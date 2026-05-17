@@ -10,7 +10,7 @@ Bound artifact:
 
 ```text
 polymarket-dual-project-v0.23.0.zip
-sha256=a23e21624a6ddc3b0a5c052aebdefce2ba47dd7c849793612a181c0a08eec5b9
+sha256=e594e8bb63e0ce6cd7c717aac3b649172c86b1e494b8ed0ccb3d21e3acbd9d53
 ```
 
 ## Local/static checks
