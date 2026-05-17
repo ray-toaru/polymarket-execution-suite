@@ -43,6 +43,7 @@ EXPECTED_202_PATHS = {
     "/v1/admin/kill-switch": "set_kill_switch",
     "/v1/admin/cancel-order": "cancel_order_placeholder",
     "/v1/admin/reconcile": "reconcile_placeholder",
+    "/v1/admin/reconcile-order-local": "reconcile_order_local",
 }
 
 PY_MODEL_BY_SCHEMA = {
@@ -59,6 +60,9 @@ PY_MODEL_BY_SCHEMA = {
     "CancelReceipt": "CancelReceipt",
     "KillSwitchReceipt": "KillSwitchReceipt",
     "ReconcileReport": "ReconcileReport",
+    "OrderLifecycleRecord": "OrderLifecycleRecord",
+    "OrderLifecycleDivergence": "OrderLifecycleDivergence",
+    "ReconcileOrderLocalResponse": "ReconcileOrderLocalResponse",
     "SignOnlyLifecycleRecord": "SignOnlyLifecycleRecord",
     "RedactedPayloadEnvelope": "RedactedPayloadEnvelope",
     "ExecutionLifecycleEvent": "ExecutionLifecycleEvent",
@@ -164,6 +168,7 @@ def validate_rust_deny_unknown_fields() -> None:
     for struct_name in [
         "TradeIntent", "NormalizedIntent", "DecisionRequest", "CompilePlanRequest",
         "SubmitPlanRequest", "CancelOrderRequest", "KillSwitchRequest", "ReconcileRequest",
+        "ReconcileOrderLocalRequest",
     ]:
         pattern = rf"#\[serde\(deny_unknown_fields\)\]\s*pub struct {struct_name}"
         if not re.search(pattern, text):
@@ -625,10 +630,13 @@ def validate_v23_lifecycle_query_and_hardening() -> None:
             "/v1/sign-only/lifecycle-events",
             "/v1/lifecycle/executions/{execution_id}/events",
             "/v1/admin/audit-events",
+            "/v1/admin/reconcile-order-local",
             "client_event_id",
             "before_event_id",
             "before_audit_id",
             "readOnly: true",
+            "ReconcileOrderLocalRequest",
+            "ReconcileOrderLocalResponse",
         ]),
         "core": (core, [
             "pub struct RedactedPayloadEnvelope",
@@ -684,6 +692,8 @@ def validate_v23_lifecycle_query_and_hardening() -> None:
             "candidate.client_event_id.as_deref()",
             "record.event_id = None",
             "record.created_at = None",
+            "record_standard_sign_only_construction",
+            "account_id does not match request",
         ]),
         "policy": (policy, [
             "WorkerStatus::Degraded => reasons.push(BlockReason::WorkerDegraded)",
@@ -695,6 +705,8 @@ def validate_v23_lifecycle_query_and_hardening() -> None:
             "redacted_payload_envelope",
             "principal_subject: query.principal_subject",
             "result: query.result",
+            "reconcile_order_local",
+            "ReconcileOrderLocalResponse",
         ]),
         "gate": (gate, [
             "run_current_gates.sh",
@@ -726,6 +738,8 @@ def validate_v023_hermes_client_surface() -> None:
         "list_sign_only_lifecycle_events",
         "list_execution_lifecycle_events",
         "list_admin_audit_events",
+        "reconcile_order_local",
+        "ReconcileOrderLocalResponse",
         "principal_subject: str | None = None",
         "result: str | None = None",
         "execution_id: str | None = None",
@@ -740,6 +754,8 @@ def validate_v023_hermes_client_surface() -> None:
         "payload: RedactedPayloadEnvelope",
         "class ExecutionLifecycleEvent",
         "class AdminAuditEvent",
+        "class OrderLifecycleDivergence",
+        "class ReconcileOrderLocalResponse",
         "sign-only lifecycle records must not contain remote side effects",
     ]:
         if needle not in model_text:
