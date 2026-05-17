@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: 0c9e3011252c5ffa2be41cdad6ae4cf6af54bf36
-polymarket-execution-engine: cf37e89c54f69c6792ce4ee867467518d12061a5
+polymarket-execution-engine: e56ca06d4c513662dbbedf993dc11e6202bbbe74
 ```
 
 The target is validation promotion of v0.23.x. This batch does not introduce
@@ -56,6 +56,10 @@ Rationale:
 - Runtime worker loop closure, order lifecycle divergence classification, SDK
   standard sign-only plan, live canary prep, and production hardening spec are
   included in the pinned execution-engine source.
+- Read-only remote reconcile reader, continuous runtime worker tick entry,
+  explicit SDK sign-only default path, fail-closed live canary defaults, and
+  production evidence controls are included in the pinned execution-engine
+  source.
 - Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.
 - PostgreSQL gates used an isolated local PostgreSQL 16 instance on
   `localhost:55432`; the `.env` `PMX_DATABASE_URL` target on `localhost:5432`
@@ -76,7 +80,7 @@ Current evidence:
   `polymarket-dual-project-v0.23.0.zip.sha256` and
   `polymarket-dual-project-v0.23.0.zip.evidence.json`
 - Current artifact SHA-256:
-  `e594e8bb63e0ce6cd7c717aac3b649172c86b1e494b8ed0ccb3d21e3acbd9d53`
+  `eaac83fd80d9a3dce382767a9ae38d92c16ec09dab326bb6d7ed4618018070d6`
 
 ## Explicit non-claims
 
