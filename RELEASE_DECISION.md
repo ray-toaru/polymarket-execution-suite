@@ -17,8 +17,8 @@ Current decision: `shadow-ready candidate`
 This decision applies to the integration repository at the pinned submodule revisions:
 
 ```text
-hermes-polymarket-control: f668365fa9246ed150713d19734b04fd5453ce9f
-polymarket-execution-engine: f833672618b4ef3bab5f05d41bce837582dbf2ad
+hermes-polymarket-control: 0c9e3011252c5ffa2be41cdad6ae4cf6af54bf36
+polymarket-execution-engine: dc6f817aa79f862ff68f097d1954fa0f34dc20df
 ```
 
 The target is validation promotion of v0.23.x. This batch does not introduce
@@ -57,6 +57,9 @@ Rationale:
   standard sign-only plan, live canary prep, and production hardening spec are
   included in the pinned execution-engine source.
 - Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.
+- PostgreSQL gates used an isolated local PostgreSQL 16 instance on
+  `localhost:55432`; the `.env` `PMX_DATABASE_URL` target on `localhost:5432`
+  was not listening during validation.
 - Current source state remains pre-live and fail-closed for live submit/cancel.
 - `PMX_ALLOW_LIVE_SUBMIT=0` and `PMX_ALLOW_LIVE_CANCEL=0` during validation;
   blocked canary evidence records `posted=false`, `cancelled=false`, and
@@ -72,6 +75,8 @@ Current evidence:
 - Artifact SHA-256: recorded outside the zip in
   `polymarket-dual-project-v0.23.0.zip.sha256` and
   `polymarket-dual-project-v0.23.0.zip.evidence.json`
+- Current artifact SHA-256:
+  `e0797c960f4ed59242784df5c89779fd118db9c2a8be36234a627635ba5ecd7b`
 
 ## Explicit non-claims
 
