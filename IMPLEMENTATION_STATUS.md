@@ -1,4 +1,4 @@
-# Implementation status — v0.23.0 source candidate
+# Implementation status — v0.23.1 validation-promotion
 
 ## Implemented source-level items
 
@@ -11,6 +11,11 @@
 - Lifecycle and admin audit query APIs.
 - Redacted lifecycle payload envelope at public API/model level.
 - v0.23 gate runner, static guards, version guard, and docs/evidence governance guard.
+- Runtime worker loop/tick models for heartbeat lease, resource refresh,
+  reconcile backlog, WebSocket liveness, geoblock, and worker crash recovery.
+- Order lifecycle event query API and per-order correlation trace field.
+- PostgreSQL migration ledger with checksum-bound forward migrations through
+  `0003_order_event_trace`.
 
 ## Intentionally blocked
 
@@ -20,10 +25,15 @@
 - Python-side access to signing or CLOB secrets.
 - Public exposure of raw signed payloads or signed order envelopes.
 
-## Not proven in this local environment
+## Current validation evidence
 
-- Rust format/check/clippy/tests.
-- PostgreSQL migration/store/API E2E.
-- SDK adapter/spike checks and tests.
-- Credentialed non-trading smoke.
-- Sign-only dry-run with real credentials.
+The current canonical evidence manifest records passing full gates for Rust,
+PostgreSQL, SDK, credentialed non-trading smoke, sign-only dry-run, release
+artifact, and governance checks:
+
+```text
+polymarket-execution-engine/evidence/current/manifest.json
+```
+
+Current release status remains `shadow-ready candidate`; live submit/cancel and
+production deployment are still intentionally blocked.

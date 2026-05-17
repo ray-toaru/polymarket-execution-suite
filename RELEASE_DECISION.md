@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: 0c9e3011252c5ffa2be41cdad6ae4cf6af54bf36
-polymarket-execution-engine: dc6f817aa79f862ff68f097d1954fa0f34dc20df
+polymarket-execution-engine: eb5f6bed337a62a632aa6f17f53e034f6c54f544
 ```
 
 The target is validation promotion of v0.23.x. This batch does not introduce
@@ -76,7 +76,7 @@ Current evidence:
   `polymarket-dual-project-v0.23.0.zip.sha256` and
   `polymarket-dual-project-v0.23.0.zip.evidence.json`
 - Current artifact SHA-256:
-  `e0797c960f4ed59242784df5c89779fd118db9c2a8be36234a627635ba5ecd7b`
+  `a23e21624a6ddc3b0a5c052aebdefce2ba47dd7c849793612a181c0a08eec5b9`
 
 ## Explicit non-claims
 

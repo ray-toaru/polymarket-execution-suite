@@ -1,6 +1,19 @@
-# Validation report — v0.23.0 source candidate
+# Validation report — v0.23.1 validation-promotion
 
-## Local/static checks expected for this cleanup package
+## Current conclusion
+
+`polymarket-execution-engine/evidence/current/manifest.json` records a passing
+full gate run for the pinned source package. Current release decision remains
+`shadow-ready candidate`, not production-ready and not live-trading-ready.
+
+Bound artifact:
+
+```text
+polymarket-dual-project-v0.23.0.zip
+sha256=a23e21624a6ddc3b0a5c052aebdefce2ba47dd7c849793612a181c0a08eec5b9
+```
+
+## Local/static checks
 
 ```bash
 python scripts/check_version_consistency.py
@@ -17,17 +30,19 @@ python polymarket-execution-engine/validation/check_docs_evidence_governance.py
 python polymarket-execution-engine/scripts/check_release_hygiene.py .
 ```
 
-## External checks still required
+## Full gate evidence
 
-The local packaging environment does not prove:
+The latest full gate included:
 
-- Rust format/check/clippy/tests;
-- PostgreSQL migration/store/API E2E;
-- SDK adapter/spike checks and tests;
+- Rust fmt/check/clippy/tests;
+- PostgreSQL migration, repository tests, and API E2E;
+- SDK spike and adapter checks/tests/typecheck;
 - credentialed non-trading smoke;
-- sign-only dry-run with real credentials.
+- sign-only dry-run;
+- migration drift dry-run;
+- release hygiene, release artifact check, contract validation, and docs/evidence governance.
 
-Run the full gate externally:
+Re-run command:
 
 ```bash
 cd polymarket-execution-engine
