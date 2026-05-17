@@ -57,4 +57,4 @@ Current evidence:
 - Environment: `polymarket-execution-engine/evidence/current/environment.json`
 - Manifest: `polymarket-execution-engine/evidence/current/manifest.json`
 - Logs: `polymarket-execution-engine/evidence/current/logs/`
-- Artifact SHA-256: `14508d04c26afe8a20ac944636151eaeba49c5aef84f6a37dde89b65b0bd6dca`
+- Artifact SHA-256: recorded outside the zip in `polymarket-dual-project-v0.23.0.zip.sha256` and `polymarket-dual-project-v0.23.0.zip.evidence.json`
