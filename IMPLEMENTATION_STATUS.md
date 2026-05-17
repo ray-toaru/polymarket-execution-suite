@@ -16,6 +16,20 @@
 - Order lifecycle event query API and per-order correlation trace field.
 - PostgreSQL migration ledger with checksum-bound forward migrations through
   `0003_order_event_trace`.
+- Shadow execution would-submit drill runs by default in current gates and
+  remains non-posting/non-signing.
+- Reconciliation drift drill covers open, missing, repeated-missing, and
+  unknown remote observations with fail-closed/operator escalation evidence.
+- Rollback/kill-switch drill covers runtime degraded, SDK failure, PostgreSQL
+  unavailable, geoblock blocked, low resource, and remote-unknown freeze
+  fallback behavior.
+- Observability evidence guard binds correlation id, redacted payload, order
+  event trace, admin audit query, shadow trace, reconcile trace, and rollback
+  fallback evidence.
+- Live canary rehearsal has an expanded blocked dry-run stage model covering
+  whitelist, caps, operator approval, reservation, idempotency, reconcile,
+  remote-unknown freeze, post-submit reconcile, cancel-unknown escalation, and
+  cancel-only fallback checks.
 
 ## Intentionally blocked
 
@@ -29,7 +43,7 @@
 
 The current canonical evidence manifest records passing full gates for Rust,
 PostgreSQL, SDK, credentialed non-trading smoke, sign-only dry-run, release
-artifact, and governance checks:
+artifact, shadow execution, observability, and governance checks:
 
 ```text
 polymarket-execution-engine/evidence/current/manifest.json
