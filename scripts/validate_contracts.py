@@ -723,6 +723,8 @@ def validate_v23_lifecycle_query_and_hardening() -> None:
             "check_version_consistency.py",
             "check_docs_evidence_governance.py",
             "write_v0_23_evidence_manifest.py",
+            "check_runtime_worker_status_query.py",
+            "42-runtime-worker-status-query.log",
             "evidence/current",
         ]),
     }
@@ -811,7 +813,7 @@ def validate_v023_evidence_manifest_guard() -> None:
         if needle not in governance_text:
             fail(f"v0.23 docs/evidence governance guard missing token: {needle}")
     writer_text = writer.read_text()
-    for needle in ["canonical_evidence_dir", "artifact", "sha256", "generated_from_gate_logs"]:
+    for needle in ["canonical_evidence_dir", "artifact", "sha256", "generated_from_gate_logs", "runtime_worker_status_validation"]:
         if needle not in writer_text:
             fail(f"v0.23 evidence manifest writer missing token: {needle}")
 
