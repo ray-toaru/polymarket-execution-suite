@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  push:
+    paths:
+      - "polymarket-execution-engine/**"
+      - "hermes-polymarket-control/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/rust-locked.yml"
+  pull_request:
+    paths:
+      - "polymarket-execution-engine/**"
+      - "hermes-polymarket-control/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/rust-locked.yml"
+
+jobs:
+  rust-prelive:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: polymarket-execution-engine
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust 1.88
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.88.0
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run current gates
+        run: ./validation/run_current_gates.sh
