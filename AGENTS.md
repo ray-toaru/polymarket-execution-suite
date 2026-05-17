@@ -6,10 +6,13 @@ This file applies to the whole repository. More specific `AGENTS.md` files under
 
 ## Project shape
 
-This repository contains two independent planes:
+This integration repository pins two independent implementation planes as submodules:
 
 - `hermes-polymarket-control/`: Python control plane for intents, approvals, reporting, and executor API calls.
 - `polymarket-execution-engine/`: Rust execution plane for validation, lifecycle persistence, runtime state, authorization, signing-boundary isolation, and non-live SDK scaffolding.
+
+When editing implementation code, commit the relevant submodule repository first, then update the
+submodule pointer in this integration repository.
 
 Version numbers, release status, and promotion decisions belong in `VERSION`, release manifests, validation reports, and release-decision documents. Do not encode the current version or current promotion state in AGENTS.md; these files should remain durable across releases.
 

@@ -2,7 +2,8 @@
 
 ## Baseline
 
-v0.23.0 keeps the v0.3 architectural split as the design baseline:
+v0.23.0 keeps the v0.3 architectural split as the design baseline. The integration repository pins
+the two implementation planes as submodules:
 
 ```text
 hermes-polymarket-control  -> Python control plane

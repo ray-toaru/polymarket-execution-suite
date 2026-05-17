@@ -2,10 +2,26 @@
 
 v0.23.0 is a **pre-live source candidate**, not a validated production or live-trading release.
 
-The project remains split into two independent planes:
+This repository is the integration repository. It pins two independent implementation repositories as
+submodules:
 
 - `hermes-polymarket-control`: Python control plane for intents, approvals, reporting, and executor API calls. It must not hold private keys, CLOB secrets, raw signed payloads, or live-submit authority.
 - `polymarket-execution-engine`: Rust execution plane for deterministic validation, lifecycle persistence, runtime state, authorization, signing-boundary isolation, and non-live SDK integration scaffolding.
+
+## Checkout
+
+Clone or refresh with submodules:
+
+```bash
+git submodule update --init --recursive
+```
+
+In this local workspace the submodules point at sibling repositories:
+
+```text
+../hermes-polymarket-control
+../polymarket-execution-engine
+```
 
 ## Canonical documents
 
@@ -25,7 +41,7 @@ Historical root documents and previous gate notes have been moved to `docs/archi
 
 ## Validation
 
-Local/static validation entry points:
+Integration-level local/static validation entry points:
 
 ```bash
 python scripts/check_version_consistency.py
