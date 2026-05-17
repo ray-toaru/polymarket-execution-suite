@@ -10,7 +10,7 @@ Bound artifact:
 
 ```text
 polymarket-dual-project-v0.23.0.zip
-sha256=eaac83fd80d9a3dce382767a9ae38d92c16ec09dab326bb6d7ed4618018070d6
+sha256=9aa64c356e7eeb13a258ab30864e9990b07c0787e5f4512cc9479fb5325b87d0
 ```
 
 ## Local/static checks
@@ -39,6 +39,8 @@ The latest full gate included:
 - SDK spike and adapter checks/tests/typecheck;
 - credentialed non-trading smoke;
 - sign-only dry-run;
+- shadow execution would-submit drill;
+- observability evidence guard;
 - migration drift dry-run;
 - release hygiene, release artifact check, contract validation, and docs/evidence governance.
 

@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: 0c9e3011252c5ffa2be41cdad6ae4cf6af54bf36
-polymarket-execution-engine: e56ca06d4c513662dbbedf993dc11e6202bbbe74
+polymarket-execution-engine: ab255a38277a1050d282202c0c3cf4250f44a600
 ```
 
 The target is validation promotion of v0.23.x. This batch does not introduce
@@ -60,6 +60,8 @@ Rationale:
   explicit SDK sign-only default path, fail-closed live canary defaults, and
   production evidence controls are included in the pinned execution-engine
   source.
+- Shadow execution evidence now runs by default in the current gate, and
+  observability evidence is bound as an explicit manifest section.
 - Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.
 - PostgreSQL gates used an isolated local PostgreSQL 16 instance on
   `localhost:55432`; the `.env` `PMX_DATABASE_URL` target on `localhost:5432`
@@ -80,7 +82,7 @@ Current evidence:
   `polymarket-dual-project-v0.23.0.zip.sha256` and
   `polymarket-dual-project-v0.23.0.zip.evidence.json`
 - Current artifact SHA-256:
-  `eaac83fd80d9a3dce382767a9ae38d92c16ec09dab326bb6d7ed4618018070d6`
+  `9aa64c356e7eeb13a258ab30864e9990b07c0787e5f4512cc9479fb5325b87d0`
 
 ## Explicit non-claims
 
