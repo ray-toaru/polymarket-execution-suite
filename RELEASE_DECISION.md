@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: 24e238ee55ab12942d63e40670c5b397fcf5a98f
-polymarket-execution-engine: 163ce2b84b1d31653cf79696fc281583a1fc1052
+polymarket-execution-engine: 58f3fbc028f985830a56f3074d9962cae17a7428
 ```
 
 The target is promotion of the v0.24.0 shadow-ready baseline. This batch does not introduce
