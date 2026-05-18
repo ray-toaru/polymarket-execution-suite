@@ -77,6 +77,10 @@
 - Runtime model tests now live in focused modules for breakdown/loop behavior
   and capability evaluations; the parent runtime test file now only keeps
   module declarations.
+- HTTP fake/in-memory API E2E tests now live in focused modules for auth/smoke,
+  scaffolded non-live lifecycle coverage, and negative startup/object-graph
+  behavior; the parent file now only keeps shared helpers and module
+  declarations.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.

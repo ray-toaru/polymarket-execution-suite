@@ -204,7 +204,7 @@ def validate_rust_deny_unknown_fields() -> None:
 def validate_v04_source_landings() -> None:
     if not API_E2E_TEST.exists():
         fail("missing HTTP/auth/fake E2E integration test source")
-    test_text = API_E2E_TEST.read_text()
+    test_text = rust_file_with_modules_text(API_E2E_TEST)
     for needle in ["http_auth_and_fake_e2e_smoke", "StatusCode::UNAUTHORIZED", "StatusCode::FORBIDDEN", "StatusCode::ACCEPTED"]:
         if needle not in test_text:
             fail(f"HTTP/auth/fake E2E test missing expected assertion token: {needle}")
@@ -239,7 +239,7 @@ def validate_v07_source_landings() -> None:
     ]:
         if needle not in gateway_text:
             fail(f"v0.7 gateway landing missing token: {needle}")
-    e2e_text = API_E2E_TEST.read_text()
+    e2e_text = rust_file_with_modules_text(API_E2E_TEST)
     for needle in [
         "full_scaffold_path_compile_submit_cancel_and_reconcile",
         "/v1/plans/compile",

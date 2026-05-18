@@ -64,6 +64,9 @@
     focused test modules.
 20. Runtime model test module split: breakdown/loop and evaluation coverage now
     live in focused runtime test modules.
+21. HTTP fake/in-memory API E2E module split: auth/smoke, scaffolded lifecycle,
+    and negative startup/object-graph coverage now live in focused test
+    modules.
 
 ## Still blocked
 
