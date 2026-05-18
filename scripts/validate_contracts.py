@@ -28,6 +28,7 @@ GATEWAY_RS = EXECUTOR / "crates/pmx-gateway/src/lib.rs"
 SDK_SPIKE_RS = EXECUTOR / "adapters/pmx-official-sdk-spike/src/lib.rs"
 SDK_SPIKE_TOML = EXECUTOR / "adapters/pmx-official-sdk-spike/Cargo.toml"
 SDK_ADAPTER_RS = EXECUTOR / "adapters/pmx-official-sdk-adapter/src/lib.rs"
+SDK_ADAPTER_SRC = EXECUTOR / "adapters/pmx-official-sdk-adapter/src"
 SDK_ADAPTER_TOML = EXECUTOR / "adapters/pmx-official-sdk-adapter/Cargo.toml"
 LIVE_SUBMIT_GUARD = EXECUTOR / "validation/check_live_submit_guard.py"
 SERVICE_RS = SERVICE_SRC / "lib.rs"
@@ -514,7 +515,7 @@ def validate_v16_postgres_runtime_provider() -> None:
 
 
 def validate_v19_redaction_and_live_guard() -> None:
-    adapter_text = SDK_ADAPTER_RS.read_text()
+    adapter_text = rust_source_text(SDK_ADAPTER_SRC)
     for needle in [
         "pub const REDACTED",
         "redact_sensitive_text",
@@ -543,8 +544,8 @@ def validate_v19_redaction_and_live_guard() -> None:
 def validate_v20_plan_storage_and_packaging() -> None:
     migration = (EXECUTOR / "migrations/0001_initial.sql").read_text()
     postgres = (EXECUTOR / "crates/pmx-store/src/postgres.rs").read_text()
-    adapter = SDK_ADAPTER_RS.read_text()
-    runtime = (EXECUTOR / "crates/pmx-runtime/src/lib.rs").read_text()
+    adapter = rust_source_text(SDK_ADAPTER_SRC)
+    runtime = rust_source_text(EXECUTOR / "crates/pmx-runtime/src")
     core = rust_source_text(CORE_SRC)
 
     for needle in [
@@ -593,8 +594,8 @@ def validate_v20_plan_storage_and_packaging() -> None:
 
 def validate_v21_sign_only_and_runtime_models() -> None:
     core = rust_source_text(CORE_SRC)
-    adapter = SDK_ADAPTER_RS.read_text()
-    runtime = (EXECUTOR / "crates/pmx-runtime/src/lib.rs").read_text()
+    adapter = rust_source_text(SDK_ADAPTER_SRC)
+    runtime = rust_source_text(EXECUTOR / "crates/pmx-runtime/src")
     for needle in [
         "pub enum SignOnlyLifecycleState",
         "transition_sign_only_lifecycle",
