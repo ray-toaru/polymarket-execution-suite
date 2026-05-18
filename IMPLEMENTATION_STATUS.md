@@ -1,4 +1,4 @@
-# Implementation status — v0.23.1 validation-promotion
+# Implementation status — v0.24.0 shadow-ready baseline
 
 ## Implemented source-level items
 
@@ -10,7 +10,7 @@
 - Non-live cancel/reconcile lifecycle event recording.
 - Lifecycle and admin audit query APIs.
 - Redacted lifecycle payload envelope at public API/model level.
-- v0.23 gate runner, static guards, version guard, and docs/evidence governance guard.
+- v0.24 shadow-ready baseline gate runner, static guards, version guard, and docs/evidence governance guard.
 - Runtime worker loop/tick models for heartbeat lease, resource refresh,
   reconcile backlog, WebSocket liveness, geoblock, and worker crash recovery.
 - Order lifecycle event query API and per-order correlation trace field.

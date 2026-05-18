@@ -1,4 +1,4 @@
-# Review audit — v0.23.1 validation-promotion
+# Review audit — v0.24.0 shadow-ready baseline
 
 ## Confirmed source-level improvements
 
@@ -23,10 +23,10 @@ polymarket-execution-engine/evidence/current/manifest.json
 Bound artifact SHA-256:
 
 ```text
-a23e21624a6ddc3b0a5c052aebdefce2ba47dd7c849793612a181c0a08eec5b9
+fd476e36af78099ba542cd6f030ccdd01f325565e8a5667d0d791c2479eaf0be
 ```
 
 ## Current conclusion
 
-v0.23.1 validation-promotion is a `shadow-ready candidate`. It is not a
+v0.24.0 shadow-ready baseline is a `shadow-ready candidate`. It is not a
 production/live-trading release.

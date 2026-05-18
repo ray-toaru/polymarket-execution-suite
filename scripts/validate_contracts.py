@@ -788,8 +788,9 @@ def validate_v023_evidence_manifest_guard() -> None:
     if not writer.exists():
         fail("v0.23 evidence manifest writer missing")
     data = json.loads(manifest.read_text())
-    if data.get("version") != "0.23.0":
-        fail("v0.23 evidence manifest template must use version 0.23.0")
+    expected_version = (ROOT / "VERSION").read_text().strip()
+    if data.get("version") != expected_version:
+        fail(f"v0.23 evidence manifest template must use version {expected_version}")
     if data.get("canonical_evidence_dir") != "polymarket-execution-engine/evidence/current":
         fail("v0.23 evidence manifest template must point to evidence/current")
     if not current_manifest.exists():

@@ -1,11 +1,11 @@
-# Roadmap — v0.23.0 pre-live
+# Roadmap — v0.24.0 shadow-ready baseline
 
 ## Immediate next validation
 
 1. Run local/static checks.
 2. Generate a clean package.
 3. Run full Rust/SDK/PostgreSQL gates externally against the final package.
-4. Bind external evidence to `evidence/current/manifest.json` and the final artifact SHA-256.
+4. Bind current evidence to `evidence/current/manifest.json` and the final artifact SHA-256.
 
 ## Next source-hardening items
 
@@ -17,4 +17,4 @@
 
 ## Still blocked
 
-Live submit, live cancel, and production deployment remain blocked until the evidence above exists and passes.
+Live submit, live cancel, and production deployment remain blocked in v0.24.0 until a later release has canary/production evidence and an explicit release decision.

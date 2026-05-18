@@ -1,4 +1,4 @@
-# Tasks — v0.23.0
+# Tasks — v0.24.0
 
 ## Completed in governance cleanup
 
@@ -10,7 +10,7 @@
 - [x] Tighten public lifecycle payload schema to a redacted envelope.
 - [x] Make pre-live degraded worker status fail closed in policy.
 
-## Required external gates
+## Required current gates
 
 - [ ] `cargo fmt --check`
 - [ ] `cargo check --workspace --locked`

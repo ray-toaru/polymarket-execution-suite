@@ -1,6 +1,6 @@
-# Current progress — v0.23.0
+# Current progress — v0.24.0
 
-This pass addressed release-governance and auditability problems found during v0.23 review.
+This pass formalizes the v0.24.0 shadow-ready baseline after the v0.23 validation-promotion work.
 
 ## Done in this cleanup pass
 
@@ -13,8 +13,7 @@ This pass addressed release-governance and auditability problems found during v0
 - Tightened lifecycle payload schema to a typed redacted envelope in OpenAPI and Hermes models.
 - Made pre-live worker `DEGRADED` status block constraints rather than silently allowing execution.
 
-## Still pending
+## Still pending for later releases
 
-- Full Rust/SDK/PostgreSQL validation in an external environment.
-- Exact final artifact validation after this cleanup package is generated.
 - Live submit/cancel promotion evidence.
+- Production deployment evidence and operational controls.

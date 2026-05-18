@@ -1,4 +1,4 @@
-# Validation report — v0.23.1 validation-promotion
+# Validation report — v0.24.0 shadow-ready baseline
 
 ## Current conclusion
 
@@ -9,8 +9,8 @@ full gate run for the pinned source package. Current release decision remains
 Bound artifact:
 
 ```text
-polymarket-dual-project-v0.23.0.zip
-sha256=9aa64c356e7eeb13a258ab30864e9990b07c0787e5f4512cc9479fb5325b87d0
+polymarket-dual-project-v0.24.0.zip
+sha256=fd476e36af78099ba542cd6f030ccdd01f325565e8a5667d0d791c2479eaf0be
 ```
 
 ## Local/static checks

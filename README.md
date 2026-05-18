@@ -1,6 +1,6 @@
-# Polymarket dual project v0.23.0
+# Polymarket dual project v0.24.0
 
-v0.23.0 is a **pre-live source candidate**, not a validated production or live-trading release.
+v0.24.0 is a **shadow-ready baseline source candidate**, not a validated production or live-trading release.
 
 This repository is the integration repository. It pins two independent implementation repositories as
 submodules:
@@ -29,7 +29,7 @@ Use these current documents first:
 
 - `AGENTS.md` — repository-level agent instructions, safety boundaries, and validation rules.
 
-- `PROJECT_ARCHITECTURE.md` — v0.23 architecture baseline from the v0.3 design split.
+- `PROJECT_ARCHITECTURE.md` — v0.24 architecture baseline from the v0.3 design split.
 - `DEPENDENCY_POLICY.md` — pinned runtime/toolchain/dependency policy.
 - `DESIGN_DECISION_RECORD.md` — accepted architectural decisions.
 - `IMPLEMENTATION_STATUS.md` — implemented, blocked, and intentionally disabled areas.

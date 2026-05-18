@@ -1,4 +1,4 @@
-# Release Decision — v0.23.1 validation-promotion
+# Release Decision — v0.24.0 shadow-ready baseline
 
 ## Decision
 
@@ -17,11 +17,11 @@ Current decision: `shadow-ready candidate`
 This decision applies to the integration repository at the pinned submodule revisions:
 
 ```text
-hermes-polymarket-control: 0c9e3011252c5ffa2be41cdad6ae4cf6af54bf36
-polymarket-execution-engine: ab255a38277a1050d282202c0c3cf4250f44a600
+hermes-polymarket-control: 95d718e988f0de89514bef53a71a6c6e53530dcf
+polymarket-execution-engine: 8dd6fae16098cae143b21a2a6f381c318d5a0c34
 ```
 
-The target is validation promotion of v0.23.x. This batch does not introduce
+The target is promotion of the v0.24.0 shadow-ready baseline. This batch does not introduce
 live trading capability.
 
 ## Required evidence
@@ -79,10 +79,10 @@ Current evidence:
 - Manifest: `polymarket-execution-engine/evidence/current/manifest.json`
 - Logs: `polymarket-execution-engine/evidence/current/logs/`
 - Artifact SHA-256: recorded outside the zip in
-  `polymarket-dual-project-v0.23.0.zip.sha256` and
-  `polymarket-dual-project-v0.23.0.zip.evidence.json`
+  `polymarket-dual-project-v0.24.0.zip.sha256` and
+  `polymarket-dual-project-v0.24.0.zip.evidence.json`
 - Current artifact SHA-256:
-  `9aa64c356e7eeb13a258ab30864e9990b07c0787e5f4512cc9479fb5325b87d0`
+  `fd476e36af78099ba542cd6f030ccdd01f325565e8a5667d0d791c2479eaf0be`
 
 ## Explicit non-claims
 

@@ -1,4 +1,4 @@
-# Documentation and evidence status — v0.23.1 validation-promotion
+# Documentation and evidence status — v0.24.0 shadow-ready baseline
 
 ## Current canonical root documents
 
@@ -43,8 +43,8 @@ polymarket-execution-engine/evidence/current/manifest.json
 The current manifest binds the release artifact:
 
 ```text
-polymarket-dual-project-v0.23.0.zip
-sha256=a23e21624a6ddc3b0a5c052aebdefce2ba47dd7c849793612a181c0a08eec5b9
+polymarket-dual-project-v0.24.0.zip
+sha256=fd476e36af78099ba542cd6f030ccdd01f325565e8a5667d0d791c2479eaf0be
 ```
 
 Historical or imported logs live under:

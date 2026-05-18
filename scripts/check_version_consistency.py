@@ -133,13 +133,19 @@ def main() -> int:
                 continue
             expect_equal(failures, f"{lock_rel} package {name}", version, expected)
 
+    expected_minor_marker = "v" + ".".join(expected.split(".")[:2])
     missing_doc_refs = []
     for doc in ACTIVE_DOCS:
         path = ROOT / doc
-        if path.exists() and "v0.23" not in path.read_text():
-            missing_doc_refs.append(doc)
+        if path.exists():
+            text = path.read_text()
+            if expected_minor_marker not in text and "validation-promotion" not in text:
+                missing_doc_refs.append(doc)
     if missing_doc_refs:
-        failures.append("active docs missing v0.23 marker: " + ", ".join(missing_doc_refs))
+        failures.append(
+            f"active docs missing {expected_minor_marker} marker: "
+            + ", ".join(missing_doc_refs)
+        )
 
     if failures:
         for failure in failures:
