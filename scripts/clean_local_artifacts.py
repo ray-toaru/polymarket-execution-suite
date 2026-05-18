@@ -11,7 +11,7 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DIR_NAMES = {"__pycache__", ".pytest_cache", ".mypy_cache"}
+DIR_NAMES = {".venv", "venv", "target", "__pycache__", ".pytest_cache", ".mypy_cache"}
 FILE_SUFFIXES = {".pyc", ".pyo"}
 
 

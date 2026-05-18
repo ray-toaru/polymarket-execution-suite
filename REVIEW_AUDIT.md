@@ -23,7 +23,7 @@ polymarket-execution-engine/evidence/current/manifest.json
 Bound artifact SHA-256:
 
 ```text
-fd476e36af78099ba542cd6f030ccdd01f325565e8a5667d0d791c2479eaf0be
+cc04a6a892f2d51bb96418a0d8d98896427038c3a08a01f4f76b30c1605ffb90
 ```
 
 ## Current conclusion
