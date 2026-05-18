@@ -24,7 +24,7 @@ STORE_RS = STORE_SRC / "lib.rs"
 POSTGRES_RS = EXECUTOR / "crates/pmx-store/src/postgres.rs"
 API_E2E_TEST = EXECUTOR / "crates/pmx-api/tests/http_and_fake_e2e.rs"
 API_POSTGRES_E2E_TEST = EXECUTOR / "crates/pmx-api/tests/http_postgres_e2e.rs"
-GATEWAY_RS = EXECUTOR / "crates/pmx-gateway/src/lib.rs"
+GATEWAY_SRC = EXECUTOR / "crates/pmx-gateway/src"
 SDK_SPIKE_RS = EXECUTOR / "adapters/pmx-official-sdk-spike/src/lib.rs"
 SDK_SPIKE_TOML = EXECUTOR / "adapters/pmx-official-sdk-spike/Cargo.toml"
 SDK_ADAPTER_RS = EXECUTOR / "adapters/pmx-official-sdk-adapter/src/lib.rs"
@@ -219,7 +219,7 @@ def validate_v04_source_landings() -> None:
 
 
 def validate_v07_source_landings() -> None:
-    gateway_text = GATEWAY_RS.read_text()
+    gateway_text = rust_source_text(GATEWAY_SRC)
     for needle in [
         "pub trait SignerProvider",
         "pub struct DisabledSignerProvider",
