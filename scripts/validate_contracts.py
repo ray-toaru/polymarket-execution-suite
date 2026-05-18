@@ -14,9 +14,13 @@ ROOT = Path(__file__).resolve().parents[1]
 EXECUTOR = ROOT / "polymarket-execution-engine"
 CONTROL = ROOT / "hermes-polymarket-control"
 OPENAPI = EXECUTOR / "openapi" / "executor.v1.yaml"
-API_RS = EXECUTOR / "crates" / "pmx-api" / "src" / "lib.rs"
+API_SRC = EXECUTOR / "crates" / "pmx-api" / "src"
+CORE_SRC = EXECUTOR / "crates" / "pmx-core" / "src"
+STORE_SRC = EXECUTOR / "crates" / "pmx-store" / "src"
+SERVICE_SRC = EXECUTOR / "crates" / "pmx-service" / "src"
+API_RS = API_SRC / "lib.rs"
 SQL = EXECUTOR / "migrations" / "0001_initial.sql"
-STORE_RS = EXECUTOR / "crates/pmx-store/src/lib.rs"
+STORE_RS = STORE_SRC / "lib.rs"
 POSTGRES_RS = EXECUTOR / "crates/pmx-store/src/postgres.rs"
 API_E2E_TEST = EXECUTOR / "crates/pmx-api/tests/http_and_fake_e2e.rs"
 API_POSTGRES_E2E_TEST = EXECUTOR / "crates/pmx-api/tests/http_postgres_e2e.rs"
@@ -26,7 +30,7 @@ SDK_SPIKE_TOML = EXECUTOR / "adapters/pmx-official-sdk-spike/Cargo.toml"
 SDK_ADAPTER_RS = EXECUTOR / "adapters/pmx-official-sdk-adapter/src/lib.rs"
 SDK_ADAPTER_TOML = EXECUTOR / "adapters/pmx-official-sdk-adapter/Cargo.toml"
 LIVE_SUBMIT_GUARD = EXECUTOR / "validation/check_live_submit_guard.py"
-SERVICE_RS = EXECUTOR / "crates/pmx-service/src/lib.rs"
+SERVICE_RS = SERVICE_SRC / "lib.rs"
 SERVICE_TOML = EXECUTOR / "crates/pmx-service/Cargo.toml"
 ROOT_CARGO_TOML = EXECUTOR / "Cargo.toml"
 
@@ -82,8 +86,15 @@ def normalize_path(path: str) -> str:
     return re.sub(r":([A-Za-z_][A-Za-z0-9_]*)", r"{\1}", path)
 
 
+def rust_source_text(src: Path) -> str:
+    return "\n".join(
+        path.read_text()
+        for path in sorted(src.glob("*.rs"))
+    )
+
+
 def rust_routes() -> set[str]:
-    text = API_RS.read_text()
+    text = rust_source_text(API_SRC)
     return {
         normalize_path(m.group(1))
         for m in re.finditer(r'\.route\(\s*"([^"]+)"', text)
@@ -91,7 +102,7 @@ def rust_routes() -> set[str]:
 
 
 def rust_handler_body(name: str) -> str:
-    text = API_RS.read_text()
+    text = rust_source_text(API_SRC)
     marker = f"async fn {name}"
     start = text.rfind(marker)
     if start == -1:
@@ -167,7 +178,7 @@ def validate_sql_idempotency() -> None:
 
 
 def validate_rust_deny_unknown_fields() -> None:
-    text = API_RS.read_text() + "\n" + (EXECUTOR / "crates/pmx-core/src/lib.rs").read_text()
+    text = rust_source_text(API_SRC) + "\n" + rust_source_text(CORE_SRC)
     for struct_name in [
         "TradeIntent", "NormalizedIntent", "DecisionRequest", "CompilePlanRequest",
         "SubmitPlanRequest", "CancelOrderRequest", "KillSwitchRequest", "ReconcileRequest",
@@ -186,7 +197,7 @@ def validate_v04_source_landings() -> None:
     for needle in ["http_auth_and_fake_e2e_smoke", "StatusCode::UNAUTHORIZED", "StatusCode::FORBIDDEN", "StatusCode::ACCEPTED"]:
         if needle not in test_text:
             fail(f"HTTP/auth/fake E2E test missing expected assertion token: {needle}")
-    store_text = STORE_RS.read_text()
+    store_text = rust_source_text(STORE_SRC)
     for needle in ["pub struct AdvisoryLockKey", "pub fn advisory_lock_key"]:
         if needle not in store_text:
             fail(f"pmx-store missing advisory lock helper evidence: {needle}")
@@ -328,8 +339,8 @@ def validate_v12_service_layer() -> None:
         fail("missing pmx-service crate source")
     if not SERVICE_TOML.exists():
         fail("missing pmx-service Cargo.toml")
-    service_text = SERVICE_RS.read_text()
-    api_text = API_RS.read_text()
+    service_text = rust_source_text(SERVICE_SRC)
+    api_text = rust_source_text(API_SRC)
     root_toml = ROOT_CARGO_TOML.read_text()
     for needle in [
         '"crates/pmx-service"',
@@ -388,10 +399,10 @@ def validate_v12_service_layer() -> None:
 
 
 def validate_v15_admin_audit_and_runtime_provider() -> None:
-    service_text = SERVICE_RS.read_text()
-    store_text = STORE_RS.read_text()
+    service_text = rust_source_text(SERVICE_SRC)
+    store_text = rust_source_text(STORE_SRC)
     postgres_text = POSTGRES_RS.read_text()
-    api_text = API_RS.read_text()
+    api_text = rust_source_text(API_SRC)
     pg_test_text = API_POSTGRES_E2E_TEST.read_text()
     for needle in [
         "pub struct AdminAuditEvent",
@@ -437,10 +448,10 @@ def validate_v15_admin_audit_and_runtime_provider() -> None:
 
 
 def validate_v16_postgres_runtime_provider() -> None:
-    service_text = SERVICE_RS.read_text()
-    store_text = STORE_RS.read_text()
+    service_text = rust_source_text(SERVICE_SRC)
+    store_text = rust_source_text(STORE_SRC)
     postgres_text = POSTGRES_RS.read_text()
-    api_text = API_RS.read_text()
+    api_text = rust_source_text(API_SRC)
     pg_test_text = API_POSTGRES_E2E_TEST.read_text()
     spike_text = SDK_SPIKE_RS.read_text()
     for needle in [
@@ -534,7 +545,7 @@ def validate_v20_plan_storage_and_packaging() -> None:
     postgres = (EXECUTOR / "crates/pmx-store/src/postgres.rs").read_text()
     adapter = SDK_ADAPTER_RS.read_text()
     runtime = (EXECUTOR / "crates/pmx-runtime/src/lib.rs").read_text()
-    core = (EXECUTOR / "crates/pmx-core/src/lib.rs").read_text()
+    core = rust_source_text(CORE_SRC)
 
     for needle in [
         "DROP TABLE IF EXISTS plan_summaries",
@@ -581,7 +592,7 @@ def validate_v20_plan_storage_and_packaging() -> None:
 
 
 def validate_v21_sign_only_and_runtime_models() -> None:
-    core = (EXECUTOR / "crates/pmx-core/src/lib.rs").read_text()
+    core = rust_source_text(CORE_SRC)
     adapter = SDK_ADAPTER_RS.read_text()
     runtime = (EXECUTOR / "crates/pmx-runtime/src/lib.rs").read_text()
     for needle in [
@@ -619,11 +630,11 @@ def validate_v21_sign_only_and_runtime_models() -> None:
 
 def validate_v23_lifecycle_query_and_hardening() -> None:
     openapi = OPENAPI.read_text()
-    api = API_RS.read_text()
-    core = (EXECUTOR / "crates/pmx-core/src/lib.rs").read_text()
-    store = STORE_RS.read_text()
+    api = rust_source_text(API_SRC)
+    core = rust_source_text(CORE_SRC)
+    store = rust_source_text(STORE_SRC)
     postgres = POSTGRES_RS.read_text()
-    service = SERVICE_RS.read_text()
+    service = rust_source_text(SERVICE_SRC)
     policy = (EXECUTOR / "crates/pmx-policy/src/lib.rs").read_text()
     sql = SQL.read_text()
     gate = (EXECUTOR / "validation/run_v0_24_gates.sh").read_text()
