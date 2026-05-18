@@ -44,6 +44,10 @@ The latest full gate included:
 - migration drift dry-run;
 - release hygiene, release artifact check, contract validation, and docs/evidence governance.
 
+The latest bound full gate was run with local PostgreSQL and explicit
+credentialed SDK opt-in. It records `credentialed_non_trading_validation=pass`
+and keeps live submit/cancel blocked.
+
 Re-run command:
 
 ```bash

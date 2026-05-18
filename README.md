@@ -1,6 +1,6 @@
 # Polymarket dual project v0.24.0
 
-v0.24.0 is a **shadow-ready baseline source candidate**, not a validated production or live-trading release.
+v0.24.0 is a **shadow-ready candidate**, not a production-ready or live-trading release.
 
 This repository is the integration repository. It pins two independent implementation repositories as
 submodules:

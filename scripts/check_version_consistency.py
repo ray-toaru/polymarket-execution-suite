@@ -108,8 +108,9 @@ def main() -> int:
 
     manifest = json.loads(read("polymarket-execution-engine/release/manifest.json"))
     expect_equal(failures, "release manifest version", manifest.get("version", ""), expected)
-    if "source-candidate" not in manifest.get("status", ""):
-        failures.append("release manifest status must explicitly say source-candidate")
+    status = manifest.get("status", "")
+    if "source-candidate" not in status and "shadow-ready-candidate" not in status:
+        failures.append("release manifest status must explicitly say source-candidate or shadow-ready-candidate")
     if "not-production" not in manifest.get("status", ""):
         failures.append("release manifest status must explicitly say not-production")
 

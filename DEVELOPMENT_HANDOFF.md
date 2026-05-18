@@ -1,4 +1,4 @@
-# Development handoff — v0.24.0 shadow-ready baseline source candidate
+# Development handoff — v0.24.0 shadow-ready candidate
 
 ## Start here
 

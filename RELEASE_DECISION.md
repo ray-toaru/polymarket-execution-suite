@@ -17,8 +17,8 @@ Current decision: `shadow-ready candidate`
 This decision applies to the integration repository at the pinned submodule revisions:
 
 ```text
-hermes-polymarket-control: 95d718e988f0de89514bef53a71a6c6e53530dcf
-polymarket-execution-engine: 9edf9876b6adac8b7b8e57a62b2651cc13c152ae
+hermes-polymarket-control: 24e238ee55ab12942d63e40670c5b397fcf5a98f
+polymarket-execution-engine: 163ce2b84b1d31653cf79696fc281583a1fc1052
 ```
 
 The target is promotion of the v0.24.0 shadow-ready baseline. This batch does not introduce
