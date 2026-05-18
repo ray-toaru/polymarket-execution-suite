@@ -12,6 +12,9 @@
   reads persisted candidates, elects lease ownership, and records fail-closed
   runtime observations with in-memory and PostgreSQL-backed tests.
 - Non-live cancel/reconcile lifecycle event recording.
+- Persistent cancel/reconcile order lifecycle hardening for
+  `RECONCILE_UNKNOWN`, same-correlation replay, and correlation-id mismatch
+  rejection across in-memory and PostgreSQL stores.
 - Lifecycle and admin audit query APIs.
 - Redacted lifecycle payload envelope at public API/model level.
 - v0.25 shadow-ready SDK sign-only baseline gate runner, static guards, version guard, and docs/evidence governance guard.
