@@ -35,6 +35,8 @@
 7. SDK mapping module split: official SDK adapter mapping normalization and
    validation helpers now live behind smaller internal module boundaries without
    changing the public adapter API.
+8. SDK liveness module split: SDK error normalization now lives behind a
+   feature-gated internal module with public liveness exports preserved.
 
 ## Still blocked
 
