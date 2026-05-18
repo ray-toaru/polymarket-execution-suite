@@ -39,6 +39,8 @@
    feature-gated internal module with public liveness exports preserved.
 9. PostgreSQL runtime worker module split: worker heartbeat writes,
    observation writes, and status queries now live behind smaller store modules.
+10. PostgreSQL repository test module split: runtime-worker health/status and
+    order-lifecycle PG tests now live in focused test modules.
 
 ## Still blocked
 

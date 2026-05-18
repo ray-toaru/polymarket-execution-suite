@@ -46,6 +46,8 @@
   internal module without changing public exports.
 - PostgreSQL runtime worker persistence was split into heartbeat, observation,
   and status-query implementation modules.
+- PostgreSQL repository tests now split runtime-worker health/status and
+  order-lifecycle coverage into smaller focused modules.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.
