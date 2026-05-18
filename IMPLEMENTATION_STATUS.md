@@ -106,8 +106,18 @@
   for capability grouping, worker-loop behavior, provider-fed loop behavior,
   lease/resource evaluation, reconcile/websocket/geoblock evaluation, and
   crash-recovery evaluation.
+- Core lifecycle domain models now live in focused modules for sign-only
+  lifecycle, order-lifecycle transitions, and divergence/reconcile
+  classification.
+- Core plan/control-plane models now live in focused modules for decision
+  results, execution summaries/submit receipts, redaction envelopes, and
+  control-plane request/receipt models.
 - In-memory store admin/sign-only tests now live in focused modules for
   admin-audit behavior and sign-only lifecycle behavior.
+- In-memory store sign-only tests now also separate happy-path, idempotency,
+  and reject-path coverage into focused modules.
+- Runtime breakdown capability tests now also separate blocking, capability
+  grouping, and store-write fail-closed coverage into focused modules.
 - The HTTP fake scaffold E2E test now uses local helper functions to preserve
   the same route assertions with lower single-function complexity.
 - The HTTP fake scaffold E2E test now also keeps compile, submit/sign-only,

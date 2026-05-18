@@ -103,6 +103,16 @@
 35. HTTP PostgreSQL runtime phase split: runtime-state/degraded checks and
     ready-plan/blocked-submit verification now live in focused modules while
     preserving one E2E entry test.
+36. Core lifecycle module split: sign-only lifecycle, order-lifecycle
+    transitions, and divergence/reconcile classification now live in focused
+    modules.
+37. Core plan module split: decision results, execution summaries/submit
+    receipts, redaction envelopes, and control-plane request/receipt models now
+    live in focused modules.
+38. In-memory sign-only memory-test split: happy-path, idempotency, and
+    reject-path coverage now live in focused modules.
+39. Runtime breakdown capability split: blocking, capability-group, and
+    store-write fail-closed coverage now live in focused modules.
 
 ## Still blocked
 
