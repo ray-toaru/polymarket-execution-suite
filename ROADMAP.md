@@ -9,8 +9,7 @@
 
 ## Next source-hardening items
 
-1. Audit query pagination and typed per-event payload bodies.
-2. Shadow dry-run and rollback drills.
+1. Shadow dry-run and rollback drills.
 
 ## Recently landed hardening
 
@@ -20,6 +19,10 @@
    observations are durable local `order_events`, repeated same-correlation
    cancel/reconcile writes replay idempotently, and correlation id reuse with a
    different event is rejected in both in-memory and PostgreSQL stores.
+4. Audit query pagination and typed per-event payload bodies: admin audit
+   cursor/filter behavior is covered in in-memory and PostgreSQL stores, and
+   non-live cancel/reconcile/divergence payloads are serialized from typed
+   service-layer constructors without exposing raw signed material.
 
 ## Still blocked
 

@@ -15,6 +15,10 @@
 - Persistent cancel/reconcile order lifecycle hardening for
   `RECONCILE_UNKNOWN`, same-correlation replay, and correlation-id mismatch
   rejection across in-memory and PostgreSQL stores.
+- Admin audit cursor pagination and filter behavior with in-memory and
+  PostgreSQL-backed tests.
+- Typed non-live order-event payload constructors for cancel, reconcile, and
+  lifecycle divergence records.
 - Lifecycle and admin audit query APIs.
 - Redacted lifecycle payload envelope at public API/model level.
 - v0.25 shadow-ready SDK sign-only baseline gate runner, static guards, version guard, and docs/evidence governance guard.
