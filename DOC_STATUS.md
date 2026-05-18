@@ -44,7 +44,7 @@ The current manifest binds the release artifact:
 
 ```text
 polymarket-dual-project-v0.24.0.zip
-sha256=cc04a6a892f2d51bb96418a0d8d98896427038c3a08a01f4f76b30c1605ffb90
+sha256=8394008eed3dde30b86893466fec8952b6317d3faec2525e31df77028b1c0c21
 ```
 
 Historical or imported logs live under:
