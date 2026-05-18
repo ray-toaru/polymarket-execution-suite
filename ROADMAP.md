@@ -55,6 +55,8 @@
 16. Service runtime/order-lifecycle test module split: runtime-worker basic,
     heartbeat lease/continuous tick, and non-live order lifecycle tests now
     live in focused service test modules.
+17. Service test parent-file cleanup: `pmx-service/src/service_tests.rs` now
+    only keeps shared helpers and module declarations.
 
 ## Still blocked
 

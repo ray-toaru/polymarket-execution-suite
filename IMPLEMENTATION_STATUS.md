@@ -65,6 +65,8 @@
 - Service runtime-worker basic, heartbeat lease/continuous tick, and non-live
   order lifecycle tests now live in focused modules while preserving
   fail-closed, PG parity, cancel/reconcile, and divergence assertions.
+- The parent `pmx-service` service test file now only holds shared helpers and
+  module declarations; all service tests have moved to focused modules.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.
