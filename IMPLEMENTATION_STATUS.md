@@ -87,6 +87,16 @@
 - Gateway tests now live in focused modules for post/cancel flows, signer
   provider boundaries, and read-only reconcile-reader behavior; the parent test
   file now only keeps shared helpers and module declarations.
+- Service specialized runtime-worker tests now live in focused modules for
+  resource/reconcile, websocket/geoblock, and crash-recovery behavior.
+- Runtime breakdown/evaluation tests now live in finer-grained focused modules
+  for capability grouping, worker-loop behavior, provider-fed loop behavior,
+  lease/resource evaluation, reconcile/websocket/geoblock evaluation, and
+  crash-recovery evaluation.
+- In-memory store admin/sign-only tests now live in focused modules for
+  admin-audit behavior and sign-only lifecycle behavior.
+- The HTTP fake scaffold E2E test now uses local helper functions to preserve
+  the same route assertions with lower single-function complexity.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.

@@ -71,6 +71,17 @@
     and divergence coverage now live in focused test modules.
 23. Gateway test module split: post/cancel, signer-provider, and read-only
     reconcile-reader coverage now live in focused test modules.
+24. Service specialized runtime-worker test split: resource/reconcile,
+    websocket/geoblock, and crash-recovery coverage now live in focused test
+    modules.
+25. Runtime breakdown/evaluation test split: capability grouping, worker-loop,
+    provider-fed loop, lease/resource, reconcile/websocket/geoblock, and crash
+    recovery coverage now live in focused test modules.
+26. In-memory store admin/sign-only test split: admin-audit and sign-only
+    lifecycle coverage now live in focused test modules.
+27. HTTP fake scaffold helper extraction: the same E2E assertion flow now runs
+    through local helper functions to reduce single-function complexity without
+    changing behavior.
 
 ## Still blocked
 
