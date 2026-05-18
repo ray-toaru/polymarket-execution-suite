@@ -94,6 +94,16 @@ def rust_source_text(src: Path) -> str:
     )
 
 
+def rust_file_with_modules_text(src: Path) -> str:
+    texts: list[str] = []
+    if src.exists():
+        texts.append(src.read_text())
+    module_dir = src.with_suffix("")
+    if module_dir.is_dir():
+        texts.extend(path.read_text() for path in sorted(module_dir.rglob("*.rs")))
+    return "\n".join(texts)
+
+
 def rust_routes() -> set[str]:
     text = rust_source_text(API_SRC)
     return {
@@ -384,7 +394,7 @@ def validate_v12_service_layer() -> None:
         fail("missing current gate runner")
     if not API_POSTGRES_E2E_TEST.exists():
         fail("missing HTTP PostgreSQL E2E test source")
-    pg_test_text = API_POSTGRES_E2E_TEST.read_text()
+    pg_test_text = rust_file_with_modules_text(API_POSTGRES_E2E_TEST)
     for needle in [
         'http_postgres_backed_e2e_smoke',
         'http_postgres_rejects_cross_object_graph_and_bad_plan_hash',
@@ -404,7 +414,7 @@ def validate_v15_admin_audit_and_runtime_provider() -> None:
     store_text = rust_source_text(STORE_SRC)
     postgres_text = rust_source_text(STORE_SRC)
     api_text = rust_source_text(API_SRC)
-    pg_test_text = API_POSTGRES_E2E_TEST.read_text()
+    pg_test_text = rust_file_with_modules_text(API_POSTGRES_E2E_TEST)
     for needle in [
         "pub struct AdminAuditEvent",
         "pub trait AdminAuditStore",
@@ -453,7 +463,7 @@ def validate_v16_postgres_runtime_provider() -> None:
     store_text = rust_source_text(STORE_SRC)
     postgres_text = rust_source_text(STORE_SRC)
     api_text = rust_source_text(API_SRC)
-    pg_test_text = API_POSTGRES_E2E_TEST.read_text()
+    pg_test_text = rust_file_with_modules_text(API_POSTGRES_E2E_TEST)
     spike_text = SDK_SPIKE_RS.read_text()
     for needle in [
         "pub struct ExecutionLifecycleEvent",

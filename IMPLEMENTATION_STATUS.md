@@ -67,6 +67,9 @@
   fail-closed, PG parity, cancel/reconcile, and divergence assertions.
 - The parent `pmx-service` service test file now only holds shared helpers and
   module declarations; all service tests have moved to focused modules.
+- HTTP PostgreSQL API E2E tests now live in focused modules for smoke,
+  object-graph/plan-hash rejection, runtime-state gating, and admin-audit
+  coverage; the parent file only keeps shared helpers and module declarations.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.

@@ -57,6 +57,8 @@
     live in focused service test modules.
 17. Service test parent-file cleanup: `pmx-service/src/service_tests.rs` now
     only keeps shared helpers and module declarations.
+18. HTTP PostgreSQL API E2E module split: smoke, negative-path, runtime-state,
+    and admin-audit coverage now live in focused test modules.
 
 ## Still blocked
 
