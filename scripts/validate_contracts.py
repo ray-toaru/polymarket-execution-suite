@@ -298,7 +298,7 @@ def validate_v09_official_adapter_boundary() -> None:
         fail("missing official SDK adapter boundary crate source")
     if not SDK_ADAPTER_TOML.exists():
         fail("missing official SDK adapter boundary Cargo.toml")
-    adapter_text = SDK_ADAPTER_RS.read_text()
+    adapter_text = rust_source_text(SDK_ADAPTER_SRC)
     adapter_toml = SDK_ADAPTER_TOML.read_text()
     required_tokens = [
         "OfficialSdkAdapterConfig",
