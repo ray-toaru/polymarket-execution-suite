@@ -6,6 +6,7 @@
 - Server-authoritative execution service scaffold.
 - PostgreSQL-backed store scaffolding for core execution data.
 - Sign-only lifecycle API, store path, query path, and idempotency field.
+- Sign-only lifecycle PostgreSQL concurrency proof for `client_event_id` replay, mismatch rejection, and terminal-state rejection.
 - Runtime worker observation and heartbeat store scaffolding.
 - Non-live cancel/reconcile lifecycle event recording.
 - Lifecycle and admin audit query APIs.

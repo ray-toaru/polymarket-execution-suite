@@ -9,11 +9,14 @@
 
 ## Next source-hardening items
 
-1. Sign-only lifecycle concurrency and replay stress tests.
-2. Runtime worker heartbeat leases and real worker persistence.
-3. Persistent cancel/reconcile lifecycle beyond non-live placeholders.
-4. Audit query pagination and typed per-event payload bodies.
-5. Shadow dry-run and rollback drills.
+1. Runtime worker heartbeat leases and real worker persistence.
+2. Persistent cancel/reconcile lifecycle beyond non-live placeholders.
+3. Audit query pagination and typed per-event payload bodies.
+4. Shadow dry-run and rollback drills.
+
+## Recently landed hardening
+
+1. Sign-only lifecycle PostgreSQL concurrency and replay stress test for `client_event_id`, mismatched replay rejection, and terminal-state rejection.
 
 ## Still blocked
 
