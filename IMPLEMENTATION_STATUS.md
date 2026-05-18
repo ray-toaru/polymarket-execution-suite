@@ -34,6 +34,9 @@
 - Rollback/kill-switch drill covers runtime degraded, SDK failure, PostgreSQL
   unavailable, geoblock blocked, low resource, and remote-unknown freeze
   fallback behavior.
+- Shadow and rollback drill safety guards validate non-posting/non-signing
+  behavior, hashed identifiers, sensitive-env redaction, required rollback
+  scenarios, and fallback modes without requiring network access.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.

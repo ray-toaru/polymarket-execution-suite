@@ -9,7 +9,8 @@
 
 ## Next source-hardening items
 
-1. Shadow dry-run and rollback drills.
+1. No remaining v0.25 source-hardening item is currently open. Continue with
+   validation replay and release evidence refresh before any new feature scope.
 
 ## Recently landed hardening
 
@@ -23,6 +24,10 @@
    cursor/filter behavior is covered in in-memory and PostgreSQL stores, and
    non-live cancel/reconcile/divergence payloads are serialized from typed
    service-layer constructors without exposing raw signed material.
+5. Shadow dry-run and rollback drill hardening: the shadow drill now has
+   script-level invariant checks for non-posting, non-signing, hashed
+   identifiers, and redacted sensitive-env handling; rollback drills now have
+   scenario/fallback validation and a network-free guard captured in evidence.
 
 ## Still blocked
 
