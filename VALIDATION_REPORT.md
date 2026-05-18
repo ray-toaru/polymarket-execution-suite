@@ -27,7 +27,7 @@ python polymarket-execution-engine/validation/check_runtime_worker_models.py
 python polymarket-execution-engine/validation/check_current_lifecycle_api.py
 python polymarket-execution-engine/validation/check_current_evidence_manifest.py
 python polymarket-execution-engine/validation/check_docs_evidence_governance.py
-python polymarket-execution-engine/scripts/check_release_hygiene.py .
+python polymarket-execution-engine/scripts/check_release_hygiene.py . --dev-worktree
 ```
 
 ## Full gate evidence
