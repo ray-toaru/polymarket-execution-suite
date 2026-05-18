@@ -59,6 +59,9 @@
 - In-memory store tests now live in focused modules for common helpers,
   admin/sign-only behavior, runtime observations, runtime worker health, and
   order lifecycle.
+- Service flow and sign-only orchestration tests now live in focused modules
+  while preserving submit blocking, object-graph conflict, lifecycle sequence,
+  standard sign-only digest, and malformed digest assertions.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.

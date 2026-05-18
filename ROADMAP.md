@@ -50,6 +50,8 @@
 14. In-memory store test module split: common helpers, admin/sign-only,
     runtime observation, runtime worker, and order lifecycle tests now live in
     focused modules.
+15. Service flow/sign-only test module split: base flow and sign-only
+    orchestration tests now live in focused service test modules.
 
 ## Still blocked
 
