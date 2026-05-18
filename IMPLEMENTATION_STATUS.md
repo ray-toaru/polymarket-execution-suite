@@ -118,6 +118,16 @@
   and reject-path coverage into focused modules.
 - Runtime breakdown capability tests now also separate blocking, capability
   grouping, and store-write fail-closed coverage into focused modules.
+- PostgreSQL order-lifecycle tests now also separate persistence, replay, and
+  reconcile-backlog coverage into focused modules.
+- PostgreSQL sign-only tests now also separate persistence and concurrent
+  idempotency coverage into focused modules.
+- PostgreSQL runtime-state tests now also separate state-loading/degradation
+  and observation-write coverage into focused modules.
+- Service standard sign-only implementation now separates request validation,
+  digest/ref derivation, and lifecycle persistence/replay helpers.
+- PostgreSQL order-lifecycle write implementation now separates upsert,
+  replay lookup/conflict handling, and event-apply SQL paths.
 - The HTTP fake scaffold E2E test now uses local helper functions to preserve
   the same route assertions with lower single-function complexity.
 - The HTTP fake scaffold E2E test now also keeps compile, submit/sign-only,

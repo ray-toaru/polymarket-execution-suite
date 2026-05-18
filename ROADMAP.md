@@ -113,6 +113,17 @@
     reject-path coverage now live in focused modules.
 39. Runtime breakdown capability split: blocking, capability-group, and
     store-write fail-closed coverage now live in focused modules.
+40. PostgreSQL order-lifecycle test split: persistence, replay, and
+    reconcile-backlog coverage now live in focused modules.
+41. PostgreSQL sign-only test split: persistence and concurrent idempotency
+    coverage now live in focused modules.
+42. PostgreSQL runtime-state test split: state-loading/degradation and
+    observation-write coverage now live in focused modules.
+43. Service standard sign-only implementation split: request validation,
+    digest/ref derivation, and lifecycle persistence/replay helpers now live in
+    focused modules.
+44. PostgreSQL order-lifecycle write split: upsert, replay/conflict handling,
+    and event-apply SQL paths now live in focused modules.
 
 ## Still blocked
 
