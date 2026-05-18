@@ -32,6 +32,9 @@
 6. Rust module governance first split: sign-only service lifecycle/standard
    construction and PostgreSQL audit/execution-lifecycle persistence were moved
    behind smaller module boundaries without public API changes.
+7. SDK mapping module split: official SDK adapter mapping normalization and
+   validation helpers now live behind smaller internal module boundaries without
+   changing the public adapter API.
 
 ## Still blocked
 

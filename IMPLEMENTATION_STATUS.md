@@ -40,6 +40,8 @@
 - First Rust module governance split keeps behavior stable while separating
   service sign-only lifecycle/standard construction and PostgreSQL
   audit/execution-lifecycle persistence modules.
+- SDK adapter mapping helpers were split into normalization and validation
+  modules while preserving the public mapping function and sign-only behavior.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.
