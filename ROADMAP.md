@@ -37,6 +37,8 @@
    changing the public adapter API.
 8. SDK liveness module split: SDK error normalization now lives behind a
    feature-gated internal module with public liveness exports preserved.
+9. PostgreSQL runtime worker module split: worker heartbeat writes,
+   observation writes, and status queries now live behind smaller store modules.
 
 ## Still blocked
 

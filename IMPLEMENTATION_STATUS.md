@@ -44,6 +44,8 @@
   modules while preserving the public mapping function and sign-only behavior.
 - SDK error normalization was split out of adapter liveness into a feature-gated
   internal module without changing public exports.
+- PostgreSQL runtime worker persistence was split into heartbeat, observation,
+  and status-query implementation modules.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.
