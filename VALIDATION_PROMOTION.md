@@ -1,8 +1,8 @@
-# v0.23.1 validation-promotion plan
+# Historical v0.23.1 validation-promotion plan
 
 ## Objective
 
-Turn the current v0.23 source candidate into an auditable, repeatable promotion candidate. This batch is validation-only by default; it must not add live trading capability.
+This historical plan turned the v0.23 source candidate into an auditable, repeatable promotion candidate. This batch is validation-only by default; it must not add live trading capability.
 
 ## P0: external validation closure
 

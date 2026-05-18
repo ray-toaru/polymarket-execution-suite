@@ -48,11 +48,14 @@ def sha256(path: Path) -> str | None:
 
 
 def git_info(path: Path) -> dict[str, object]:
+    status = run(["git", "status", "--short"], cwd=path).get("stdout")
+    status_lines = [line for line in str(status).splitlines() if line.strip()]
     return {
         "path": str(path.relative_to(ROOT)) if path != ROOT else ".",
         "branch": run(["git", "branch", "--show-current"], cwd=path).get("stdout"),
         "head": run(["git", "rev-parse", "HEAD"], cwd=path).get("stdout"),
-        "status_short": run(["git", "status", "--short"], cwd=path).get("stdout"),
+        "status_clean": not status_lines,
+        "status_entry_count": len(status_lines),
     }
 
 

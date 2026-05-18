@@ -117,9 +117,9 @@ def main() -> int:
     if "./validation/run_current_gates.sh" not in ci:
         failures.append("CI must run validation/run_current_gates.sh")
     current_gate = read("polymarket-execution-engine/validation/run_current_gates.sh")
-    if "run_v0_23_gates.sh" not in current_gate:
-        failures.append("run_current_gates.sh must delegate to run_v0_23_gates.sh")
-    if "./validation/run_v0_21_gates.sh" in ci or "./validation/run_v0_22_gates.sh" in ci or "./validation/run_v0_23_gates.sh" in ci:
+    if "run_v0_24_gates.sh" not in current_gate:
+        failures.append("run_current_gates.sh must delegate to run_v0_24_gates.sh")
+    if "./validation/run_v0_21_gates.sh" in ci or "./validation/run_v0_22_gates.sh" in ci or "./validation/run_v0_24_gates.sh" in ci:
         failures.append("CI must not bypass run_current_gates.sh or run stale versioned gates for current rust-prelive job")
 
     for lock_rel in [

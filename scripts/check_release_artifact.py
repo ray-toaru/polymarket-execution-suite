@@ -65,8 +65,6 @@ def stale_engine_doc(member: str, expected_root: str) -> bool:
     rel = member[len(prefix) :]
     if "/" in rel:
         return False
-    if rel == "V0_23_SOURCE_CANDIDATE.md":
-        return False
     return rel.startswith("V0_") and rel.endswith(".md")
 
 def main() -> int:

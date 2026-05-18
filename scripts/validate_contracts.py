@@ -626,7 +626,7 @@ def validate_v23_lifecycle_query_and_hardening() -> None:
     service = SERVICE_RS.read_text()
     policy = (EXECUTOR / "crates/pmx-policy/src/lib.rs").read_text()
     sql = SQL.read_text()
-    gate = (EXECUTOR / "validation/run_v0_23_gates.sh").read_text()
+    gate = (EXECUTOR / "validation/run_v0_24_gates.sh").read_text()
 
     required_by_file = {
         "openapi": (openapi, [
@@ -722,10 +722,10 @@ def validate_v23_lifecycle_query_and_hardening() -> None:
         ]),
         "gate": (gate, [
             "run_current_gates.sh",
-            "check_v0_23_lifecycle_api.py",
+            "check_current_lifecycle_api.py",
             "check_version_consistency.py",
             "check_docs_evidence_governance.py",
-            "write_v0_23_evidence_manifest.py",
+            "write_current_evidence_manifest.py",
             "check_runtime_worker_status_query.py",
             "42-runtime-worker-status-query.log",
             "evidence/current",
@@ -734,17 +734,17 @@ def validate_v23_lifecycle_query_and_hardening() -> None:
     for label, (text, needles) in required_by_file.items():
         for needle in needles:
             if needle not in text:
-                fail(f"v0.23 {label} missing token: {needle}")
+                fail(f"current {label} missing token: {needle}")
 
     if core.count("pub client_event_id: Option<String>") != 1:
-        fail("v0.23 SignOnlyLifecycleRecord must have exactly one client_event_id field")
+        fail("current SignOnlyLifecycleRecord must have exactly one client_event_id field")
     if store.count("pub observed_at: Option<DateTime<Utc>>") != 1:
-        fail("v0.23 RuntimeWorkerObservation must have exactly one observed_at field")
+        fail("current RuntimeWorkerObservation must have exactly one observed_at field")
     if "SignedOrderEnvelope" in openapi or "signed_payload" in openapi:
-        fail("v0.23 public OpenAPI must not expose signed payload internals")
+        fail("current public OpenAPI must not expose signed payload internals")
 
 
-def validate_v023_hermes_client_surface() -> None:
+def validate_current_hermes_client_surface() -> None:
     client_text = (CONTROL / "src/hermes_polymarket_control/client.py").read_text()
     model_text = (CONTROL / "src/hermes_polymarket_control/models.py").read_text()
     for needle in [
@@ -760,7 +760,7 @@ def validate_v023_hermes_client_surface() -> None:
         "X-Correlation-Id",
     ]:
         if needle not in client_text:
-            fail(f"Hermes v0.23 client surface missing token: {needle}")
+            fail(f"Hermes current client surface missing token: {needle}")
     for needle in [
         "class SignOnlyLifecycleRecord",
         "client_event_id",
@@ -773,33 +773,33 @@ def validate_v023_hermes_client_surface() -> None:
         "sign-only lifecycle records must not contain remote side effects",
     ]:
         if needle not in model_text:
-            fail(f"Hermes v0.23 model surface missing token: {needle}")
+            fail(f"Hermes current model surface missing token: {needle}")
 
 
-def validate_v023_evidence_manifest_guard() -> None:
+def validate_current_evidence_manifest_guard() -> None:
     manifest = EXECUTOR / "validation/templates/evidence_manifest.template.json"
     current_manifest = EXECUTOR / "evidence/current/manifest.json"
-    guard = EXECUTOR / "validation/check_v0_23_evidence_manifest.py"
+    guard = EXECUTOR / "validation/check_current_evidence_manifest.py"
     governance_guard = EXECUTOR / "validation/check_docs_evidence_governance.py"
-    writer = EXECUTOR / "validation/write_v0_23_evidence_manifest.py"
+    writer = EXECUTOR / "validation/write_current_evidence_manifest.py"
     if not manifest.exists():
-        fail("v0.23 evidence manifest template missing from validation/templates")
+        fail("current evidence manifest template missing from validation/templates")
     if not guard.exists():
-        fail("v0.23 evidence manifest guard missing")
+        fail("current evidence manifest guard missing")
     if not governance_guard.exists():
-        fail("v0.23 docs/evidence governance guard missing")
+        fail("current docs/evidence governance guard missing")
     if not writer.exists():
-        fail("v0.23 evidence manifest writer missing")
+        fail("current evidence manifest writer missing")
     data = json.loads(manifest.read_text())
     expected_version = (ROOT / "VERSION").read_text().strip()
     if data.get("version") != expected_version:
-        fail(f"v0.23 evidence manifest template must use version {expected_version}")
+        fail(f"current evidence manifest template must use version {expected_version}")
     if data.get("canonical_evidence_dir") != "polymarket-execution-engine/evidence/current":
-        fail("v0.23 evidence manifest template must point to evidence/current")
+        fail("current evidence manifest template must point to evidence/current")
     if not current_manifest.exists():
-        fail("v0.23 current evidence manifest missing")
+        fail("current evidence manifest missing")
     if data.get("release_decision", {}).get("validated_release") is not False:
-        fail("v0.23 evidence template must not mark validated_release=true")
+        fail("current evidence template must not mark validated_release=true")
     for section in [
         "rust_workspace_validation",
         "postgres_validation",
@@ -807,23 +807,23 @@ def validate_v023_evidence_manifest_guard() -> None:
         "credentialed_non_trading_validation",
     ]:
         if data.get(section, {}).get("status") != "pending":
-            fail(f"v0.23 evidence template {section} must stay pending")
+            fail(f"current evidence template {section} must stay pending")
     guard_text = guard.read_text()
     for needle in ["validated_release=true", "non-pass evidence sections", "artifact_kind=validated_release", "artifact.sha256"]:
         if needle not in guard_text:
-            fail(f"v0.23 evidence guard missing token: {needle}")
+            fail(f"current evidence guard missing token: {needle}")
     governance_text = governance_guard.read_text()
     for needle in ["docs/evidence governance guard passed", "canonical evidence manifest", "archive-excluded-from-release-package"]:
         if needle not in governance_text:
-            fail(f"v0.23 docs/evidence governance guard missing token: {needle}")
+            fail(f"current docs/evidence governance guard missing token: {needle}")
     writer_text = writer.read_text()
     for needle in ["canonical_evidence_dir", "artifact", "sha256", "generated_from_gate_logs", "runtime_worker_status_validation"]:
         if needle not in writer_text:
-            fail(f"v0.23 evidence manifest writer missing token: {needle}")
+            fail(f"current evidence manifest writer missing token: {needle}")
 
 
 
-def validate_v023_docs_and_release_governance() -> None:
+def validate_current_docs_and_release_governance() -> None:
     package_text = (ROOT / "scripts/package_release.py").read_text()
     artifact_text = (ROOT / "scripts/check_release_artifact.py").read_text()
     release = json.loads((EXECUTOR / "release/manifest.json").read_text())
@@ -843,14 +843,13 @@ def validate_v023_docs_and_release_governance() -> None:
     active_versioned_engine_docs = [
         path.name
         for path in (EXECUTOR / "docs").glob("V0_*.md")
-        if path.name != "V0_23_SOURCE_CANDIDATE.md"
     ]
     if active_versioned_engine_docs:
         fail("stale execution-engine versioned docs remain outside docs/archive: " + ", ".join(sorted(active_versioned_engine_docs)))
     active_old_gates = [
         path.name
         for path in (EXECUTOR / "validation").glob("run_v0_*_gates.sh")
-        if path.name != "run_v0_23_gates.sh"
+        if path.name != "run_v0_24_gates.sh"
     ]
     if active_old_gates:
         fail("stale gate scripts remain outside validation/archive: " + ", ".join(sorted(active_old_gates)))
@@ -881,9 +880,9 @@ def main() -> None:
     validate_v20_plan_storage_and_packaging()
     validate_v21_sign_only_and_runtime_models()
     validate_v23_lifecycle_query_and_hardening()
-    validate_v023_hermes_client_surface()
-    validate_v023_evidence_manifest_guard()
-    validate_v023_docs_and_release_governance()
+    validate_current_hermes_client_surface()
+    validate_current_evidence_manifest_guard()
+    validate_current_docs_and_release_governance()
     print(json.dumps({"status": "ok", "paths": len(spec["paths"]), "schemas": len(spec["components"]["schemas"])}))
 
 
