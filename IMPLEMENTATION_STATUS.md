@@ -56,6 +56,9 @@
 - PostgreSQL schema, receipt/reservation, execution lifecycle, and runtime-state
   PG tests now live in focused modules; the parent PG test file now only holds
   shared setup helpers and module declarations.
+- In-memory store tests now live in focused modules for common helpers,
+  admin/sign-only behavior, runtime observations, runtime worker health, and
+  order lifecycle.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.

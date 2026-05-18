@@ -47,6 +47,9 @@
     submit idempotency replay/conflict tests now live in focused PG modules.
 13. PostgreSQL remaining test split: schema, receipt/reservation, execution
     lifecycle, and runtime-state PG tests now live in focused modules.
+14. In-memory store test module split: common helpers, admin/sign-only,
+    runtime observation, runtime worker, and order lifecycle tests now live in
+    focused modules.
 
 ## Still blocked
 
