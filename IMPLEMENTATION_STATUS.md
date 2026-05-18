@@ -8,6 +8,9 @@
 - Sign-only lifecycle API, store path, query path, and idempotency field.
 - Sign-only lifecycle PostgreSQL concurrency proof for `client_event_id` replay, mismatch rejection, and terminal-state rejection.
 - Runtime worker observation and heartbeat store scaffolding.
+- Runtime heartbeat lease persistence path that writes local worker health,
+  reads persisted candidates, elects lease ownership, and records fail-closed
+  runtime observations with in-memory and PostgreSQL-backed tests.
 - Non-live cancel/reconcile lifecycle event recording.
 - Lifecycle and admin audit query APIs.
 - Redacted lifecycle payload envelope at public API/model level.
