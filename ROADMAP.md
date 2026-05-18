@@ -45,6 +45,8 @@
     client-event idempotency tests now live in a focused PG test module.
 12. PostgreSQL admin/idempotency test module split: admin audit pagination and
     submit idempotency replay/conflict tests now live in focused PG modules.
+13. PostgreSQL remaining test split: schema, receipt/reservation, execution
+    lifecycle, and runtime-state PG tests now live in focused modules.
 
 ## Still blocked
 

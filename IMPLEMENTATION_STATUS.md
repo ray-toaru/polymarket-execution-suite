@@ -53,6 +53,9 @@
 - PostgreSQL admin audit and submit idempotency PG tests now live in focused
   test modules while preserving the same pagination, replay, conflict, and
   in-progress assertions.
+- PostgreSQL schema, receipt/reservation, execution lifecycle, and runtime-state
+  PG tests now live in focused modules; the parent PG test file now only holds
+  shared setup helpers and module declarations.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.
