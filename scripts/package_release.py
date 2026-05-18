@@ -12,7 +12,8 @@ from datetime import datetime, timezone
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "VERSION").read_text().strip()
 ARCHIVE_ROOT = f"polymarket_dual_project_v{VERSION.replace('.', '_')}"
-OUT = ROOT.parent / f"polymarket-dual-project-v{VERSION}.zip"
+DIST = ROOT / "dist"
+OUT = DIST / f"polymarket-dual-project-v{VERSION}.zip"
 FORBIDDEN_PARTS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", "target"}
 FORBIDDEN_SUFFIXES = {".pyc", ".pyo", ".db", ".sqlite", ".sqlite3"}
 FORBIDDEN_FILENAMES = {".env"}
@@ -66,6 +67,7 @@ def main() -> int:
     if not VERSION:
         print("VERSION file is empty", file=sys.stderr)
         return 1
+    DIST.mkdir(exist_ok=True)
     if OUT.exists():
         OUT.unlink()
     with ZipFile(OUT, "w", ZIP_DEFLATED) as zf:
