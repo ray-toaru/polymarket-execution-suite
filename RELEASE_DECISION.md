@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: f0680017a37d5647a0abd2e44e0642a4b7b762da
-polymarket-execution-engine: 3d38e98c5e087bc5de280e33091fd5d53ff3506b
+polymarket-execution-engine: 91395ac4a3d153f4669ecf52fdfc4ac1c0f813b5
 ```
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce

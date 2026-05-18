@@ -90,6 +90,19 @@
     modules.
 30. Service non-live lifecycle sub-split: cancel/reconcile recording and
     divergence escalation now live in focused modules.
+31. Service sign-only sub-split: lifecycle sequencing and standard sign-only
+    construction/redaction coverage now live in focused modules.
+32. Service specialized runtime-worker sub-split: resource-refresh and
+    reconcile-backlog coverage now live in separate focused modules.
+33. HTTP fake scaffold phase split: compile, submit/sign-only, admin, and
+    public-query helpers now live in focused modules while preserving one E2E
+    entry test.
+34. HTTP PostgreSQL smoke phase split: compile/submit, sign-only, admin
+    lifecycle, and public-query helpers now live in focused modules while
+    preserving one E2E entry test.
+35. HTTP PostgreSQL runtime phase split: runtime-state/degraded checks and
+    ready-plan/blocked-submit verification now live in focused modules while
+    preserving one E2E entry test.
 
 ## Still blocked
 

@@ -97,6 +97,11 @@
   persisted/PostgreSQL lease-owner parity behavior.
 - Service non-live order lifecycle tests now live in focused modules for
   cancel/reconcile recording and divergence escalation behavior.
+- Service sign-only tests now live in finer-grained modules for lifecycle
+  sequencing and standard sign-only construction/redaction behavior.
+- Service specialized runtime-worker tests now also separate dedicated
+  resource-refresh and reconcile-backlog modules instead of sharing a mixed
+  resource/reconcile parent file.
 - Runtime breakdown/evaluation tests now live in finer-grained focused modules
   for capability grouping, worker-loop behavior, provider-fed loop behavior,
   lease/resource evaluation, reconcile/websocket/geoblock evaluation, and
@@ -105,6 +110,15 @@
   admin-audit behavior and sign-only lifecycle behavior.
 - The HTTP fake scaffold E2E test now uses local helper functions to preserve
   the same route assertions with lower single-function complexity.
+- The HTTP fake scaffold E2E test now also keeps compile, submit/sign-only,
+  admin, and public-query phases in focused helper modules while preserving the
+  same single test flow.
+- The HTTP PostgreSQL smoke E2E test now keeps compile/submit, sign-only,
+  admin lifecycle, and public-query phases in focused helper modules while
+  preserving the same single test flow.
+- The HTTP PostgreSQL runtime E2E test now keeps runtime-state/degraded checks
+  and ready-plan/blocked-submit verification in focused helper modules while
+  preserving the same single test flow.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.
