@@ -82,7 +82,7 @@ Current evidence:
   `polymarket-dual-project-v0.24.0.zip.sha256` and
   `polymarket-dual-project-v0.24.0.zip.evidence.json`
 - Current artifact SHA-256:
-  `8394008eed3dde30b86893466fec8952b6317d3faec2525e31df77028b1c0c21`
+  recorded in the external sidecars generated with the artifact
 
 ## Explicit non-claims
 
