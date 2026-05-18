@@ -62,6 +62,9 @@
 - Service flow and sign-only orchestration tests now live in focused modules
   while preserving submit blocking, object-graph conflict, lifecycle sequence,
   standard sign-only digest, and malformed digest assertions.
+- Service runtime-worker basic, heartbeat lease/continuous tick, and non-live
+  order lifecycle tests now live in focused modules while preserving
+  fail-closed, PG parity, cancel/reconcile, and divergence assertions.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.

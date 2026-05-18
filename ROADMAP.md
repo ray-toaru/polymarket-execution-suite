@@ -52,6 +52,9 @@
     focused modules.
 15. Service flow/sign-only test module split: base flow and sign-only
     orchestration tests now live in focused service test modules.
+16. Service runtime/order-lifecycle test module split: runtime-worker basic,
+    heartbeat lease/continuous tick, and non-live order lifecycle tests now
+    live in focused service test modules.
 
 ## Still blocked
 
