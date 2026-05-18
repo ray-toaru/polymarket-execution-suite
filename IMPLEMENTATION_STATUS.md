@@ -89,6 +89,14 @@
   file now only keeps shared helpers and module declarations.
 - Service specialized runtime-worker tests now live in focused modules for
   resource/reconcile, websocket/geoblock, and crash-recovery behavior.
+- Service runtime-worker basic tests now live in finer-grained modules for
+  provider-backed state, runtime signal/tick fail-closed behavior, and
+  runtime-worker status query coverage.
+- Service runtime-worker lease tests now live in finer-grained modules for
+  continuous provider snapshots, fail-closed lease election, and
+  persisted/PostgreSQL lease-owner parity behavior.
+- Service non-live order lifecycle tests now live in focused modules for
+  cancel/reconcile recording and divergence escalation behavior.
 - Runtime breakdown/evaluation tests now live in finer-grained focused modules
   for capability grouping, worker-loop behavior, provider-fed loop behavior,
   lease/resource evaluation, reconcile/websocket/geoblock evaluation, and

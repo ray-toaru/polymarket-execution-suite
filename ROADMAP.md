@@ -82,6 +82,14 @@
 27. HTTP fake scaffold helper extraction: the same E2E assertion flow now runs
     through local helper functions to reduce single-function complexity without
     changing behavior.
+28. Service runtime-worker basic sub-split: provider state, runtime
+    signals/ticks, and worker-status query coverage now live in finer-grained
+    focused modules.
+29. Service runtime-worker lease sub-split: continuous snapshots, lease
+    election, and persisted/PostgreSQL owner parity now live in focused
+    modules.
+30. Service non-live lifecycle sub-split: cancel/reconcile recording and
+    divergence escalation now live in focused modules.
 
 ## Still blocked
 
