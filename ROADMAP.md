@@ -67,6 +67,10 @@
 21. HTTP fake/in-memory API E2E module split: auth/smoke, scaffolded lifecycle,
     and negative startup/object-graph coverage now live in focused test
     modules.
+22. Core domain test module split: intent normalization, lifecycle transition,
+    and divergence coverage now live in focused test modules.
+23. Gateway test module split: post/cancel, signer-provider, and read-only
+    reconcile-reader coverage now live in focused test modules.
 
 ## Still blocked
 

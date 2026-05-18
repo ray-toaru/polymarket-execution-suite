@@ -81,6 +81,12 @@
   scaffolded non-live lifecycle coverage, and negative startup/object-graph
   behavior; the parent file now only keeps shared helpers and module
   declarations.
+- Core domain tests now live in focused modules for intent normalization,
+  lifecycle transitions, and divergence classification; the parent domain test
+  file now only keeps shared helpers and module declarations.
+- Gateway tests now live in focused modules for post/cancel flows, signer
+  provider boundaries, and read-only reconcile-reader behavior; the parent test
+  file now only keeps shared helpers and module declarations.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.
