@@ -43,6 +43,8 @@
     order-lifecycle PG tests now live in focused test modules.
 11. PostgreSQL sign-only test module split: sign-only lifecycle persistence and
     client-event idempotency tests now live in a focused PG test module.
+12. PostgreSQL admin/idempotency test module split: admin audit pagination and
+    submit idempotency replay/conflict tests now live in focused PG modules.
 
 ## Still blocked
 

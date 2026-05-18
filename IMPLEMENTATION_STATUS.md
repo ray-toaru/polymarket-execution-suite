@@ -50,6 +50,9 @@
   order-lifecycle coverage into smaller focused modules.
 - PostgreSQL sign-only lifecycle PG tests now live in a focused test module
   with the same idempotency and no-remote-side-effect assertions.
+- PostgreSQL admin audit and submit idempotency PG tests now live in focused
+  test modules while preserving the same pagination, replay, conflict, and
+  in-progress assertions.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.
