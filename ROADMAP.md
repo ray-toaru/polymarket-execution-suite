@@ -10,7 +10,8 @@
 ## Next source-hardening items
 
 1. No remaining v0.25 source-hardening item is currently open. Continue with
-   validation replay and release evidence refresh before any new feature scope.
+   validation replay, release evidence refresh, and behavior-preserving Rust
+   module governance before any new feature scope.
 
 ## Recently landed hardening
 
@@ -28,6 +29,9 @@
    script-level invariant checks for non-posting, non-signing, hashed
    identifiers, and redacted sensitive-env handling; rollback drills now have
    scenario/fallback validation and a network-free guard captured in evidence.
+6. Rust module governance first split: sign-only service lifecycle/standard
+   construction and PostgreSQL audit/execution-lifecycle persistence were moved
+   behind smaller module boundaries without public API changes.
 
 ## Still blocked
 

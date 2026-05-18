@@ -37,6 +37,9 @@
 - Shadow and rollback drill safety guards validate non-posting/non-signing
   behavior, hashed identifiers, sensitive-env redaction, required rollback
   scenarios, and fallback modes without requiring network access.
+- First Rust module governance split keeps behavior stable while separating
+  service sign-only lifecycle/standard construction and PostgreSQL
+  audit/execution-lifecycle persistence modules.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.
