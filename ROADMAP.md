@@ -62,6 +62,8 @@
 19. Official SDK adapter test module split: canary/config, sign-only, mapping,
     liveness/error, and feature-gated smoke/typecheck coverage now live in
     focused test modules.
+20. Runtime model test module split: breakdown/loop and evaluation coverage now
+    live in focused runtime test modules.
 
 ## Still blocked
 
