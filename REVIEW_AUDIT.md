@@ -1,4 +1,4 @@
-# Review audit — v0.24.0 shadow-ready baseline
+# Review audit — v0.25.0 shadow-ready SDK sign-only baseline
 
 ## Confirmed source-level improvements
 
@@ -28,5 +28,5 @@ recorded in external .zip.sha256 and .zip.evidence.json sidecars
 
 ## Current conclusion
 
-v0.24.0 shadow-ready baseline is a `shadow-ready candidate`. It is not a
+v0.25.0 shadow-ready SDK sign-only baseline is a `shadow-ready SDK sign-only candidate`. It is not a
 production/live-trading release.

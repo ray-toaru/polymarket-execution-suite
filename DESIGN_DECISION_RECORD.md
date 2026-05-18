@@ -1,4 +1,4 @@
-# Design decision record — v0.24.0
+# Design decision record — v0.25.0
 
 ## DDR-001: Two independent projects
 

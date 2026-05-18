@@ -7,7 +7,7 @@ import sys
 import zipfile
 from pathlib import Path
 
-FORBIDDEN_PARTS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", "target"}
+FORBIDDEN_PARTS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", "target", "dist"}
 FORBIDDEN_SUFFIXES = {".pyc", ".pyo", ".db", ".sqlite", ".sqlite3"}
 FORBIDDEN_FILENAMES = {".env"}
 FORBIDDEN_PREFIX_SUFFIXES = (

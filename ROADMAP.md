@@ -1,4 +1,4 @@
-# Roadmap — v0.24.0 shadow-ready baseline
+# Roadmap — v0.25.0 shadow-ready SDK sign-only baseline
 
 ## Immediate next validation
 
@@ -17,4 +17,4 @@
 
 ## Still blocked
 
-Live submit, live cancel, and production deployment remain blocked in v0.24.0 until a later release has canary/production evidence and an explicit release decision.
+Live submit, live cancel, and production deployment remain blocked in v0.25.0 until a later release has canary/production evidence and an explicit release decision.

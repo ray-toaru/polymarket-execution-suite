@@ -1,27 +1,27 @@
-# Release Decision — v0.24.0 shadow-ready baseline
+# Release Decision — v0.25.0 shadow-ready SDK sign-only baseline
 
 ## Decision
 
-Status: `shadow-ready candidate`
+Status: `shadow-ready SDK sign-only candidate`
 
 Allowed final statuses for this batch:
 
 - `validated source candidate`
-- `shadow-ready candidate`
+- `shadow-ready SDK sign-only candidate`
 - `not promotable`
 
-Current decision: `shadow-ready candidate`
+Current decision: `shadow-ready SDK sign-only candidate`
 
 ## Scope
 
 This decision applies to the integration repository at the pinned submodule revisions:
 
 ```text
-hermes-polymarket-control: 24e238ee55ab12942d63e40670c5b397fcf5a98f
-polymarket-execution-engine: d53c16de6acc4b2bafeeb9e59c7ff08a0ef72a5c
+hermes-polymarket-control: 56ef592e4169efbe91fd9f1d375e56df773043e1
+polymarket-execution-engine: 194d545750de24687c5b3a4722ce3c0d62570cc0
 ```
 
-The target is promotion of the v0.24.0 shadow-ready baseline. This batch does not introduce
+The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
 live trading capability.
 
 ## Required evidence
@@ -43,7 +43,7 @@ live trading capability.
 
 ## Promotion outcome
 
-Final status: `shadow-ready candidate`
+Final status: `shadow-ready SDK sign-only candidate`
 
 Rationale:
 
@@ -79,8 +79,8 @@ Current evidence:
 - Manifest: `polymarket-execution-engine/evidence/current/manifest.json`
 - Logs: `polymarket-execution-engine/evidence/current/logs/`
 - Artifact SHA-256: recorded outside the zip in
-  `polymarket-dual-project-v0.24.0.zip.sha256` and
-  `polymarket-dual-project-v0.24.0.zip.evidence.json`
+  `polymarket-dual-project-v0.25.0.zip.sha256` and
+  `polymarket-dual-project-v0.25.0.zip.evidence.json`
 - Current artifact SHA-256:
   recorded in the external sidecars generated with the artifact
 

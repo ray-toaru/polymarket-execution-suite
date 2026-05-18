@@ -1,4 +1,4 @@
-# Development handoff — v0.24.0 shadow-ready candidate
+# Development handoff — v0.25.0 shadow-ready SDK sign-only candidate
 
 ## Start here
 

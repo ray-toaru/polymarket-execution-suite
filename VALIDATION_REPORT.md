@@ -1,15 +1,15 @@
-# Validation report — v0.24.0 shadow-ready baseline
+# Validation report — v0.25.0 shadow-ready SDK sign-only baseline
 
 ## Current conclusion
 
 `polymarket-execution-engine/evidence/current/manifest.json` records a passing
 full gate run for the pinned source package. Current release decision remains
-`shadow-ready candidate`, not production-ready and not live-trading-ready.
+`shadow-ready SDK sign-only candidate`, not production-ready and not live-trading-ready.
 
 Bound artifact:
 
 ```text
-polymarket-dual-project-v0.24.0.zip
+polymarket-dual-project-v0.25.0.zip
 sha256=recorded in external .zip.sha256 and .zip.evidence.json sidecars
 ```
 

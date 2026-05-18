@@ -1,4 +1,4 @@
-# Dependency and environment policy — v0.24.0
+# Dependency and environment policy — v0.25.0
 
 ## Current baseline
 
@@ -21,4 +21,4 @@ Official SDK version: =0.6.0-canary.1
 
 ## Current limitation
 
-This v0.24.0 package requires Rust/SDK/PostgreSQL compatibility evidence from the current full gate before release promotion. `cargo check --workspace --locked`, SDK adapter checks, and PostgreSQL E2E must remain green for the bound artifact.
+This v0.25.0 package requires Rust/SDK/PostgreSQL compatibility evidence from the current full gate before release promotion. `cargo check --workspace --locked`, SDK adapter checks, and PostgreSQL E2E must remain green for the bound artifact.

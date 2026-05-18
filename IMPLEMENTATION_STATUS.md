@@ -1,4 +1,4 @@
-# Implementation status — v0.24.0 shadow-ready baseline
+# Implementation status — v0.25.0 shadow-ready SDK sign-only baseline
 
 ## Implemented source-level items
 
@@ -10,7 +10,7 @@
 - Non-live cancel/reconcile lifecycle event recording.
 - Lifecycle and admin audit query APIs.
 - Redacted lifecycle payload envelope at public API/model level.
-- v0.24 shadow-ready baseline gate runner, static guards, version guard, and docs/evidence governance guard.
+- v0.25 shadow-ready SDK sign-only baseline gate runner, static guards, version guard, and docs/evidence governance guard.
 - Runtime worker loop/tick models for heartbeat lease, resource refresh,
   reconcile backlog, WebSocket liveness, geoblock, and worker crash recovery.
 - Order lifecycle event query API and per-order correlation trace field.
@@ -49,5 +49,5 @@ artifact, shadow execution, observability, and governance checks:
 polymarket-execution-engine/evidence/current/manifest.json
 ```
 
-Current release status remains `shadow-ready candidate`; live submit/cancel and
+Current release status remains `shadow-ready SDK sign-only candidate`; live submit/cancel and
 production deployment are still intentionally blocked.

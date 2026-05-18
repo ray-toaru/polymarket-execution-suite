@@ -1,4 +1,4 @@
-# Tasks — v0.24.0
+# Tasks — v0.25.0
 
 ## Completed in governance cleanup
 
