@@ -41,6 +41,8 @@
    observation writes, and status queries now live behind smaller store modules.
 10. PostgreSQL repository test module split: runtime-worker health/status and
     order-lifecycle PG tests now live in focused test modules.
+11. PostgreSQL sign-only test module split: sign-only lifecycle persistence and
+    client-event idempotency tests now live in a focused PG test module.
 
 ## Still blocked
 

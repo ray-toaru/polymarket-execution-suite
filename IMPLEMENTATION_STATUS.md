@@ -48,6 +48,8 @@
   and status-query implementation modules.
 - PostgreSQL repository tests now split runtime-worker health/status and
   order-lifecycle coverage into smaller focused modules.
+- PostgreSQL sign-only lifecycle PG tests now live in a focused test module
+  with the same idempotency and no-remote-side-effect assertions.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.
