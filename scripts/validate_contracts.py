@@ -90,7 +90,7 @@ def normalize_path(path: str) -> str:
 def rust_source_text(src: Path) -> str:
     return "\n".join(
         path.read_text()
-        for path in sorted(src.glob("*.rs"))
+        for path in sorted(src.rglob("*.rs"))
     )
 
 
