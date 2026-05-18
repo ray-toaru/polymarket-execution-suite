@@ -203,7 +203,7 @@ def validate_v04_source_landings() -> None:
             fail(f"pmx-store missing advisory lock helper evidence: {needle}")
     if not POSTGRES_RS.exists():
         fail("missing PostgreSQL repository adapter source")
-    postgres_text = POSTGRES_RS.read_text()
+    postgres_text = rust_source_text(STORE_SRC)
     for needle in [
         "pub struct PostgresStore",
         "impl IdempotencyStore for PostgresStore",
@@ -401,7 +401,7 @@ def validate_v12_service_layer() -> None:
 def validate_v15_admin_audit_and_runtime_provider() -> None:
     service_text = rust_source_text(SERVICE_SRC)
     store_text = rust_source_text(STORE_SRC)
-    postgres_text = POSTGRES_RS.read_text()
+    postgres_text = rust_source_text(STORE_SRC)
     api_text = rust_source_text(API_SRC)
     pg_test_text = API_POSTGRES_E2E_TEST.read_text()
     for needle in [
@@ -450,7 +450,7 @@ def validate_v15_admin_audit_and_runtime_provider() -> None:
 def validate_v16_postgres_runtime_provider() -> None:
     service_text = rust_source_text(SERVICE_SRC)
     store_text = rust_source_text(STORE_SRC)
-    postgres_text = POSTGRES_RS.read_text()
+    postgres_text = rust_source_text(STORE_SRC)
     api_text = rust_source_text(API_SRC)
     pg_test_text = API_POSTGRES_E2E_TEST.read_text()
     spike_text = SDK_SPIKE_RS.read_text()
@@ -633,7 +633,7 @@ def validate_v23_lifecycle_query_and_hardening() -> None:
     api = rust_source_text(API_SRC)
     core = rust_source_text(CORE_SRC)
     store = rust_source_text(STORE_SRC)
-    postgres = POSTGRES_RS.read_text()
+    postgres = rust_source_text(STORE_SRC)
     service = rust_source_text(SERVICE_SRC)
     policy = (EXECUTOR / "crates/pmx-policy/src/lib.rs").read_text()
     sql = SQL.read_text()
