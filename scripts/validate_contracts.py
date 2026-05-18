@@ -40,6 +40,7 @@ FORBIDDEN_PUBLIC_TOKENS = [
 
 EXPECTED_202_PATHS = {
     "/v1/submissions": "submit_plan",
+    "/v1/sign-only/standard-constructions": "record_standard_sign_only_construction",
     "/v1/admin/kill-switch": "set_kill_switch",
     "/v1/admin/cancel-order": "cancel_order_placeholder",
     "/v1/admin/reconcile": "reconcile_placeholder",
@@ -64,6 +65,8 @@ PY_MODEL_BY_SCHEMA = {
     "OrderLifecycleDivergence": "OrderLifecycleDivergence",
     "ReconcileOrderLocalResponse": "ReconcileOrderLocalResponse",
     "SignOnlyLifecycleRecord": "SignOnlyLifecycleRecord",
+    "StandardSignOnlyConstructionRequest": "StandardSignOnlyConstructionRequest",
+    "StandardSignOnlyConstructionReceipt": "StandardSignOnlyConstructionReceipt",
     "RedactedPayloadEnvelope": "RedactedPayloadEnvelope",
     "ExecutionLifecycleEvent": "ExecutionLifecycleEvent",
     "AdminAuditEvent": "AdminAuditEvent",
