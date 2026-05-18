@@ -126,8 +126,14 @@
   and observation-write coverage into focused modules.
 - Service standard sign-only implementation now separates request validation,
   digest/ref derivation, and lifecycle persistence/replay helpers.
+- Service heartbeat lease tick implementation now separates lease-election
+  recording and store-backed heartbeat/status persistence helpers while
+  preserving the same public runtime-worker API and fail-closed behavior.
 - PostgreSQL order-lifecycle write implementation now separates upsert,
   replay lookup/conflict handling, and event-apply SQL paths.
+- In-memory order-lifecycle tests now also separate cancel-requested,
+  replay/conflict, invalid-transition, and reconcile-backlog coverage into
+  focused modules.
 - The HTTP fake scaffold E2E test now uses local helper functions to preserve
   the same route assertions with lower single-function complexity.
 - The HTTP fake scaffold E2E test now also keeps compile, submit/sign-only,

@@ -124,6 +124,11 @@
     focused modules.
 44. PostgreSQL order-lifecycle write split: upsert, replay/conflict handling,
     and event-apply SQL paths now live in focused modules.
+45. Service heartbeat lease tick split: lease-election recording and
+    store-backed heartbeat/status persistence now live in focused modules.
+46. In-memory order-lifecycle test split: cancel-requested, replay/conflict,
+    invalid-transition, and reconcile-backlog coverage now live in focused
+    modules.
 
 ## Still blocked
 
