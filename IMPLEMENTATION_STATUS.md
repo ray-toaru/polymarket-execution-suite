@@ -70,6 +70,10 @@
 - HTTP PostgreSQL API E2E tests now live in focused modules for smoke,
   object-graph/plan-hash rejection, runtime-state gating, and admin-audit
   coverage; the parent file only keeps shared helpers and module declarations.
+- Official SDK adapter tests now live in focused modules for canary/config,
+  sign-only lifecycle/profile behavior, plan mapping, liveness/error redaction,
+  and feature-gated smoke/typecheck coverage; the parent file only keeps shared
+  helpers and module declarations.
 - Observability evidence guard binds correlation id, redacted payload, order
   event trace, admin audit query, shadow trace, reconcile trace, and rollback
   fallback evidence.

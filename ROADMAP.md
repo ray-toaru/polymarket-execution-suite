@@ -59,6 +59,9 @@
     only keeps shared helpers and module declarations.
 18. HTTP PostgreSQL API E2E module split: smoke, negative-path, runtime-state,
     and admin-audit coverage now live in focused test modules.
+19. Official SDK adapter test module split: canary/config, sign-only, mapping,
+    liveness/error, and feature-gated smoke/typecheck coverage now live in
+    focused test modules.
 
 ## Still blocked
 
