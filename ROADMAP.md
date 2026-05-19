@@ -11,10 +11,12 @@
 
 1. `v0.25.0` is now in closure phase.
 2. Default-on Rust module governance is paused; see `CLOSURE_PHASE_PLAN.md`.
-3. Only continue:
+3. The next approved source batch is P1 canary-prep; see
+   `CANARY_PRODUCTION_ROADMAP.md`.
+4. Only continue:
    - validation replay after material code changes;
    - release/evidence consistency fixes;
-   - small structural fixes that unblock the next explicitly approved batch.
+   - small structural fixes that unblock the approved canary-prep batch.
 
 ## Recently landed hardening
 

@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: f0680017a37d5647a0abd2e44e0642a4b7b762da
-polymarket-execution-engine: 3df8b6b9f2ff58df48a7300c3bec37dcf831d1da
+polymarket-execution-engine: 4c80d6d4900aaf9885ee7337b24d210161e833bf
 ```
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
@@ -60,6 +60,8 @@ Rationale:
   explicit SDK sign-only default path, fail-closed live canary defaults, and
   production evidence controls are included in the pinned execution-engine
   source.
+- Canary drill validation now binds the public release gate entrypoint
+  `validation/run_current_gates.sh` to the current implementation gate chain.
 - Shadow execution evidence now runs by default in the current gate, and
   observability evidence is bound as an explicit manifest section.
 - Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.
