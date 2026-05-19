@@ -129,6 +129,8 @@
 46. In-memory order-lifecycle test split: cancel-requested, replay/conflict,
     invalid-transition, and reconcile-backlog coverage now live in focused
     modules.
+47. Core base module split: shared errors, typed ids, decimal validation, and
+    canonical JSON hashing/serialization helpers now live in focused modules.
 
 ## Still blocked
 

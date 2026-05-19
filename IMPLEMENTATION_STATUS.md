@@ -112,6 +112,9 @@
 - Core plan/control-plane models now live in focused modules for decision
   results, execution summaries/submit receipts, redaction envelopes, and
   control-plane request/receipt models.
+- Core base domain primitives now live in focused modules for shared errors,
+  typed ids, decimal validation, and canonical JSON hashing/serialization
+  helpers.
 - In-memory store admin/sign-only tests now live in focused modules for
   admin-audit behavior and sign-only lifecycle behavior.
 - In-memory store sign-only tests now also separate happy-path, idempotency,
