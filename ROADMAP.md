@@ -146,6 +146,10 @@
 53. PostgreSQL runtime-state split: account/collateral lookup, worker-row
     collection, and runtime-worker observation loading now live in focused
     modules.
+54. API backend lifecycle split: execution-event, order-lifecycle, and
+    sign-only/receipt helpers now live in focused modules.
+55. API routes split: bootstrap/router construction and health endpoint
+    helpers now live in focused modules.
 
 ## Still blocked
 

@@ -152,6 +152,11 @@
 - PostgreSQL runtime-state loading now separates account/collateral lookup,
   worker-heartbeat row collection, and runtime-worker observation loading while
   preserving the same `RuntimeStateStore` behavior.
+- API backend lifecycle delegation now separates execution-event,
+  order-lifecycle, and sign-only/receipt helpers while preserving the same
+  backend method surface.
+- API route assembly now separates bootstrap/router construction and health
+  endpoint helpers while preserving the same exported app builders.
 - In-memory order-lifecycle tests now also separate cancel-requested,
   replay/conflict, invalid-transition, and reconcile-backlog coverage into
   focused modules.
