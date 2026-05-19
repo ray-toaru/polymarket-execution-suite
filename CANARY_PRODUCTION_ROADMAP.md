@@ -60,8 +60,9 @@ Exit criteria:
 
 ## P2: Controlled live canary
 
-Status: blocked until P1 exits cleanly and a reviewed release decision authorizes
-the attempt.
+Status: real-funds canary preflight scaffold implemented and validated; actual
+remote canary fill remains blocked until a reviewed release decision and local
+approval file authorize the attempt.
 
 Goal: validate a tiny real side-effect path under hard runtime, account, market,
 amount, approval, kill-switch, and reconciliation controls.
@@ -70,12 +71,28 @@ Minimum gates before any live attempt:
 
 - Compile feature, environment, and config live-submit gates all enabled for the
   canary build only.
+- `PMX_ALLOW_REAL_FUNDS_CANARY=1` and `allow_real_funds_canary=true` enabled
+  only for the canary process.
+- Local approval file binds scope `REAL_FUNDS_CANARY`, `FOK_LIMIT_FILL`, the
+  release artifact SHA-256, and the current evidence manifest SHA-256.
+- Per-order cap is `1` USD and per-day cap is `5` USD for the first canary.
 - Kill switch open and reversible.
 - Runtime worker, geoblock, resource, and reconcile state healthy.
 - Repository reservation and idempotency key already persisted.
 - Account and market whitelists match the operator-approved plan.
 - Per-order and per-day caps are enforced.
 - Cancel-only fallback and post-submit reconcile path are ready.
+
+Current validated preflight:
+
+- `real_funds_canary_preflight_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `65-real-funds-canary-preflight.log` proves normal gates keep
+  `live_submit_allowed=false`, `live_cancel_allowed=false`,
+  `real_funds_canary_allowed=false`, `posted=false`, and
+  `remote_side_effects=false`.
+- The only adapter `post_order` call site is the guarded real-funds canary FOK
+  limit-fill path behind the `live-submit` feature and explicit preconditions.
 
 Pause conditions:
 

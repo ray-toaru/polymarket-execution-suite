@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: 71c2676a43ac2996f131eb59f179f2d88b311391
-polymarket-execution-engine: c2cef39da9ca2e5f4563ef008ac866d21ada0b87
+polymarket-execution-engine: 8e7897ed67c826c62bf2f91fd5e83e0fb0461640
 ```
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
@@ -168,6 +168,10 @@ Rationale:
 - `PMX_ALLOW_LIVE_SUBMIT=0` and `PMX_ALLOW_LIVE_CANCEL=0` during validation;
   blocked canary evidence records `posted=false`, `cancelled=false`, and
   `remote_side_effects=false`.
+- Real-funds canary preflight is implemented and validated, but no real-funds
+  order was submitted in this batch. Evidence records
+  `real_funds_canary_allowed=false`, `posted=false`, and
+  `remote_side_effects=false` during normal gates.
 
 ## Evidence references
 
@@ -176,6 +180,8 @@ Current evidence:
 - Environment: `polymarket-execution-engine/evidence/current/environment.json`
 - Manifest: `polymarket-execution-engine/evidence/current/manifest.json`
 - Logs: `polymarket-execution-engine/evidence/current/logs/`
+- Real-funds canary preflight log:
+  `polymarket-execution-engine/evidence/current/logs/65-real-funds-canary-preflight.log`
 - Artifact SHA-256: recorded outside the zip in
   `polymarket-dual-project-v0.25.0.zip.sha256` and
   `polymarket-dual-project-v0.25.0.zip.evidence.json`
@@ -186,5 +192,5 @@ Current evidence:
 
 This is not production-ready and not live-canary-approved. Production promotion
 still requires reviewed secret-manager/KMS/HSM controls, deployment and rollback
-runbooks, observability, retention, account and market risk limits, real live
-canary evidence, and an explicit future release decision.
+runbooks, observability, retention, account and market risk limits, actual
+real-funds canary evidence, and an explicit future release decision.

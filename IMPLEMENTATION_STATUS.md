@@ -204,12 +204,24 @@
 - Runtime heartbeat worker scaffolding now exposes a non-trading heartbeat
   loop with an injected persistence sink, replacing the old discard-only
   placeholder while preserving a deprecated compatibility entry point.
+- Guarded real-funds canary preflight is implemented behind explicit
+  `live-submit`, `PMX_ALLOW_LIVE_SUBMIT`, `PMX_ALLOW_REAL_FUNDS_CANARY`,
+  config, approval, artifact-hash, evidence-manifest-hash, balance/allowance,
+  market-safety, and cap preconditions.
+- The real-funds canary SDK path constructs a FOK limit-fill order and contains
+  the only permitted adapter `post_order` call site; normal gates validate this
+  without posting or cancelling.
+- PostgreSQL migration `0004_real_funds_canary` adds idempotent, hash-bound,
+  redaction-preserving local canary run storage without raw signed order
+  exposure.
 
 ## Intentionally blocked
 
 - Live submit.
 - Live cancel.
 - Production deployment.
+- Actual real-funds canary fill until a reviewed release decision and local
+  approval file explicitly authorize it.
 - Python-side access to signing or CLOB secrets.
 - Public exposure of raw signed payloads or signed order envelopes.
 
@@ -218,6 +230,10 @@
 The current canonical evidence manifest records passing full gates for Rust,
 PostgreSQL, SDK, credentialed non-trading smoke, sign-only dry-run, release
 artifact, shadow execution, observability, and governance checks:
+
+- `real_funds_canary_preflight_validation`: pass.
+- `65-real-funds-canary-preflight.log`: pass, no post, no cancel, no remote side
+  effect.
 
 ```text
 polymarket-execution-engine/evidence/current/manifest.json

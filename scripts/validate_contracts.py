@@ -328,10 +328,12 @@ def validate_v09_official_adapter_boundary() -> None:
             fail(f"v0.11 official adapter boundary missing token: {needle}")
     if 'polymarket_client_sdk_v2 = { version = "=0.6.0-canary.1"' not in adapter_toml:
         fail("official adapter must pin the official SDK canary explicitly")
-    if 'live-submit = []' not in adapter_toml:
+    if not re.search(r'(?m)^live-submit\s*=\s*\[', adapter_toml):
         fail("official adapter must expose an explicit live-submit feature gate")
-    if 'post_order(' in adapter_text or 'post_orders(' in adapter_text:
-        fail("official adapter boundary must not call post_order/post_orders in v0.11")
+    live_canary = SDK_ADAPTER_SRC / "sdk_runtime/live_canary.rs"
+    adapter_boundary_text = adapter_text.replace(live_canary.read_text() if live_canary.exists() else "", "")
+    if 'post_order(' in adapter_boundary_text or 'post_orders(' in adapter_text:
+        fail("official adapter boundary must not call post_order/post_orders outside guarded real-funds canary")
     if 'allow_live_submit: false' not in adapter_text:
         fail("official adapter default must keep live submit disabled")
     for doc in [
