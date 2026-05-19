@@ -168,6 +168,12 @@
   preserving the same route behavior.
 - API fake/PostgreSQL E2E tests now serialize process-env token mutation so
   crate-level tests remain deterministic under parallel scheduling.
+- API read routes now separate submit-receipt reads, lifecycle-event queries,
+  and runtime-worker status queries while preserving the same public API
+  behavior.
+- API flow routes now separate intent/snapshot/decision, plan compile/submit,
+  and sign-only lifecycle handlers while preserving the same public API
+  behavior.
 - In-memory order-lifecycle tests now also separate cancel-requested,
   replay/conflict, invalid-transition, and reconcile-backlog coverage into
   focused modules.

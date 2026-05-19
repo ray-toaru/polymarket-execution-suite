@@ -160,6 +160,10 @@
     in focused modules.
 59. API E2E env-guard hardening: fake and PostgreSQL E2E suites now serialize
     token env mutation so local crate tests remain deterministic.
+60. API read-route split: submit receipt, lifecycle queries, and runtime
+    worker status handlers now live in focused modules.
+61. API flow-route split: intent/snapshot/decision, plan compile/submit, and
+    sign-only lifecycle handlers now live in focused modules.
 
 ## Still blocked
 
