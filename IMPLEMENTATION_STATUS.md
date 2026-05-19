@@ -143,6 +143,9 @@
 - In-memory execution store implementation now separates normalized-intent/
   snapshot, decision, plan-summary, and reservation/receipt helpers while
   preserving the same public store traits.
+- Service binding helpers now separate hash-input DTOs, sign-only lifecycle
+  append validation, and snapshot/decision binding verification while
+  preserving the same public service exports.
 - In-memory order-lifecycle tests now also separate cancel-requested,
   replay/conflict, invalid-transition, and reconcile-backlog coverage into
   focused modules.

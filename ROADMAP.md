@@ -138,6 +138,9 @@
 50. In-memory execution implementation split: normalized-intent/snapshot,
     decision, plan-summary, and reservation/receipt helpers now live in
     focused modules.
+51. Service binding split: hash-input DTOs, sign-only lifecycle append
+    validation, and snapshot/decision binding verification now live in
+    focused modules.
 
 ## Still blocked
 
