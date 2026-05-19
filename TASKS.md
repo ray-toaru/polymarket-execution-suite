@@ -38,3 +38,12 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [x] Canary rehearsal drill
 - [x] Canary preflight structured evidence
 - [x] Negative preflight scenarios fail closed
+
+## P3 productionization evidence scaffold
+
+- [x] Production operations drill included in current gates
+- [x] Manifest section `production_operations_validation`
+- [x] Secret custody, deployment, rollback, incident, alerting/SLO, retention,
+  risk-limit, and SDK breakage controls represented as local evidence
+- [x] Drill asserts no live submit, no live cancel, no remote side effects, and
+  no production-ready claim

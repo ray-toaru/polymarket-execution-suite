@@ -86,7 +86,8 @@ Pause conditions:
 
 ## P3: v0.27 productionization
 
-Status: blocked until P2 canary evidence is reviewed.
+Status: operations-control evidence scaffold active; promotion remains blocked
+until P2 canary evidence is reviewed.
 
 Goal: move from controlled canary to limited production with operational
 controls, not broad default live trading.
@@ -101,6 +102,13 @@ Required deliverables:
 - Account, market, and strategy risk limits.
 - Dependency update and SDK upstream breakage playbooks.
 - Automatic downgrade paths to sign-only, cancel-only, or read-only modes.
+
+Current evidence coverage:
+
+- `production_operations_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `46-production-operations-drill.log` records no live submit, no live cancel,
+  no remote side effects, and no production-ready claim.
 
 Exit criteria:
 

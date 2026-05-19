@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: 71c2676a43ac2996f131eb59f179f2d88b311391
-polymarket-execution-engine: 46c8433ff0add8a6b6602ca6838ece35e1ae0d5f
+polymarket-execution-engine: db68642de228354ee5951a147aa1c3c5ee97a181
 ```
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
@@ -72,6 +72,10 @@ Rationale:
 - Live canary preflight now has an independent manifest section with structured
   local-ready and negative fail-closed scenarios; it still records no live
   submit, no live cancel, and no remote trading side effects.
+- Production operations drill evidence is included as an independent manifest
+  section for secret custody, deployment preflight, rollback, incident,
+  alerting/SLO, audit retention, risk-limit, and SDK breakage controls; it
+  still records no live submit, no live cancel, and no production-ready claim.
 - Shadow execution evidence now runs by default in the current gate, and
   observability evidence is bound as an explicit manifest section.
 - Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.
