@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: 71c2676a43ac2996f131eb59f179f2d88b311391
-polymarket-execution-engine: 8942ed2cc41444ebe05d4258d62b110daa0f4723
+polymarket-execution-engine: 0dbede181b8d0df839f441b8b6edfc426f73c415
 ```
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
@@ -79,6 +79,10 @@ Rationale:
 - Production authorization block evidence is included as an independent
   manifest section proving partial live/prod gates remain fail-closed without a
   reviewed release decision.
+- Production audit export evidence is included as an independent manifest
+  section proving exported local audit records keep trace/digest/ref metadata
+  and exclude private keys, CLOB secrets, raw signed payloads, raw signatures,
+  and signed order envelopes.
 - Shadow execution evidence now runs by default in the current gate, and
   observability evidence is bound as an explicit manifest section.
 - Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.

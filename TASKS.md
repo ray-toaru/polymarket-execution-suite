@@ -50,3 +50,6 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [x] Production authorization block drill included in current gates
 - [x] Partial live/prod gate combinations fail closed without a reviewed release
   decision
+- [x] Production audit export drill included in current gates
+- [x] Local audit export evidence preserves trace/digest/ref metadata without
+  exporting sensitive signing material

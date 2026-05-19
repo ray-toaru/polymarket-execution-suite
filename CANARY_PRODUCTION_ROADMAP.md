@@ -113,6 +113,11 @@ Current evidence coverage:
   `polymarket-execution-engine/evidence/current/manifest.json`.
 - `47-production-authorization-block-drill.log` proves partial live/prod gates
   remain fail-closed without a reviewed release decision.
+- `production_audit_export_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `48-production-audit-export-drill.log` proves local audit export keeps
+  trace/digest/ref metadata while excluding private keys, CLOB secrets, raw
+  signed payloads, raw signatures, and signed order envelopes.
 
 Exit criteria:
 
