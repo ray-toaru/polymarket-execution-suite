@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: f0680017a37d5647a0abd2e44e0642a4b7b762da
-polymarket-execution-engine: bf9a6ba217244911dd68dc57f95f9cea1e2521b3
+polymarket-execution-engine: 18c60b60b493da9060abe89dec8ec8148880add8
 ```
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
@@ -64,6 +64,9 @@ Rationale:
   `validation/run_current_gates.sh` to the current implementation gate chain.
 - Current gate-chain validation is centralized for lifecycle, migration, SDK,
   observability, canary, and production guard checks.
+- The active gate implementation is version-neutral
+  `validation/run_current_gates_impl.sh`; `validation/run_current_gates.sh`
+  remains the public entrypoint.
 - Shadow execution evidence now runs by default in the current gate, and
   observability evidence is bound as an explicit manifest section.
 - Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.

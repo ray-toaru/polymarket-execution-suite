@@ -648,7 +648,7 @@ def validate_v23_lifecycle_query_and_hardening() -> None:
     service = rust_source_text(SERVICE_SRC)
     policy = (EXECUTOR / "crates/pmx-policy/src/lib.rs").read_text()
     sql = SQL.read_text()
-    gate = (EXECUTOR / "validation/run_v0_24_gates.sh").read_text()
+    gate = (EXECUTOR / "validation/run_current_gates_impl.sh").read_text()
 
     required_by_file = {
         "openapi": (openapi, [
@@ -871,7 +871,6 @@ def validate_current_docs_and_release_governance() -> None:
     active_old_gates = [
         path.name
         for path in (EXECUTOR / "validation").glob("run_v0_*_gates.sh")
-        if path.name != "run_v0_24_gates.sh"
     ]
     if active_old_gates:
         fail("stale gate scripts remain outside validation/archive: " + ", ".join(sorted(active_old_gates)))
