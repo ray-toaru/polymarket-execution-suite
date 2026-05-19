@@ -86,3 +86,14 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [x] Controlled live canary prep drill included in current gates
 - [x] Canary prep gates are represented locally while live submit, live cancel,
   posting, cancelling, and remote side effects remain blocked
+- [x] External secret-provider/KMS preflight included in current gates
+- [x] Secret-provider, rotation, and break-glass references are required before
+  secret custody can be considered externally ready
+- [x] External operator-approval preflight included in current gates
+- [x] Approval id/hash/ticket, approver, expiry, scope, dual-control,
+  replay-block, and expiry-enforcement signals are required before approval can
+  be considered externally ready
+- [x] External alert-routing/pager preflight included in current gates
+- [x] Alert provider, route, pager policy, dashboard, alert-test, runtime,
+  reconcile, remote-unknown, SDK, audit, and pager-ack signals are required
+  before alerting can be considered externally ready

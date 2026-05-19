@@ -169,6 +169,23 @@ Current evidence coverage:
   gates can be represented locally while live submit, live cancel, posting,
   cancelling, and remote side effects remain blocked without a reviewed release
   decision.
+- `external_secret_provider_preflight_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `59-external-secret-provider-preflight.log` proves the KMS/secret-provider,
+  rotation, and break-glass contract is represented while missing external
+  references keep secret custody not ready and live submit/cancel blocked.
+- `external_operator_approval_preflight_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `60-external-operator-approval-preflight.log` proves approval id/hash/ticket,
+  approver, expiry, scope, dual-control, replay-block, and expiry-enforcement
+  signals are required while missing references keep approval not ready and live
+  submit/cancel blocked.
+- `external_alert_routing_preflight_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `61-external-alert-routing-preflight.log` proves alert provider, route, pager,
+  dashboard, alert-test, runtime, reconcile, remote-unknown, SDK, audit, and
+  pager-ack signals are required while missing references keep alerting not
+  ready and live submit/cancel blocked.
 
 Exit criteria:
 

@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: 71c2676a43ac2996f131eb59f179f2d88b311391
-polymarket-execution-engine: 94e01404611250e1af79ae62e6ae042e9bf2190b
+polymarket-execution-engine: b8bbf0d5f544e72b889c81efb87cf16937262b9c
 ```
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
@@ -123,6 +123,20 @@ Rationale:
   reservation/reconcile/fallback gates can be represented while live submit,
   live cancel, posting, cancelling, and remote side effects remain blocked
   without a reviewed release decision.
+- External secret-provider preflight evidence is included as an independent
+  manifest section proving KMS/secret-provider, rotation, and break-glass
+  references are represented as a contract while missing external references
+  keep `external_secret_custody_ready=false` and live submit/cancel blocked.
+- External operator-approval preflight evidence is included as an independent
+  manifest section proving approval id/hash/ticket/approver/expiry/scope,
+  dual-control, replay-block, and expiry-enforcement signals are required while
+  missing references keep `operator_approval_ready=false` and live submit/cancel
+  blocked.
+- External alert-routing preflight evidence is included as an independent
+  manifest section proving alert provider, route, pager policy, dashboard, alert
+  test evidence, runtime/reconcile/remote-unknown/SDK/audit alert signals, and
+  pager acknowledgement are required while missing references keep
+  `alerting_ready=false` and live submit/cancel blocked.
 - Shadow execution evidence now runs by default in the current gate, and
   observability evidence is bound as an explicit manifest section.
 - Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.
