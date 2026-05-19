@@ -59,3 +59,6 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [x] Production deployment preflight drill included in current gates
 - [x] Artifact SHA-256, artifact sidecar, evidence sidecar, manifest hash, and
   migration evidence are verified while deployment remains blocked
+- [x] Production secret custody drill included in current gates
+- [x] Sensitive environment values are checked absent from logs, manifest, and
+  package artifact without printing the values

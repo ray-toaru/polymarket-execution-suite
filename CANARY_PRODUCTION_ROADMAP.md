@@ -128,6 +128,11 @@ Current evidence coverage:
 - `50-production-deployment-preflight-drill.log` proves artifact SHA-256,
   artifact sidecar, evidence sidecar, evidence manifest hash, and migration
   evidence can be verified while deployment remains blocked.
+- `production_secret_custody_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `51-production-secret-custody-drill.log` proves sensitive environment values
+  observed by validation are absent from logs, manifest, and package artifact,
+  with `.env` excluded from the release zip.
 
 Exit criteria:
 

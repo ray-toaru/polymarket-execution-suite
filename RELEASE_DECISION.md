@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: 71c2676a43ac2996f131eb59f179f2d88b311391
-polymarket-execution-engine: 195ff11519f7c0f4811da1ecacd679153574dc46
+polymarket-execution-engine: d473ef73bcf00b9c6de9e3155a316d3e918c7e0e
 ```
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
@@ -91,6 +91,10 @@ Rationale:
   manifest section proving the release artifact SHA-256 sidecar, evidence
   sidecar, evidence manifest hash, and migration evidence can be verified while
   deployment remains blocked.
+- Production secret custody evidence is included as an independent manifest
+  section proving sensitive environment values observed by validation are absent
+  from logs, manifest, and release artifact, with `.env` excluded from the
+  package.
 - Shadow execution evidence now runs by default in the current gate, and
   observability evidence is bound as an explicit manifest section.
 - Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.
