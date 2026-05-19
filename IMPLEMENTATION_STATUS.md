@@ -157,6 +157,12 @@
   backend method surface.
 - API route assembly now separates bootstrap/router construction and health
   endpoint helpers while preserving the same exported app builders.
+- PostgreSQL support helpers now separate database-error normalization,
+  JSON-payload loading, and runtime-state enum/status conversion while
+  preserving the same public store helper behavior.
+- PostgreSQL migration helpers now separate manifest/checksum, apply flow, and
+  applied-migration recording while preserving the same `PostgresStore`
+  schema-apply behavior.
 - In-memory order-lifecycle tests now also separate cancel-requested,
   replay/conflict, invalid-transition, and reconcile-backlog coverage into
   focused modules.

@@ -150,6 +150,11 @@
     sign-only/receipt helpers now live in focused modules.
 55. API routes split: bootstrap/router construction and health endpoint
     helpers now live in focused modules.
+56. PostgreSQL support-helper split: database-error normalization, JSON-payload
+    loading, and runtime-state enum/status conversion now live in focused
+    modules.
+57. PostgreSQL migration-helper split: manifest/checksum, apply flow, and
+    applied-migration recording now live in focused modules.
 
 ## Still blocked
 
