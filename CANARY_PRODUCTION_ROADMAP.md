@@ -123,6 +123,11 @@ Current evidence coverage:
 - `49-production-dependency-breakage-drill.log` proves the SDK remains exactly
   pinned, lockfiles are present, sign-only regression evidence is bound, and SDK
   breakage downgrades to sign-only/read-only with live submit frozen.
+- `production_deployment_preflight_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `50-production-deployment-preflight-drill.log` proves artifact SHA-256,
+  artifact sidecar, evidence sidecar, evidence manifest hash, and migration
+  evidence can be verified while deployment remains blocked.
 
 Exit criteria:
 
