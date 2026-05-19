@@ -163,6 +163,11 @@
 - PostgreSQL migration helpers now separate manifest/checksum, apply flow, and
   applied-migration recording while preserving the same `PostgresStore`
   schema-apply behavior.
+- API admin reconcile support now separates shared auth/correlation context,
+  placeholder reconcile validation, and local reconcile validation while
+  preserving the same route behavior.
+- API fake/PostgreSQL E2E tests now serialize process-env token mutation so
+  crate-level tests remain deterministic under parallel scheduling.
 - In-memory order-lifecycle tests now also separate cancel-requested,
   replay/conflict, invalid-transition, and reconcile-backlog coverage into
   focused modules.
