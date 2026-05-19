@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: 71c2676a43ac2996f131eb59f179f2d88b311391
-polymarket-execution-engine: 0dbede181b8d0df839f441b8b6edfc426f73c415
+polymarket-execution-engine: 2549bffe94c0f11041f18c5dd2f15b2b33579a4f
 ```
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
@@ -83,6 +83,10 @@ Rationale:
   section proving exported local audit records keep trace/digest/ref metadata
   and exclude private keys, CLOB secrets, raw signed payloads, raw signatures,
   and signed order envelopes.
+- Production dependency breakage evidence is included as an independent
+  manifest section proving the SDK remains exactly pinned, adapter/spike
+  lockfiles are present, sign-only regression evidence is bound, and SDK
+  breakage downgrades to sign-only/read-only with live submit frozen.
 - Shadow execution evidence now runs by default in the current gate, and
   observability evidence is bound as an explicit manifest section.
 - Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.

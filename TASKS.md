@@ -53,3 +53,6 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [x] Production audit export drill included in current gates
 - [x] Local audit export evidence preserves trace/digest/ref metadata without
   exporting sensitive signing material
+- [x] Production dependency breakage drill included in current gates
+- [x] SDK pin, lockfiles, sign-only regression evidence, compatibility review,
+  rollback plan, and safe downgrade path are bound in current evidence

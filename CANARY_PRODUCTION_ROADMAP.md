@@ -118,6 +118,11 @@ Current evidence coverage:
 - `48-production-audit-export-drill.log` proves local audit export keeps
   trace/digest/ref metadata while excluding private keys, CLOB secrets, raw
   signed payloads, raw signatures, and signed order envelopes.
+- `production_dependency_breakage_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `49-production-dependency-breakage-drill.log` proves the SDK remains exactly
+  pinned, lockfiles are present, sign-only regression evidence is bound, and SDK
+  breakage downgrades to sign-only/read-only with live submit frozen.
 
 Exit criteria:
 
