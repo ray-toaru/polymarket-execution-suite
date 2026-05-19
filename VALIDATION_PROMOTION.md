@@ -63,9 +63,12 @@ Refactor order:
 
 Each refactor must be behavior-preserving and followed by Rust gates.
 
-## P4: future v0.24 direction
+## P4: historical follow-up direction
 
-Do not start v0.24 until this batch is closed. Candidate v0.24 themes are shadow execution, reconciliation drills, rollback/kill-switch drills, and observability.
+The later shadow execution, reconciliation drill, rollback/kill-switch drill,
+observability, canary-prep, and production-control themes are now tracked in
+`CANARY_PRODUCTION_ROADMAP.md`. This historical v0.23.1 plan is retained for
+audit context only and is not the active development roadmap.
 
 ## Pause conditions
 

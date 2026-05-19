@@ -12,6 +12,9 @@ This pass formalizes the v0.25.0 shadow-ready SDK sign-only baseline after the p
 - Added release package exclusions so historical docs/evidence are not included in normal release zips.
 - Tightened lifecycle payload schema to a typed redacted envelope in OpenAPI and Hermes models.
 - Made pre-live worker `DEGRADED` status block constraints rather than silently allowing execution.
+- Renamed the active gate implementation to
+  `polymarket-execution-engine/validation/run_current_gates_impl.sh`; the public
+  entrypoint remains `polymarket-execution-engine/validation/run_current_gates.sh`.
 
 ## Still pending for later releases
 

@@ -17,7 +17,7 @@ Current decision: `shadow-ready SDK sign-only candidate`
 This decision applies to the integration repository at the pinned submodule revisions:
 
 ```text
-hermes-polymarket-control: f0680017a37d5647a0abd2e44e0642a4b7b762da
+hermes-polymarket-control: 71c2676a43ac2996f131eb59f179f2d88b311391
 polymarket-execution-engine: 18c60b60b493da9060abe89dec8ec8148880add8
 ```
 

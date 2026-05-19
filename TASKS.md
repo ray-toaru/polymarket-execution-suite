@@ -12,14 +12,18 @@
 
 ## Required current gates
 
-- [ ] `cargo fmt --check`
-- [ ] `cargo check --workspace --locked`
-- [ ] `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`
-- [ ] Rust tests
-- [ ] PostgreSQL migration/store/API E2E with `PMX_TEST_DATABASE_URL`
-- [ ] SDK adapter/spike checks and tests
-- [ ] Credentialed non-trading smoke, if explicitly enabled
-- [ ] Sign-only dry-run, if explicitly enabled
+Latest local full-gate run: passed via
+`polymarket-execution-engine/validation/run_current_gates.sh`; current evidence
+is under `polymarket-execution-engine/evidence/current/`.
+
+- [x] `cargo fmt --check`
+- [x] `cargo check --workspace --locked`
+- [x] `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`
+- [x] Rust tests
+- [x] PostgreSQL migration/store/API E2E with `PMX_TEST_DATABASE_URL`
+- [x] SDK adapter/spike checks and tests
+- [x] Credentialed non-trading smoke, explicitly enabled
+- [x] Sign-only dry-run, explicitly enabled
 
 ## Still intentionally blocked
 
