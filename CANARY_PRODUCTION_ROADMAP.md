@@ -109,6 +109,10 @@ Current evidence coverage:
   `polymarket-execution-engine/evidence/current/manifest.json`.
 - `46-production-operations-drill.log` records no live submit, no live cancel,
   no remote side effects, and no production-ready claim.
+- `production_authorization_block_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `47-production-authorization-block-drill.log` proves partial live/prod gates
+  remain fail-closed without a reviewed release decision.
 
 Exit criteria:
 

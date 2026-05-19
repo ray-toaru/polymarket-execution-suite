@@ -47,3 +47,6 @@ is under `polymarket-execution-engine/evidence/current/`.
   risk-limit, and SDK breakage controls represented as local evidence
 - [x] Drill asserts no live submit, no live cancel, no remote side effects, and
   no production-ready claim
+- [x] Production authorization block drill included in current gates
+- [x] Partial live/prod gate combinations fail closed without a reviewed release
+  decision
