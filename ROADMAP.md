@@ -9,9 +9,12 @@
 
 ## Next source-hardening items
 
-1. No remaining v0.25 source-hardening item is currently open. Continue with
-   validation replay, release evidence refresh, and behavior-preserving Rust
-   module governance before any new feature scope.
+1. `v0.25.0` is now in closure phase.
+2. Default-on Rust module governance is paused; see `CLOSURE_PHASE_PLAN.md`.
+3. Only continue:
+   - validation replay after material code changes;
+   - release/evidence consistency fixes;
+   - small structural fixes that unblock the next explicitly approved batch.
 
 ## Recently landed hardening
 
