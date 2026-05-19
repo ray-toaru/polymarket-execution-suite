@@ -135,6 +135,9 @@
     reconcile-backlog helpers now live in focused modules.
 49. In-memory lifecycle implementation split: execution-lifecycle and
     sign-only lifecycle helpers now live in focused modules.
+50. In-memory execution implementation split: normalized-intent/snapshot,
+    decision, plan-summary, and reservation/receipt helpers now live in
+    focused modules.
 
 ## Still blocked
 

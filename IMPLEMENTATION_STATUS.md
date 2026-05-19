@@ -140,6 +140,9 @@
 - In-memory lifecycle store implementation now separates execution-lifecycle
   and sign-only lifecycle helpers while preserving the same public store
   traits.
+- In-memory execution store implementation now separates normalized-intent/
+  snapshot, decision, plan-summary, and reservation/receipt helpers while
+  preserving the same public store traits.
 - In-memory order-lifecycle tests now also separate cancel-requested,
   replay/conflict, invalid-transition, and reconcile-backlog coverage into
   focused modules.
