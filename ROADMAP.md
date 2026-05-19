@@ -131,6 +131,10 @@
     modules.
 47. Core base module split: shared errors, typed ids, decimal validation, and
     canonical JSON hashing/serialization helpers now live in focused modules.
+48. In-memory order-lifecycle implementation split: write, event-query, and
+    reconcile-backlog helpers now live in focused modules.
+49. In-memory lifecycle implementation split: execution-lifecycle and
+    sign-only lifecycle helpers now live in focused modules.
 
 ## Still blocked
 

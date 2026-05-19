@@ -134,6 +134,12 @@
   preserving the same public runtime-worker API and fail-closed behavior.
 - PostgreSQL order-lifecycle write implementation now separates upsert,
   replay lookup/conflict handling, and event-apply SQL paths.
+- In-memory order-lifecycle store implementation now separates write,
+  event-query, and reconcile-backlog helpers while preserving the same public
+  store traits.
+- In-memory lifecycle store implementation now separates execution-lifecycle
+  and sign-only lifecycle helpers while preserving the same public store
+  traits.
 - In-memory order-lifecycle tests now also separate cancel-requested,
   replay/conflict, invalid-transition, and reconcile-backlog coverage into
   focused modules.
