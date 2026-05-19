@@ -174,6 +174,12 @@
 - API flow routes now separate intent/snapshot/decision, plan compile/submit,
   and sign-only lifecycle handlers while preserving the same public API
   behavior.
+- Service submit implementation now separates request/response fingerprinting,
+  blocked-before-remote receipt construction, and replay decoding while
+  preserving the same submit/idempotency behavior.
+- Service runtime-state providers now separate fail-closed fallback, static
+  provider, and store-backed provider implementations while preserving the
+  same public provider behavior.
 - In-memory order-lifecycle tests now also separate cancel-requested,
   replay/conflict, invalid-transition, and reconcile-backlog coverage into
   focused modules.

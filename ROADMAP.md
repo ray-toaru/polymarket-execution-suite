@@ -164,6 +164,11 @@
     worker status handlers now live in focused modules.
 61. API flow-route split: intent/snapshot/decision, plan compile/submit, and
     sign-only lifecycle handlers now live in focused modules.
+62. Service submit split: request/response fingerprinting, blocked-before-
+    remote receipt construction, and replay decoding now live in focused
+    modules.
+63. Service runtime-state provider split: fail-closed, static, and
+    store-backed providers now live in focused modules.
 
 ## Still blocked
 
