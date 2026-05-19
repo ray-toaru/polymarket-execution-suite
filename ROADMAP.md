@@ -141,6 +141,11 @@
 51. Service binding split: hash-input DTOs, sign-only lifecycle append
     validation, and snapshot/decision binding verification now live in
     focused modules.
+52. Runtime helper split: freshness horizon checks, worker-status aggregation,
+    and observation-application helpers now live in focused modules.
+53. PostgreSQL runtime-state split: account/collateral lookup, worker-row
+    collection, and runtime-worker observation loading now live in focused
+    modules.
 
 ## Still blocked
 

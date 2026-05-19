@@ -146,6 +146,12 @@
 - Service binding helpers now separate hash-input DTOs, sign-only lifecycle
   append validation, and snapshot/decision binding verification while
   preserving the same public service exports.
+- Runtime helper logic now separates freshness horizon checks, worker-status
+  aggregation, and observation-application helpers while preserving the same
+  store helper exports.
+- PostgreSQL runtime-state loading now separates account/collateral lookup,
+  worker-heartbeat row collection, and runtime-worker observation loading while
+  preserving the same `RuntimeStateStore` behavior.
 - In-memory order-lifecycle tests now also separate cancel-requested,
   replay/conflict, invalid-transition, and reconcile-backlog coverage into
   focused modules.
