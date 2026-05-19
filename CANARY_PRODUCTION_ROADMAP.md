@@ -192,6 +192,12 @@ Current evidence coverage:
   `config/production-preflight.example.json` is schema-versioned,
   reference-only, free of forbidden sensitive keys/values, and usable by the
   external preflight checks without enabling live submit/cancel.
+- `production_preflight_config_fixture_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `63-production-preflight-config-fixture-drill.log` proves a positive fixture
+  can drive external preflight readiness to true while live submit/cancel remain
+  blocked, and a negative sensitive-key fixture is rejected without logging the
+  fixture secret value.
 
 Exit criteria:
 

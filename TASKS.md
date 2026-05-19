@@ -102,3 +102,8 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [x] Preflight config is schema-versioned, reference-only, and checked for
   forbidden sensitive keys/values before external preflight checks can mark
   readiness
+- [x] Positive production preflight fixture added and validated
+- [x] Negative sensitive-key production preflight fixture added and rejected
+  without logging the fixture secret value
+- [x] Production preflight config fixture drill included in current gates and
+  evidence manifest
