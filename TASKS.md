@@ -65,3 +65,24 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [x] Production monitoring/SLO drill included in current gates
 - [x] Required alert signals are represented and safety SLO/error budget states
   cannot auto-enable live submit
+- [x] Production incident response drill included in current gates
+- [x] Remote-unknown, cancel-failure, SDK-failure, PostgreSQL, geoblock,
+  low-resource, and degraded-worker incidents fail closed with evidence
+  preserved
+- [x] Production rollback/downgrade drill included in current gates
+- [x] SDK, remote-unknown, PostgreSQL, geoblock, kill-switch, and recovery
+  states downgrade to sign-only, cancel-only, or read-only without auto
+  re-enabling live submit
+- [x] Production risk-limits drill included in current gates
+- [x] Account/market whitelists, per-order/per-day/exposure caps, operator
+  threshold, remote-unknown freeze, stale-market-data, and geoblock controls
+  remain fail-closed
+- [x] Production config-profile drill included in current gates
+- [x] Conservative defaults keep live submit/cancel disabled and require explicit
+  enablement, caps, operator approval, and isolated canary profile behavior
+- [x] Production release-decision guard included in current gates
+- [x] Current release decision does not claim production-ready, live-ready, or
+  validated-release status
+- [x] Controlled live canary prep drill included in current gates
+- [x] Canary prep gates are represented locally while live submit, live cancel,
+  posting, cancelling, and remote side effects remain blocked

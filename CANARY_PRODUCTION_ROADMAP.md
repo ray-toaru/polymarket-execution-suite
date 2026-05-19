@@ -138,6 +138,37 @@ Current evidence coverage:
 - `52-production-monitoring-slo-drill.log` proves required alert/SLO signals are
   represented and safety SLO or error budget states cannot auto-enable live
   submit.
+- `production_incident_response_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `53-production-incident-response-drill.log` proves remote-unknown,
+  cancel-failure, SDK-failure, PostgreSQL, geoblock, low-resource, and
+  degraded-worker incidents fail closed with evidence preserved and no remote
+  side effects.
+- `production_rollback_downgrade_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `54-production-rollback-downgrade-drill.log` proves SDK, remote-unknown,
+  PostgreSQL, geoblock, kill-switch, and recovery states downgrade safely
+  without auto re-enabling live submit.
+- `production_risk_limits_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `55-production-risk-limits-drill.log` proves account/market whitelists,
+  per-order/per-day/exposure caps, operator threshold, remote-unknown freeze,
+  stale-market-data, and geoblock controls remain fail-closed.
+- `production_config_profile_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `56-production-config-profile-drill.log` proves conservative production
+  defaults keep live submit/cancel disabled, require explicit enablement,
+  require caps and operator approval, and isolate canary profile behavior.
+- `production_release_decision_guard_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `57-production-release-decision-guard.log` proves the release decision still
+  does not claim production-ready, live-ready, or validated-release status.
+- `live_canary_controlled_prep_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `58-live-canary-controlled-prep-drill.log` proves controlled canary prep
+  gates can be represented locally while live submit, live cancel, posting,
+  cancelling, and remote side effects remain blocked without a reviewed release
+  decision.
 
 Exit criteria:
 

@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: 71c2676a43ac2996f131eb59f179f2d88b311391
-polymarket-execution-engine: 68ef4ec0bed449f7288469945a359c7da7c32c88
+polymarket-execution-engine: 94e01404611250e1af79ae62e6ae042e9bf2190b
 ```
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
@@ -98,6 +98,31 @@ Rationale:
 - Production monitoring/SLO evidence is included as an independent manifest
   section proving required alert signals are represented and safety SLO or error
   budget states cannot auto-enable live submit.
+- Production incident response evidence is included as an independent manifest
+  section proving remote-unknown, cancel-failure, SDK-failure, PostgreSQL,
+  geoblock, low-resource, and degraded-worker incidents fail closed with
+  evidence preserved and no remote side effects.
+- Production rollback/downgrade evidence is included as an independent manifest
+  section proving SDK, remote-unknown, PostgreSQL, geoblock, kill-switch, and
+  recovery states downgrade to sign-only, cancel-only, or read-only modes
+  without auto re-enabling live submit.
+- Production risk-limit evidence is included as an independent manifest section
+  proving account whitelist, market whitelist, per-order cap, per-day cap,
+  exposure cap, operator threshold, remote-unknown freeze, stale-market-data,
+  and geoblock controls remain fail-closed.
+- Production config-profile evidence is included as an independent manifest
+  section proving conservative defaults keep live submit/cancel disabled,
+  production-ready false, kill switch closed, per-account/per-market enablement
+  required, caps required, operator approval required, and canary profile
+  isolated.
+- Production release-decision guard evidence is included as an independent
+  manifest section proving the current release decision does not claim
+  production-ready, live-ready, or validated-release status.
+- Controlled live canary prep evidence is included as an independent manifest
+  section proving compile/env/config/operator/whitelist/cap/idempotency/
+  reservation/reconcile/fallback gates can be represented while live submit,
+  live cancel, posting, cancelling, and remote side effects remain blocked
+  without a reviewed release decision.
 - Shadow execution evidence now runs by default in the current gate, and
   observability evidence is bound as an explicit manifest section.
 - Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.
