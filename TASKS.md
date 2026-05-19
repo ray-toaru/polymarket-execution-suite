@@ -30,3 +30,11 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [ ] Live submit
 - [ ] Live cancel
 - [ ] Production deployment
+
+## P1 canary-prep evidence
+
+- [x] Canary readiness drill
+- [x] Canary blocked drill
+- [x] Canary rehearsal drill
+- [x] Canary preflight structured evidence
+- [x] Negative preflight scenarios fail closed

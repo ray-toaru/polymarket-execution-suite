@@ -35,6 +35,8 @@ Required deliverables:
 - Current gate entrypoint remains `polymarket-execution-engine/validation/run_current_gates.sh`.
 - Canary readiness, blocked, and rehearsal drills are included in current
   evidence.
+- Canary preflight is included as its own current evidence section with
+  structured local-ready and negative fail-closed scenarios.
 - Canary prep state records whitelist checks, caps, operator approval,
   reservation/idempotency readiness, reconcile readiness, cancel-only fallback,
   and remote-unknown freeze.
@@ -53,7 +55,7 @@ Exit criteria:
 
 - Required current gates pass.
 - Canary drill logs are present in `evidence/current/logs/`.
-- Manifest records the canary drill statuses and log hashes.
+- Manifest records the canary drill and preflight statuses and log hashes.
 - Release decision remains explicit that live side effects are blocked.
 
 ## P2: Controlled live canary

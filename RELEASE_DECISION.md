@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: 71c2676a43ac2996f131eb59f179f2d88b311391
-polymarket-execution-engine: 10d2f88b03004bbb1a88fe9a29e16b4fce7d03db
+polymarket-execution-engine: 46c8433ff0add8a6b6602ca6838ece35e1ae0d5f
 ```
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
@@ -69,6 +69,9 @@ Rationale:
   remains the public entrypoint.
 - Standard sign-only mapping now has explicit non-posting MARKET-order coverage
   in the SDK adapter regression evidence.
+- Live canary preflight now has an independent manifest section with structured
+  local-ready and negative fail-closed scenarios; it still records no live
+  submit, no live cancel, and no remote trading side effects.
 - Shadow execution evidence now runs by default in the current gate, and
   observability evidence is bound as an explicit manifest section.
 - Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.
