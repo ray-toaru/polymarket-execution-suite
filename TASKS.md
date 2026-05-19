@@ -112,3 +112,7 @@ is under `polymarket-execution-engine/evidence/current/`.
   only, without full reference values or secret values
 - [x] Sensitive-key candidate config is rejected without logging the fixture
   secret value
+- [x] Deployment preflight verifies the current config diff-review manifest
+  section before deployment remains blocked
+- [x] Deployment preflight verifies the `64` diff-review log SHA-256 before
+  deployment remains blocked

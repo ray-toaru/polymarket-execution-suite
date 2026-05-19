@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: 71c2676a43ac2996f131eb59f179f2d88b311391
-polymarket-execution-engine: 7966b82ae2faf6832e0e680df4f47b7f3b1b3c8c
+polymarket-execution-engine: 14954ecb237561a8a86c9672ad98926ebdd53982
 ```
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
@@ -91,6 +91,9 @@ Rationale:
   manifest section proving the release artifact SHA-256 sidecar, evidence
   sidecar, evidence manifest hash, and migration evidence can be verified while
   deployment remains blocked.
+- Production deployment preflight evidence now also verifies the current
+  production config diff-review manifest section and the `64` diff-review log
+  SHA-256 before deployment remains blocked.
 - Production secret custody evidence is included as an independent manifest
   section proving sensitive environment values observed by validation are absent
   from logs, manifest, and release artifact, with `.env` excluded from the
