@@ -186,6 +186,12 @@ Current evidence coverage:
   dashboard, alert-test, runtime, reconcile, remote-unknown, SDK, audit, and
   pager-ack signals are required while missing references keep alerting not
   ready and live submit/cancel blocked.
+- `production_preflight_config_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `62-production-preflight-config-guard.log` proves
+  `config/production-preflight.example.json` is schema-versioned,
+  reference-only, free of forbidden sensitive keys/values, and usable by the
+  external preflight checks without enabling live submit/cancel.
 
 Exit criteria:
 

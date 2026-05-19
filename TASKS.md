@@ -97,3 +97,8 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [x] Alert provider, route, pager policy, dashboard, alert-test, runtime,
   reconcile, remote-unknown, SDK, audit, and pager-ack signals are required
   before alerting can be considered externally ready
+- [x] Production preflight example config added and included in release package
+- [x] Production preflight config guard included in current gates
+- [x] Preflight config is schema-versioned, reference-only, and checked for
+  forbidden sensitive keys/values before external preflight checks can mark
+  readiness

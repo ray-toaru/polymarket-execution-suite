@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: 71c2676a43ac2996f131eb59f179f2d88b311391
-polymarket-execution-engine: b8bbf0d5f544e72b889c81efb87cf16937262b9c
+polymarket-execution-engine: a2a8355800771e0f2b2535b9d25c1ba135c8e49b
 ```
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
@@ -137,6 +137,11 @@ Rationale:
   test evidence, runtime/reconcile/remote-unknown/SDK/audit alert signals, and
   pager acknowledgement are required while missing references keep
   `alerting_ready=false` and live submit/cancel blocked.
+- Production preflight config evidence is included as an independent manifest
+  section proving `config/production-preflight.example.json` is schema-versioned,
+  reference-only, free of forbidden sensitive keys/values, and usable by the
+  external secret-provider, operator-approval, and alert-routing preflight
+  checks without enabling live submit or live cancel.
 - Shadow execution evidence now runs by default in the current gate, and
   observability evidence is bound as an explicit manifest section.
 - Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.
