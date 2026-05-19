@@ -126,3 +126,7 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [x] Current evidence records `real_funds_canary_preflight_validation=pass`
   while live submit, live cancel, posting, and remote side effects remain
   disabled
+- [x] Real-funds canary lifecycle closure implemented for local run
+  persistence, idempotency replay/conflict, remote-unknown freeze escalation,
+  and simulated reconcile without live submit, live cancel, posting, or remote
+  side effects

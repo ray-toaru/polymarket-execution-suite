@@ -172,6 +172,10 @@ Rationale:
   order was submitted in this batch. Evidence records
   `real_funds_canary_allowed=false`, `posted=false`, and
   `remote_side_effects=false` during normal gates.
+- Real-funds canary lifecycle closure is implemented locally with persisted run
+  records, idempotency replay/conflict handling, remote-unknown freeze
+  escalation, and simulated reconcile. It does not authorize live submit,
+  live cancel, or real-funds order placement.
 
 ## Evidence references
 
@@ -182,6 +186,8 @@ Current evidence:
 - Logs: `polymarket-execution-engine/evidence/current/logs/`
 - Real-funds canary preflight log:
   `polymarket-execution-engine/evidence/current/logs/65-real-funds-canary-preflight.log`
+- Real-funds canary lifecycle log:
+  `polymarket-execution-engine/evidence/current/logs/66-real-funds-canary-lifecycle-drill.log`
 - Artifact SHA-256: recorded outside the zip in
   `polymarket-dual-project-v0.25.0.zip.sha256` and
   `polymarket-dual-project-v0.25.0.zip.evidence.json`

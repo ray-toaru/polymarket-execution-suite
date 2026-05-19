@@ -214,6 +214,10 @@
 - PostgreSQL migration `0004_real_funds_canary` adds idempotent, hash-bound,
   redaction-preserving local canary run storage without raw signed order
   exposure.
+- Real-funds canary lifecycle closure now has in-memory and PostgreSQL-backed
+  local run persistence, `(account_id, idempotency_key)` replay/conflict
+  handling, remote-unknown freeze escalation, simulated reconcile state, and
+  service helpers that reject remote side effects and raw signed order exposure.
 
 ## Intentionally blocked
 
