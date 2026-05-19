@@ -218,6 +218,10 @@
   local run persistence, `(account_id, idempotency_key)` replay/conflict
   handling, remote-unknown freeze escalation, simulated reconcile state, and
   service helpers that reject remote side effects and raw signed order exposure.
+- Real-funds canary program readiness now includes a local-only
+  `pmx-real-funds-canary` CLI behind the `live-submit` feature, SDK read-only
+  automatic market selection, default dry-run behavior, and readiness evidence
+  that records no posting and no remote side effects.
 
 ## Intentionally blocked
 
@@ -236,8 +240,12 @@ PostgreSQL, SDK, credentialed non-trading smoke, sign-only dry-run, release
 artifact, shadow execution, observability, and governance checks:
 
 - `real_funds_canary_preflight_validation`: pass.
+- `real_funds_canary_lifecycle_validation`: pass.
+- `real_funds_canary_ready_validation`: pass.
 - `65-real-funds-canary-preflight.log`: pass, no post, no cancel, no remote side
   effect.
+- `67-real-funds-canary-ready-drill.log`: pass, program ready, no actual
+  execution, no post, no remote side effect.
 
 ```text
 polymarket-execution-engine/evidence/current/manifest.json

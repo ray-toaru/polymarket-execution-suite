@@ -21,6 +21,18 @@ hermes-polymarket-control: 71c2676a43ac2996f131eb59f179f2d88b311391
 polymarket-execution-engine: 8e7897ed67c826c62bf2f91fd5e83e0fb0461640
 ```
 
+Current integration checkout has since advanced to:
+
+```text
+hermes-polymarket-control: cc04f9b4af03505907dbd5d977016ebef4c0319c
+polymarket-execution-engine: 17dac9e2dbe60d61bffa441cf5589a4bbca2c556
+```
+
+That newer source adds Hermes no-secret test coverage plus real-funds canary
+program readiness. The refreshed evidence is a local no-live refresh with
+PostgreSQL and credentialed SDK sections skipped in this environment; it must
+not be cited as refreshed external PostgreSQL or credentialed SDK evidence.
+
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
 live trading capability.
 
@@ -50,6 +62,11 @@ Rationale:
 - Rust workspace, PostgreSQL migration/store/API E2E, SDK adapter/spike, SDK
   regression, credentialed non-trading smoke, sign-only dry-run, local static,
   contract, release artifact, and governance gates passed in this environment.
+- A later local refresh at
+  `polymarket-execution-engine: 17dac9e2dbe60d61bffa441cf5589a4bbca2c556`
+  passed the current no-live gate chain but skipped PostgreSQL and credentialed
+  SDK sections because the required environment variables were not set; it must
+  not be cited as refreshed external PostgreSQL or credentialed SDK evidence.
 - Shadow execution, reconciliation drift, rollback/kill-switch, migration drift,
   live canary readiness, blocked live canary, and productionization guard gates
   passed.
@@ -199,4 +216,4 @@ Current evidence:
 This is not production-ready and not live-canary-approved. Production promotion
 still requires reviewed secret-manager/KMS/HSM controls, deployment and rollback
 runbooks, observability, retention, account and market risk limits, actual
-real-funds canary evidence, and an explicit future release decision.
+real-funds canary execution evidence, and an explicit future release decision.

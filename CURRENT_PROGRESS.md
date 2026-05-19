@@ -20,3 +20,6 @@ This pass formalizes the v0.25.0 shadow-ready SDK sign-only baseline after the p
 
 - Live submit/cancel promotion evidence.
 - Production deployment evidence and operational controls.
+- Actual real-funds canary execution evidence. The current implementation target
+  is program readiness only; normal gates must still record no posting and no
+  remote trading side effects.

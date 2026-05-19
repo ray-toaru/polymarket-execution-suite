@@ -44,9 +44,12 @@ The latest full gate included:
 - migration drift dry-run;
 - release hygiene, release artifact check, contract validation, and docs/evidence governance.
 
-The latest bound full gate was run with local PostgreSQL and explicit
-credentialed SDK opt-in. It records `credentialed_non_trading_validation=pass`
-and keeps live submit/cancel blocked.
+The latest local refresh completed the current gate chain with live
+submit/cancel blocked. In this workspace refresh, PostgreSQL and credentialed
+SDK sections were skipped because `PMX_TEST_DATABASE_URL`,
+`PMX_RUN_AUTHENTICATED_NON_TRADING_SMOKE`, and `PMX_RUN_SIGN_ONLY_DRY_RUN` were
+not set. Re-run with those prerequisites before treating the current source as
+refreshed external PostgreSQL or credentialed SDK evidence.
 
 Re-run command:
 

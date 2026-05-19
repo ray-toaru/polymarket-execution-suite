@@ -32,6 +32,13 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [ ] Production deployment
 - [ ] Actual real-funds canary fill
 
+## Real-funds canary program readiness
+
+- [x] Local CLI defaults to dry-run and is available only with the `live-submit` feature
+- [x] Automatic market selection uses official SDK read-only data and fails closed on missing/unsafe data
+- [x] Armed mode requires explicit env/config/approval/artifact/evidence gates
+- [x] Current evidence records program readiness without actual posting
+
 ## P1 canary-prep evidence
 
 - [x] Canary readiness drill
