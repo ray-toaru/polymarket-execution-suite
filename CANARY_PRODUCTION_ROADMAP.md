@@ -198,6 +198,12 @@ Current evidence coverage:
   can drive external preflight readiness to true while live submit/cancel remain
   blocked, and a negative sensitive-key fixture is rejected without logging the
   fixture secret value.
+- `production_preflight_config_diff_review_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `64-production-preflight-config-diff-review.log` proves baseline/candidate
+  config changes are summarized by field paths and SHA-256 hashes only, valid
+  reference-only changes pass, and a sensitive-key candidate is rejected without
+  logging the fixture secret value.
 
 Exit criteria:
 

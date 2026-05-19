@@ -107,3 +107,8 @@ is under `polymarket-execution-engine/evidence/current/`.
   without logging the fixture secret value
 - [x] Production preflight config fixture drill included in current gates and
   evidence manifest
+- [x] Production preflight baseline/candidate config diff review added
+- [x] Config diff summary reports changed field paths and config SHA-256 hashes
+  only, without full reference values or secret values
+- [x] Sensitive-key candidate config is rejected without logging the fixture
+  secret value

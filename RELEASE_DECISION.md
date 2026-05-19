@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: 71c2676a43ac2996f131eb59f179f2d88b311391
-polymarket-execution-engine: f462db469df10536949e0d652767229d936e850a
+polymarket-execution-engine: 7966b82ae2faf6832e0e680df4f47b7f3b1b3c8c
 ```
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
@@ -148,6 +148,11 @@ Rationale:
   while live submit/cancel remain blocked, and a negative fixture containing a
   forbidden sensitive key is rejected by field path without logging the fixture
   secret value.
+- Production preflight config diff-review evidence is included as an
+  independent manifest section proving baseline/candidate config changes are
+  summarized by field paths and SHA-256 hashes only, valid reference-only
+  changes pass, and a candidate containing a forbidden sensitive key is rejected
+  without logging the fixture secret value.
 - Shadow execution evidence now runs by default in the current gate, and
   observability evidence is bound as an explicit manifest section.
 - Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.
