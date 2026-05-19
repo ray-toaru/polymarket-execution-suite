@@ -201,6 +201,9 @@
   whitelist, caps, operator approval, reservation, idempotency, reconcile,
   remote-unknown freeze, post-submit reconcile, cancel-unknown escalation, and
   cancel-only fallback checks.
+- Runtime heartbeat worker scaffolding now exposes a non-trading heartbeat
+  loop with an injected persistence sink, replacing the old discard-only
+  placeholder while preserving a deprecated compatibility entry point.
 
 ## Intentionally blocked
 

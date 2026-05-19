@@ -116,3 +116,5 @@ is under `polymarket-execution-engine/evidence/current/`.
   section before deployment remains blocked
 - [x] Deployment preflight verifies the `64` diff-review log SHA-256 before
   deployment remains blocked
+- [x] Runtime heartbeat worker placeholder replaced with a non-trading
+  sink-driven heartbeat loop and compatibility wrapper

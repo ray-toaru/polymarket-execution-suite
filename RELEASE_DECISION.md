@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: 71c2676a43ac2996f131eb59f179f2d88b311391
-polymarket-execution-engine: 14954ecb237561a8a86c9672ad98926ebdd53982
+polymarket-execution-engine: 41792657228c82da9d0a9638353ba4eb4828e34f
 ```
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
@@ -56,6 +56,8 @@ Rationale:
 - Runtime worker loop closure, order lifecycle divergence classification, SDK
   standard sign-only plan, live canary prep, and production hardening spec are
   included in the pinned execution-engine source.
+- Runtime heartbeat worker scaffolding now uses a non-trading heartbeat loop
+  with an injected persistence sink instead of a discard-only placeholder.
 - Read-only remote reconcile reader, continuous runtime worker tick entry,
   explicit SDK sign-only default path, fail-closed live canary defaults, and
   production evidence controls are included in the pinned execution-engine
