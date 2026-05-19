@@ -18,7 +18,7 @@ This decision applies to the integration repository at the pinned submodule revi
 
 ```text
 hermes-polymarket-control: 71c2676a43ac2996f131eb59f179f2d88b311391
-polymarket-execution-engine: d473ef73bcf00b9c6de9e3155a316d3e918c7e0e
+polymarket-execution-engine: 68ef4ec0bed449f7288469945a359c7da7c32c88
 ```
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
@@ -95,6 +95,9 @@ Rationale:
   section proving sensitive environment values observed by validation are absent
   from logs, manifest, and release artifact, with `.env` excluded from the
   package.
+- Production monitoring/SLO evidence is included as an independent manifest
+  section proving required alert signals are represented and safety SLO or error
+  budget states cannot auto-enable live submit.
 - Shadow execution evidence now runs by default in the current gate, and
   observability evidence is bound as an explicit manifest section.
 - Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.

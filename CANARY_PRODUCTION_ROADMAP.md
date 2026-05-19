@@ -133,6 +133,11 @@ Current evidence coverage:
 - `51-production-secret-custody-drill.log` proves sensitive environment values
   observed by validation are absent from logs, manifest, and package artifact,
   with `.env` excluded from the release zip.
+- `production_monitoring_slo_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `52-production-monitoring-slo-drill.log` proves required alert/SLO signals are
+  represented and safety SLO or error budget states cannot auto-enable live
+  submit.
 
 Exit criteria:
 
