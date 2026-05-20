@@ -3,22 +3,25 @@ name: rust-locked
 on:
   push:
     paths:
+      - ".github/workflows/rust-locked.yml"
       - "polymarket-execution-engine/Cargo.toml"
       - "polymarket-execution-engine/Cargo.lock"
       - "polymarket-execution-engine/crates/**"
       - "polymarket-execution-engine/adapters/**"
       - "polymarket-execution-engine/migrations/**"
       - "polymarket-execution-engine/validation/**"
-      - ".github/workflows/rust-locked.yml"
   pull_request:
     paths:
+      - ".github/workflows/rust-locked.yml"
       - "polymarket-execution-engine/Cargo.toml"
       - "polymarket-execution-engine/Cargo.lock"
       - "polymarket-execution-engine/crates/**"
       - "polymarket-execution-engine/adapters/**"
       - "polymarket-execution-engine/migrations/**"
       - "polymarket-execution-engine/validation/**"
-      - ".github/workflows/rust-locked.yml"
+
+permissions:
+  contents: read
 
 jobs:
   locked-checks:
@@ -27,7 +30,10 @@ jobs:
       run:
         working-directory: polymarket-execution-engine
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Install Rust 1.88
         uses: dtolnay/rust-toolchain@stable
@@ -37,6 +43,26 @@ jobs:
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: polymarket-execution-engine
 
-      - name: Run current gates
-        run: ./validation/run_current_gates.sh
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Check workspace
+        run: cargo check --workspace --locked
+
+      - name: Run clippy
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+
+      - name: Run workspace unit tests
+        run: cargo test --workspace --exclude pmx-api --locked -- --test-threads=1
+
+      - name: Run fake HTTP e2e tests
+        run: cargo test -p pmx-api --test http_and_fake_e2e --locked -- --test-threads=1
+
+      - name: Run official SDK adapter regression tests
+        run: cargo test --manifest-path adapters/pmx-official-sdk-adapter/Cargo.toml --locked -- --test-threads=1
+
+      - name: Run official SDK adapter typecheck tests
+        run: cargo test --manifest-path adapters/pmx-official-sdk-adapter/Cargo.toml --features sdk-typecheck --locked -- --test-threads=1

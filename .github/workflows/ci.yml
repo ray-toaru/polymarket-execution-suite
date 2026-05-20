@@ -3,25 +3,102 @@ name: ci
 on:
   push:
     paths:
-      - "polymarket-execution-engine/**"
+      - ".github/**"
+      - "scripts/**"
       - "hermes-polymarket-control/**"
-      - ".github/workflows/ci.yml"
-      - ".github/workflows/rust-locked.yml"
+      - "polymarket-execution-engine/**"
+      - "VERSION"
+      - "README.md"
+      - "PROJECT_ARCHITECTURE.md"
+      - "DEPENDENCY_POLICY.md"
+      - "DESIGN_DECISION_RECORD.md"
+      - "IMPLEMENTATION_STATUS.md"
+      - "VALIDATION_REPORT.md"
+      - "REVIEW_AUDIT.md"
+      - "DOC_STATUS.md"
+      - "RELEASE_DECISION.md"
   pull_request:
     paths:
-      - "polymarket-execution-engine/**"
+      - ".github/**"
+      - "scripts/**"
       - "hermes-polymarket-control/**"
-      - ".github/workflows/ci.yml"
-      - ".github/workflows/rust-locked.yml"
+      - "polymarket-execution-engine/**"
+      - "VERSION"
+      - "README.md"
+      - "PROJECT_ARCHITECTURE.md"
+      - "DEPENDENCY_POLICY.md"
+      - "DESIGN_DECISION_RECORD.md"
+      - "IMPLEMENTATION_STATUS.md"
+      - "VALIDATION_REPORT.md"
+      - "REVIEW_AUDIT.md"
+      - "DOC_STATUS.md"
+      - "RELEASE_DECISION.md"
+
+permissions:
+  contents: read
+
+env:
+  HERMES_PROFILE: hm-pdp-test
 
 jobs:
-  rust-prelive:
+  integration-static:
+    name: integration static checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Hermes test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e "hermes-polymarket-control[test]"
+
+      - name: Check version consistency
+        run: python scripts/check_version_consistency.py
+
+      - name: Validate root and API contracts
+        run: python scripts/validate_contracts.py
+
+      - name: Run Hermes tests
+        env:
+          PYTHONPATH: hermes-polymarket-control/src
+        run: python -m pytest -q hermes-polymarket-control/tests
+
+      - name: Compile Python sources
+        run: python -m compileall -q hermes-polymarket-control/src scripts polymarket-execution-engine/validation
+
+      - name: Check docs and evidence governance
+        run: python polymarket-execution-engine/validation/check_docs_evidence_governance.py
+
+      - name: Clean local artifacts
+        run: python scripts/clean_local_artifacts.py
+
+      - name: Check release hygiene
+        run: python polymarket-execution-engine/scripts/check_release_hygiene.py . --dev-worktree
+
+      - name: Package and validate release artifact
+        run: |
+          artifact="$(python scripts/package_release.py | tail -n 1)"
+          python scripts/check_release_artifact.py "$artifact" "$(cat VERSION)"
+
+  rust-current-gates:
+    name: rust current gates
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: polymarket-execution-engine
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Install Rust 1.88
         uses: dtolnay/rust-toolchain@stable
@@ -31,6 +108,60 @@ jobs:
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: polymarket-execution-engine
 
       - name: Run current gates
         run: ./validation/run_current_gates.sh
+
+  postgres-gates:
+    name: postgres gates
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: polymarket-execution-engine
+    env:
+      PMX_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust 1.88
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.88.0
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: polymarket-execution-engine
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Apply migrations
+        run: psql "$PMX_TEST_DATABASE_URL" -f migrations/0001_initial.sql
+
+      - name: Run store PostgreSQL tests
+        run: cargo test -p pmx-store postgres::tests --locked -- --nocapture --test-threads=1
+
+      - name: Run API PostgreSQL e2e tests
+        run: cargo test -p pmx-api --test http_postgres_e2e --locked -- --nocapture --test-threads=1
+
+      - name: Run migration drift dry-run
+        run: python validation/run_migration_drift_dry_run.py
