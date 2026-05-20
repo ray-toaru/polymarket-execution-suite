@@ -115,12 +115,15 @@ def main() -> int:
         failures.append("release manifest status must explicitly say not-production")
 
     ci = read(".github/workflows/ci.yml")
-    if "./validation/run_current_gates.sh" not in ci:
-        failures.append("CI must run validation/run_current_gates.sh")
+    execution_ci = read("polymarket-execution-engine/.github/workflows/ci.yml")
+    if "./validation/run_current_gates.sh" in ci:
+        failures.append("integration CI must not own execution-engine current gates")
+    if "./validation/run_current_gates.sh" not in execution_ci:
+        failures.append("execution-engine CI must run validation/run_current_gates.sh")
     current_gate = read("polymarket-execution-engine/validation/run_current_gates.sh")
     if "run_current_gates_impl.sh" not in current_gate:
         failures.append("run_current_gates.sh must delegate to run_current_gates_impl.sh")
-    if re.search(r"\./validation/run_v0_\d+_gates\.sh", ci):
+    if re.search(r"\./validation/run_v0_\d+_gates\.sh", ci + execution_ci):
         failures.append("CI must not bypass run_current_gates.sh or run stale versioned gates for current rust-prelive job")
 
     for lock_rel in [
