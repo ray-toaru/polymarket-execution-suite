@@ -256,13 +256,15 @@ artifact, shadow execution, observability, and governance checks:
   `ray-toaru/hermes-polymarket-control/actions/runs/26174554396`, success.
 - Latest execution-engine GitHub CI:
   `ray-toaru/polymarket-execution-engine/actions/runs/26174564854`, success.
+- Latest credentialed SDK GitHub gate:
+  `ray-toaru/polymarket-execution-engine/actions/runs/26175786984`, success.
 - GitHub CI ownership is split by repository: the integration repository owns
   version/contract/release-artifact checks; execution-engine owns Rust,
   PostgreSQL, current gates, SDK adapter checks, and the manual
   `credentialed-sdk` workflow.
 - The `credentialed-sdk` environment is configured only in
-  `polymarket-execution-engine`; no real Polymarket secrets are configured in
-  GitHub for this release state.
+  `polymarket-execution-engine`; the current GitHub gate uses environment
+  secrets mapped from the local account A `.env` variables.
 
 - `real_funds_canary_preflight_validation`: pass.
 - `real_funds_canary_lifecycle_validation`: pass.

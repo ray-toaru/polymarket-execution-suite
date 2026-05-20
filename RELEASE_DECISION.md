@@ -54,11 +54,14 @@ Latest verified GitHub Actions runs for this decision:
 polymarket-execution-suite ci: 26174576711, success
 hermes-polymarket-control ci: 26174554396, success
 polymarket-execution-engine ci: 26174564854, success
+polymarket-execution-engine credentialed-sdk: 26175786984, success
 ```
 
 The `credentialed-sdk` environment exists in `polymarket-execution-engine`; the
-integration repository has no Polymarket credential environment. No real
-Polymarket credential secrets are configured or validated by this decision.
+integration repository has no Polymarket credential environment. The
+GitHub-hosted credentialed SDK gate passed with execution-engine environment
+secrets mapped from the local account A `.env` variables. Secret values are not
+recorded in this decision.
 
 ## Required evidence
 
@@ -201,10 +204,9 @@ Rationale:
 - Shadow execution evidence now runs by default in the current gate, and
   observability evidence is bound as an explicit manifest section.
 - Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.
-- GitHub-hosted credentialed SDK validation has not run in this decision,
-  because the `polymarket-execution-engine` `credentialed-sdk` environment has
-  no real Polymarket secrets configured. This is a deliberate non-claim, not a
-  pass.
+- GitHub-hosted credentialed SDK validation passed in
+  `ray-toaru/polymarket-execution-engine/actions/runs/26175786984`; it covered
+  authenticated non-trading smoke and sign-only dry-run only.
 - PostgreSQL gates used an isolated local PostgreSQL 16 instance on
   `localhost:55432`; the `.env` `PMX_DATABASE_URL` target on `localhost:5432`
   was not listening during validation.
@@ -238,6 +240,8 @@ Current evidence:
   `ray-toaru/hermes-polymarket-control/actions/runs/26174554396`
 - GitHub execution-engine CI:
   `ray-toaru/polymarket-execution-engine/actions/runs/26174564854`
+- GitHub credentialed SDK:
+  `ray-toaru/polymarket-execution-engine/actions/runs/26175786984`
 - Environment: `polymarket-execution-engine/evidence/current/environment.json`
 - Manifest: `polymarket-execution-engine/evidence/current/manifest.json`
 - Manifest SHA-256:

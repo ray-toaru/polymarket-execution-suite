@@ -38,6 +38,7 @@ The latest verified GitHub Actions runs are:
 polymarket-execution-suite ci: 26174576711, success
 hermes-polymarket-control ci: 26174554396, success
 polymarket-execution-engine ci: 26174564854, success
+polymarket-execution-engine credentialed-sdk: 26175786984, success
 ```
 
 Repository ownership is intentionally split:
@@ -73,9 +74,12 @@ credentialed SDK sections passed under explicit `PMX_TEST_DATABASE_URL`,
 `PMX_ALLOW_SIGN_ONLY_DRY_RUN` prerequisites. Hermes validation is run with the
 `hm-pdp-test` profile.
 
-GitHub-hosted `credentialed-sdk` has not been run for this report. Its protected
+GitHub-hosted `credentialed-sdk` passed for this report. Its protected
 environment exists in `polymarket-execution-engine`, not in the integration
-repository, and currently has no real Polymarket secrets configured.
+repository, and its secrets were mapped from the local account A `.env`
+variables. The gate covered authenticated non-trading smoke and sign-only
+dry-run only; it did not authorize live submit, live cancel, or real-funds
+canary execution.
 
 Re-run command:
 
