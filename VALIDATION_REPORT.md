@@ -18,8 +18,8 @@ sha256=recorded in external .zip.sha256 and .zip.evidence.json sidecars
 ```bash
 python scripts/check_version_consistency.py
 python scripts/validate_contracts.py
-PYTHONPATH=hermes-polymarket-control/src python -m pytest -q hermes-polymarket-control/tests
-python -m compileall -q hermes-polymarket-control/src scripts polymarket-execution-engine/validation
+HERMES_PROFILE=hm-pdp-test PYTHONPATH=hermes-polymarket-control/src python -m pytest -q hermes-polymarket-control/tests
+HERMES_PROFILE=hm-pdp-test python -m compileall -q hermes-polymarket-control/src scripts polymarket-execution-engine/validation
 python polymarket-execution-engine/validation/check_plan_storage.py
 python polymarket-execution-engine/validation/check_live_submit_guard.py
 python polymarket-execution-engine/validation/check_sign_only_lifecycle.py
@@ -46,10 +46,10 @@ The latest full gate included:
 
 The latest local refresh completed the current gate chain with live
 submit/cancel blocked. In this workspace refresh, PostgreSQL and credentialed
-SDK sections were skipped because `PMX_TEST_DATABASE_URL`,
-`PMX_RUN_AUTHENTICATED_NON_TRADING_SMOKE`, and `PMX_RUN_SIGN_ONLY_DRY_RUN` were
-not set. Re-run with those prerequisites before treating the current source as
-refreshed external PostgreSQL or credentialed SDK evidence.
+SDK sections passed under explicit `PMX_TEST_DATABASE_URL`,
+`PMX_RUN_AUTHENTICATED_NON_TRADING_SMOKE`, `PMX_RUN_SIGN_ONLY_DRY_RUN`, and
+`PMX_ALLOW_SIGN_ONLY_DRY_RUN` prerequisites. Hermes validation is run with the
+`hm-pdp-test` profile.
 
 Re-run command:
 

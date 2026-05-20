@@ -222,6 +222,17 @@
   `pmx-real-funds-canary` CLI behind the `live-submit` feature, SDK read-only
   automatic market selection, default dry-run behavior, and readiness evidence
   that records no posting and no remote side effects.
+- Real-funds canary dry-run market discovery now emits aggregate safe-market
+  diagnostics without token identifiers, signed material, secrets, or raw order
+  payloads.
+- Real-funds canary armed mode now requires a reviewed release-decision JSON
+  bound to the same artifact SHA-256 and evidence-manifest SHA-256 as the
+  approval file.
+- Local real-funds canary review package generation now binds artifact/evidence
+  hashes and produces review-only material that is not an armed approval.
+- Hermes control-plane can build a blocked canary readiness report from
+  approval/evidence references under the `hm-pdp-test` profile without signing,
+  direct CLOB access, or remote side effects.
 
 ## Intentionally blocked
 
@@ -242,6 +253,7 @@ artifact, shadow execution, observability, and governance checks:
 - `real_funds_canary_preflight_validation`: pass.
 - `real_funds_canary_lifecycle_validation`: pass.
 - `real_funds_canary_ready_validation`: pass.
+- `real_funds_canary_review_package_validation`: pass.
 - `65-real-funds-canary-preflight.log`: pass, no post, no cancel, no remote side
   effect.
 - `67-real-funds-canary-ready-drill.log`: pass, program ready, no actual

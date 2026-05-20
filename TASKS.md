@@ -38,6 +38,14 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [x] Automatic market selection uses official SDK read-only data and fails closed on missing/unsafe data
 - [x] Armed mode requires explicit env/config/approval/artifact/evidence gates
 - [x] Current evidence records program readiness without actual posting
+- [x] Dry-run market discovery reports aggregate safe-market diagnostics without
+  exposing token identifiers or signing material
+- [x] Armed mode requires a reviewed release-decision JSON bound to the same
+  artifact and evidence hashes as the approval
+- [x] Local review package generation produces review-only material, not an
+  armed approval
+- [x] Hermes can build blocked canary readiness reports from references under
+  the `hm-pdp-test` profile without signing or CLOB access
 
 ## P1 canary-prep evidence
 

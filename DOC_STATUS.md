@@ -47,6 +47,9 @@ polymarket-dual-project-v0.25.0.zip
 sha256=recorded in external .zip.sha256 and .zip.evidence.json sidecars
 ```
 
+Hermes validation for the control-plane side uses the externally created
+`hm-pdp-test` profile.
+
 Historical or imported logs live under:
 
 ```text

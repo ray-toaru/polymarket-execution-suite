@@ -11,6 +11,12 @@
 - Runtime worker and order lifecycle governance now have full gate evidence.
 - Credentialed non-trading smoke and sign-only dry-run passed under explicit
   opt-in gates without enabling live submit/cancel.
+- Real-funds canary dry-run diagnostics are aggregate-only and do not expose
+  token identifiers, raw signed material, or secrets.
+- Armed real-funds canary requires a reviewed release-decision JSON in addition
+  to approval, artifact, evidence, env, config, market, and balance gates.
+- Hermes can report canary readiness references under `hm-pdp-test`, but still
+  cannot sign, submit, cancel, hold executor DB credentials, or call CLOB.
 
 ## Current evidence
 

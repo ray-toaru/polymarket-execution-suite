@@ -46,8 +46,8 @@ Integration-level local/static validation entry points:
 ```bash
 python scripts/check_version_consistency.py
 python scripts/validate_contracts.py
-PYTHONPATH=hermes-polymarket-control/src python -m pytest -q hermes-polymarket-control/tests
-python -m compileall -q hermes-polymarket-control/src scripts polymarket-execution-engine/validation
+HERMES_PROFILE=hm-pdp-test PYTHONPATH=hermes-polymarket-control/src python -m pytest -q hermes-polymarket-control/tests
+HERMES_PROFILE=hm-pdp-test python -m compileall -q hermes-polymarket-control/src scripts polymarket-execution-engine/validation
 python polymarket-execution-engine/validation/check_docs_evidence_governance.py
 python polymarket-execution-engine/scripts/check_release_hygiene.py . --dev-worktree
 ```
