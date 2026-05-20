@@ -2,14 +2,14 @@
 
 ## v0.26 controlled canary decision-prep
 
-- [ ] Produce a reviewed release-decision JSON template for a future controlled
+- [x] Produce a reviewed release-decision JSON template for a future controlled
   canary attempt; default outcome must be no-go.
-- [ ] Bind any future canary review package to the released `v0.25.0` artifact
+- [x] Bind any future canary review package to the released `v0.25.0` artifact
   SHA-256, evidence manifest SHA-256, and GitHub evidence run IDs.
 - [ ] Collect external secret-custody/KMS, operator-approval, alert-routing,
   dashboard, rollback, and incident-runbook references without storing secret
   values in the repository.
-- [ ] Add or refresh validation that rejects stale, expired, mismatched, or
+- [x] Add or refresh validation that rejects stale, expired, mismatched, or
   partial canary approval references before any live-submit feature path can be
   armed.
 - [ ] Re-run the execution-engine full current gates and root integration CI

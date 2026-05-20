@@ -884,6 +884,70 @@ def validate_current_docs_and_release_governance() -> None:
     if todo_artifacts:
         fail("validation TODO artifacts remain: " + ", ".join(sorted(todo_artifacts)))
 
+
+def validate_controlled_canary_release_decision_governance() -> None:
+    template = EXECUTOR / "config/controlled-canary.release-decision.template.json"
+    example = EXECUTOR / "config/controlled-canary.release-decision.example.json"
+    invalid = EXECUTOR / "config/controlled-canary.release-decision.invalid-partial.fixture.json"
+    invalid_mismatched = EXECUTOR / "config/controlled-canary.release-decision.invalid-mismatched.fixture.json"
+    validator = EXECUTOR / "validation/validate_controlled_canary_release_decision.py"
+    review_script = EXECUTOR / "validation/prepare_real_funds_canary_review.py"
+    review_drill = EXECUTOR / "validation/run_real_funds_canary_review_package_drill.py"
+    readiness_doc = EXECUTOR / "docs/REAL_FUNDS_CANARY_OPERATIONS_READINESS.md"
+    for path in [template, example, invalid, invalid_mismatched, validator]:
+        if not path.exists():
+            fail(f"controlled canary release-decision governance file missing: {path.relative_to(ROOT)}")
+    template_data = json.loads(template.read_text())
+    example_data = json.loads(example.read_text())
+    invalid_data = json.loads(invalid.read_text())
+    invalid_mismatched_data = json.loads(invalid_mismatched.read_text())
+    if template_data.get("decision") != "no_go":
+        fail("controlled canary release-decision template must default to no_go")
+    for flag in [
+        "live_submit_authorized",
+        "live_cancel_authorized",
+        "production_deployment_authorized",
+        "real_funds_canary_authorized",
+        "remote_side_effects_authorized",
+    ]:
+        if template_data.get(flag) is not False:
+            fail(f"controlled canary release-decision template must keep {flag}=false")
+        if example_data.get(flag) is not False:
+            fail(f"controlled canary release-decision example must keep {flag}=false")
+    if example_data.get("artifact_sha256") != "a022e81e1255e3d80a6aee3bc94c6513023a1cf7118857fb0c267ff79df4cd1d":
+        fail("controlled canary release-decision example must bind v0.25.0 artifact SHA-256")
+    if invalid_data.get("decision") != "go" or invalid_data.get("live_submit_authorized") is not True:
+        fail("controlled canary invalid partial fixture must exercise rejected go/live-submit path")
+    if invalid_mismatched_data.get("artifact_sha256") == example_data.get("artifact_sha256"):
+        fail("controlled canary invalid mismatched fixture must use a mismatched artifact hash")
+    validator_text = validator.read_text()
+    for needle in [
+        "invalid partial fixture must be rejected",
+        "invalid mismatched fixture must be rejected",
+        "go decision missing external references",
+        "go decision is expired",
+        "go decision artifact hash does not match",
+        "live_submit_authorized",
+        "real_funds_canary_authorized",
+    ]:
+        if needle not in validator_text:
+            fail(f"controlled canary release-decision validator missing token: {needle}")
+    review_text = review_script.read_text()
+    if "release-decision.json" not in review_text or "DEFAULT_RELEASE_DECISION" not in review_text:
+        fail("real-funds canary review package must include release-decision.json")
+    for needle in ["DEFAULT_ROOT_CI_RUN_ID", "DEFAULT_HERMES_CI_RUN_ID", "DEFAULT_EXECUTION_ENGINE_CI_RUN_ID", "DEFAULT_CREDENTIALED_SDK_RUN_ID"]:
+        if needle not in review_text:
+            fail(f"real-funds canary review package must bind GitHub evidence run id token: {needle}")
+    drill_text = review_drill.read_text()
+    for needle in ["validate_controlled_canary_release_decision.py", "credentialed_sdk_run_id"]:
+        if needle not in drill_text:
+            fail(f"real-funds canary review package drill missing token: {needle}")
+    readiness_text = readiness_doc.read_text()
+    for needle in ["default no-go", "release-decision.json", "real_funds_canary_authorized=false"]:
+        if needle not in readiness_text:
+            fail(f"real-funds canary operations readiness doc missing token: {needle}")
+
+
 def main() -> None:
     spec = yaml.safe_load(OPENAPI.read_text())
     validate_paths_and_statuses(spec)
@@ -906,6 +970,7 @@ def main() -> None:
     validate_current_hermes_client_surface()
     validate_current_evidence_manifest_guard()
     validate_current_docs_and_release_governance()
+    validate_controlled_canary_release_decision_governance()
     print(json.dumps({"status": "ok", "paths": len(spec["paths"]), "schemas": len(spec["components"]["schemas"])}))
 
 
