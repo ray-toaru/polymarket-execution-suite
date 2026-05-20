@@ -51,8 +51,9 @@ The GitHub CI boundary now follows the repository ownership model:
 Latest verified GitHub Actions runs for this decision:
 
 ```text
-polymarket-execution-suite ci: 26173303576, success
-polymarket-execution-engine ci: 26171126780, success
+polymarket-execution-suite ci: 26174576711, success
+hermes-polymarket-control ci: 26174554396, success
+polymarket-execution-engine ci: 26174564854, success
 ```
 
 The `credentialed-sdk` environment exists in `polymarket-execution-engine`; the
@@ -232,9 +233,11 @@ Rationale:
 Current evidence:
 
 - GitHub integration CI:
-  `ray-toaru/polymarket-execution-suite/actions/runs/26173303576`
+  `ray-toaru/polymarket-execution-suite/actions/runs/26174576711`
+- GitHub Hermes CI:
+  `ray-toaru/hermes-polymarket-control/actions/runs/26174554396`
 - GitHub execution-engine CI:
-  `ray-toaru/polymarket-execution-engine/actions/runs/26171126780`
+  `ray-toaru/polymarket-execution-engine/actions/runs/26174564854`
 - Environment: `polymarket-execution-engine/evidence/current/environment.json`
 - Manifest: `polymarket-execution-engine/evidence/current/manifest.json`
 - Manifest SHA-256:

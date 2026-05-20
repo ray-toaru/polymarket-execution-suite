@@ -251,9 +251,11 @@ PostgreSQL, SDK, credentialed non-trading smoke, sign-only dry-run, release
 artifact, shadow execution, observability, and governance checks:
 
 - Latest integration GitHub CI:
-  `ray-toaru/polymarket-execution-suite/actions/runs/26173303576`, success.
+  `ray-toaru/polymarket-execution-suite/actions/runs/26174576711`, success.
+- Latest Hermes GitHub CI:
+  `ray-toaru/hermes-polymarket-control/actions/runs/26174554396`, success.
 - Latest execution-engine GitHub CI:
-  `ray-toaru/polymarket-execution-engine/actions/runs/26171126780`, success.
+  `ray-toaru/polymarket-execution-engine/actions/runs/26174564854`, success.
 - GitHub CI ownership is split by repository: the integration repository owns
   version/contract/release-artifact checks; execution-engine owns Rust,
   PostgreSQL, current gates, SDK adapter checks, and the manual

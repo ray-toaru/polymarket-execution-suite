@@ -35,8 +35,9 @@ python polymarket-execution-engine/scripts/check_release_hygiene.py . --dev-work
 The latest verified GitHub Actions runs are:
 
 ```text
-polymarket-execution-suite ci: 26173303576, success
-polymarket-execution-engine ci: 26171126780, success
+polymarket-execution-suite ci: 26174576711, success
+hermes-polymarket-control ci: 26174554396, success
+polymarket-execution-engine ci: 26174564854, success
 ```
 
 Repository ownership is intentionally split:
@@ -48,11 +49,16 @@ Repository ownership is intentionally split:
   current gates, SDK adapter checks, and owns the manual `credentialed-sdk`
   workflow.
 
-The latest execution-engine CI full gate included:
+The latest execution-engine CI completed:
 
 - Rust fmt/check/clippy/tests;
 - PostgreSQL migration, repository tests, and API E2E;
 - SDK spike and adapter checks/tests/typecheck;
+- static release and safety guards;
+- current gates.
+
+The latest canonical evidence refresh also records:
+
 - credentialed non-trading smoke;
 - sign-only dry-run;
 - shadow execution would-submit drill;
