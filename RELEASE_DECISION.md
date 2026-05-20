@@ -17,21 +17,20 @@ Current decision: `shadow-ready SDK sign-only candidate`
 This decision applies to the integration repository at the pinned submodule revisions:
 
 ```text
-hermes-polymarket-control: 71c2676a43ac2996f131eb59f179f2d88b311391
-polymarket-execution-engine: 8e7897ed67c826c62bf2f91fd5e83e0fb0461640
+hermes-polymarket-control: 24f88265a9377a9cffc529e7bc20d711eee941a4
+polymarket-execution-engine: 61c483996628f3dfb404490d135a9cc163823e7b
 ```
 
-Current integration checkout has since advanced to:
+The integration repository commit containing this decision pins those submodule
+revisions. Use `git log -1 --oneline` in the integration repository for the
+exact root commit.
 
-```text
-hermes-polymarket-control: cc04f9b4af03505907dbd5d977016ebef4c0319c
-polymarket-execution-engine: 17dac9e2dbe60d61bffa441cf5589a4bbca2c556
-```
-
-That newer source adds Hermes no-secret test coverage plus real-funds canary
-program readiness. The refreshed evidence is a local no-live refresh with
-PostgreSQL and credentialed SDK sections skipped in this environment; it must
-not be cited as refreshed external PostgreSQL or credentialed SDK evidence.
+This source includes Hermes canary readiness reference reporting under the
+`hm-pdp-test` profile, aggregate-only real-funds canary dry-run diagnostics,
+review-package generation, and a reviewed release-decision JSON gate for any
+future armed canary. The refreshed current evidence passed PostgreSQL and
+credentialed SDK sections under explicit local prerequisites; it still does not
+authorize production, live submit, live cancel, or real-funds order placement.
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
 live trading capability.
@@ -62,11 +61,10 @@ Rationale:
 - Rust workspace, PostgreSQL migration/store/API E2E, SDK adapter/spike, SDK
   regression, credentialed non-trading smoke, sign-only dry-run, local static,
   contract, release artifact, and governance gates passed in this environment.
-- A later local refresh at
-  `polymarket-execution-engine: 17dac9e2dbe60d61bffa441cf5589a4bbca2c556`
-  passed the current no-live gate chain but skipped PostgreSQL and credentialed
-  SDK sections because the required environment variables were not set; it must
-  not be cited as refreshed external PostgreSQL or credentialed SDK evidence.
+- The current local refresh at
+  `polymarket-execution-engine: 61c483996628f3dfb404490d135a9cc163823e7b`
+  passed the current no-live gate chain, including PostgreSQL and credentialed
+  SDK sections under explicit local prerequisites.
 - Shadow execution, reconciliation drift, rollback/kill-switch, migration drift,
   live canary readiness, blocked live canary, and productionization guard gates
   passed.
@@ -193,6 +191,13 @@ Rationale:
   records, idempotency replay/conflict handling, remote-unknown freeze
   escalation, and simulated reconcile. It does not authorize live submit,
   live cancel, or real-funds order placement.
+- Real-funds canary dry-run market discovery now reports aggregate-only
+  diagnostics, armed mode requires a reviewed release-decision JSON bound to the
+  same artifact/evidence hashes as the approval, and local review-package
+  generation is included in current evidence without creating armed approval.
+- Hermes can produce blocked canary readiness reference reports under
+  `hm-pdp-test`; it still cannot sign, submit, cancel, hold executor database
+  credentials, or call Polymarket CLOB.
 
 ## Evidence references
 
@@ -200,6 +205,8 @@ Current evidence:
 
 - Environment: `polymarket-execution-engine/evidence/current/environment.json`
 - Manifest: `polymarket-execution-engine/evidence/current/manifest.json`
+- Manifest SHA-256:
+  `3c0c6679678ba4938a57ace08e1193783472dc886cc09aec0ab967adb44afdcb`
 - Logs: `polymarket-execution-engine/evidence/current/logs/`
 - Real-funds canary preflight log:
   `polymarket-execution-engine/evidence/current/logs/65-real-funds-canary-preflight.log`
@@ -208,8 +215,10 @@ Current evidence:
 - Artifact SHA-256: recorded outside the zip in
   `polymarket-dual-project-v0.25.0.zip.sha256` and
   `polymarket-dual-project-v0.25.0.zip.evidence.json`
-- Current artifact SHA-256:
-  recorded in the external sidecars generated with the artifact
+- The release artifact sidecars must be regenerated after this document update
+  during the pre-publish check; the external sidecars are the artifact hash
+  source of truth because the in-archive files cannot self-bind the containing
+  zip hash.
 
 ## Explicit non-claims
 
