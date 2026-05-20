@@ -250,6 +250,18 @@ The current canonical evidence manifest records passing full gates for Rust,
 PostgreSQL, SDK, credentialed non-trading smoke, sign-only dry-run, release
 artifact, shadow execution, observability, and governance checks:
 
+- Latest integration GitHub CI:
+  `ray-toaru/polymarket-execution-suite/actions/runs/26171128634`, success.
+- Latest execution-engine GitHub CI:
+  `ray-toaru/polymarket-execution-engine/actions/runs/26171126780`, success.
+- GitHub CI ownership is split by repository: the integration repository owns
+  version/contract/release-artifact checks; execution-engine owns Rust,
+  PostgreSQL, current gates, SDK adapter checks, and the manual
+  `credentialed-sdk` workflow.
+- The `credentialed-sdk` environment is configured only in
+  `polymarket-execution-engine`; no real Polymarket secrets are configured in
+  GitHub for this release state.
+
 - `real_funds_canary_preflight_validation`: pass.
 - `real_funds_canary_lifecycle_validation`: pass.
 - `real_funds_canary_ready_validation`: pass.

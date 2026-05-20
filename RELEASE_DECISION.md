@@ -17,13 +17,13 @@ Current decision: `shadow-ready SDK sign-only candidate`
 This decision applies to the integration repository at the pinned submodule revisions:
 
 ```text
-hermes-polymarket-control: 24f88265a9377a9cffc529e7bc20d711eee941a4
-polymarket-execution-engine: 61c483996628f3dfb404490d135a9cc163823e7b
+polymarket-execution-suite: 66dd307f57b7b73a0b35cc309989c75a3c924b36
+hermes-polymarket-control: 78df12bd53207d719c861abd65a984a270a27efb
+polymarket-execution-engine: eda19644564e2a8394e0dcf07392768c4f81b50e
 ```
 
 The integration repository commit containing this decision pins those submodule
-revisions. Use `git log -1 --oneline` in the integration repository for the
-exact root commit.
+revisions.
 
 This source includes Hermes canary readiness reference reporting under the
 `hm-pdp-test` profile, aggregate-only real-funds canary dry-run diagnostics,
@@ -34,6 +34,29 @@ authorize production, live submit, live cancel, or real-funds order placement.
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
 live trading capability.
+
+## GitHub CI boundary
+
+The GitHub CI boundary now follows the repository ownership model:
+
+- `polymarket-execution-suite` owns integration, release hygiene, packaging, and
+  artifact validation only.
+- `hermes-polymarket-control` owns Python control-plane tests and the no-secret
+  boundary.
+- `polymarket-execution-engine` owns Rust locked checks, PostgreSQL gates,
+  current gates, SDK adapter checks, and the manual `credentialed-sdk`
+  workflow.
+
+Latest verified GitHub Actions runs for this decision:
+
+```text
+polymarket-execution-suite ci: 26171128634, success
+polymarket-execution-engine ci: 26171126780, success
+```
+
+The `credentialed-sdk` environment exists in `polymarket-execution-engine`; the
+integration repository has no Polymarket credential environment. No real
+Polymarket credential secrets are configured or validated by this decision.
 
 ## Required evidence
 
@@ -176,6 +199,10 @@ Rationale:
 - Shadow execution evidence now runs by default in the current gate, and
   observability evidence is bound as an explicit manifest section.
 - Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.
+- GitHub-hosted credentialed SDK validation has not run in this decision,
+  because the `polymarket-execution-engine` `credentialed-sdk` environment has
+  no real Polymarket secrets configured. This is a deliberate non-claim, not a
+  pass.
 - PostgreSQL gates used an isolated local PostgreSQL 16 instance on
   `localhost:55432`; the `.env` `PMX_DATABASE_URL` target on `localhost:5432`
   was not listening during validation.
@@ -203,6 +230,10 @@ Rationale:
 
 Current evidence:
 
+- GitHub integration CI:
+  `ray-toaru/polymarket-execution-suite/actions/runs/26171128634`
+- GitHub execution-engine CI:
+  `ray-toaru/polymarket-execution-engine/actions/runs/26171126780`
 - Environment: `polymarket-execution-engine/evidence/current/environment.json`
 - Manifest: `polymarket-execution-engine/evidence/current/manifest.json`
 - Manifest SHA-256:

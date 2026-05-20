@@ -32,7 +32,23 @@ python polymarket-execution-engine/scripts/check_release_hygiene.py . --dev-work
 
 ## Full gate evidence
 
-The latest full gate included:
+The latest verified GitHub Actions runs are:
+
+```text
+polymarket-execution-suite ci: 26171128634, success
+polymarket-execution-engine ci: 26171126780, success
+```
+
+Repository ownership is intentionally split:
+
+- the integration repository validates version consistency, contracts, release
+  hygiene, packaging, and artifact validation;
+- `hermes-polymarket-control` validates the Python control plane in its own CI;
+- `polymarket-execution-engine` validates Rust locked checks, PostgreSQL gates,
+  current gates, SDK adapter checks, and owns the manual `credentialed-sdk`
+  workflow.
+
+The latest execution-engine CI full gate included:
 
 - Rust fmt/check/clippy/tests;
 - PostgreSQL migration, repository tests, and API E2E;
@@ -45,11 +61,15 @@ The latest full gate included:
 - release hygiene, release artifact check, contract validation, and docs/evidence governance.
 
 The latest local refresh completed the current gate chain with live
-submit/cancel blocked. In this workspace refresh, PostgreSQL and credentialed
-SDK sections passed under explicit `PMX_TEST_DATABASE_URL`,
+submit/cancel blocked. In that local workspace refresh, PostgreSQL and
+credentialed SDK sections passed under explicit `PMX_TEST_DATABASE_URL`,
 `PMX_RUN_AUTHENTICATED_NON_TRADING_SMOKE`, `PMX_RUN_SIGN_ONLY_DRY_RUN`, and
 `PMX_ALLOW_SIGN_ONLY_DRY_RUN` prerequisites. Hermes validation is run with the
 `hm-pdp-test` profile.
+
+GitHub-hosted `credentialed-sdk` has not been run for this report. Its protected
+environment exists in `polymarket-execution-engine`, not in the integration
+repository, and currently has no real Polymarket secrets configured.
 
 Re-run command:
 
