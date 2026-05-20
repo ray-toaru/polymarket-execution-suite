@@ -35,7 +35,7 @@ python polymarket-execution-engine/scripts/check_release_hygiene.py . --dev-work
 The latest verified GitHub Actions runs are:
 
 ```text
-polymarket-execution-suite ci: 26171128634, success
+polymarket-execution-suite ci: 26173303576, success
 polymarket-execution-engine ci: 26171126780, success
 ```
 

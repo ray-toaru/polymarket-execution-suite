@@ -251,7 +251,7 @@ PostgreSQL, SDK, credentialed non-trading smoke, sign-only dry-run, release
 artifact, shadow execution, observability, and governance checks:
 
 - Latest integration GitHub CI:
-  `ray-toaru/polymarket-execution-suite/actions/runs/26171128634`, success.
+  `ray-toaru/polymarket-execution-suite/actions/runs/26173303576`, success.
 - Latest execution-engine GitHub CI:
   `ray-toaru/polymarket-execution-engine/actions/runs/26171126780`, success.
 - GitHub CI ownership is split by repository: the integration repository owns

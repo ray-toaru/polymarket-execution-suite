@@ -14,16 +14,17 @@ Current decision: `shadow-ready SDK sign-only candidate`
 
 ## Scope
 
-This decision applies to the integration repository at the pinned submodule revisions:
+This decision applies to the integration repository at the pinned submodule
+revisions:
 
 ```text
-polymarket-execution-suite: 66dd307f57b7b73a0b35cc309989c75a3c924b36
 hermes-polymarket-control: 78df12bd53207d719c861abd65a984a270a27efb
 polymarket-execution-engine: eda19644564e2a8394e0dcf07392768c4f81b50e
 ```
 
 The integration repository commit containing this decision pins those submodule
-revisions.
+revisions. The root commit is intentionally not embedded here because editing
+this file changes that commit hash.
 
 This source includes Hermes canary readiness reference reporting under the
 `hm-pdp-test` profile, aggregate-only real-funds canary dry-run diagnostics,
@@ -50,7 +51,7 @@ The GitHub CI boundary now follows the repository ownership model:
 Latest verified GitHub Actions runs for this decision:
 
 ```text
-polymarket-execution-suite ci: 26171128634, success
+polymarket-execution-suite ci: 26173303576, success
 polymarket-execution-engine ci: 26171126780, success
 ```
 
@@ -231,7 +232,7 @@ Rationale:
 Current evidence:
 
 - GitHub integration CI:
-  `ray-toaru/polymarket-execution-suite/actions/runs/26171128634`
+  `ray-toaru/polymarket-execution-suite/actions/runs/26173303576`
 - GitHub execution-engine CI:
   `ray-toaru/polymarket-execution-engine/actions/runs/26171126780`
 - Environment: `polymarket-execution-engine/evidence/current/environment.json`
