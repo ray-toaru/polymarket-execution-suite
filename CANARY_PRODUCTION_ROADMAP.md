@@ -23,9 +23,9 @@ Pause conditions:
 - Any path exposes private keys, CLOB secrets, raw signed payloads, raw
   signatures, or signed order envelopes.
 
-## P1: v0.26 canary-prep
+## P1: canary-prep evidence
 
-Status: active next source batch.
+Status: satisfied by the `v0.25.0` shadow-ready SDK sign-only baseline.
 
 Goal: make the future live canary sequence auditable without enabling live side
 effects.
@@ -60,9 +60,14 @@ Exit criteria:
 
 ## P2: Controlled live canary
 
-Status: real-funds canary preflight scaffold implemented and validated; actual
-remote canary fill remains blocked until a reviewed release decision and local
-approval file authorize the attempt.
+Status: next governed phase is canary decision-prep. The real-funds canary
+preflight scaffold is implemented and validated; actual remote canary fill
+remains blocked until a reviewed release decision and local approval file
+authorize the attempt.
+
+`v0.26` should prepare and verify the decision package for a possible future
+controlled canary. It should not treat the released `v0.25.0` credentialed
+non-trading/sign-only evidence as approval to place a real order.
 
 Goal: validate a tiny real side-effect path under hard runtime, account, market,
 amount, approval, kill-switch, and reconciliation controls.

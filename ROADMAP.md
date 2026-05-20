@@ -1,22 +1,38 @@
-# Roadmap — v0.25.0 shadow-ready SDK sign-only baseline
+# Roadmap — post-v0.25.0
+
+## Current baseline
+
+`v0.25.0` has been released as a GitHub prerelease:
+`https://github.com/ray-toaru/polymarket-execution-suite/releases/tag/v0.25.0`.
+
+The release decision remains `shadow-ready SDK sign-only candidate`. It is not
+production-ready, not live-canary-approved, and does not authorize live submit,
+live cancel, or real-funds canary execution.
 
 ## Immediate next validation
 
-1. Run local/static checks.
-2. Generate a clean package.
-3. Run full Rust/SDK/PostgreSQL gates externally against the final package.
-4. Bind current evidence to `evidence/current/manifest.json` and the final artifact SHA-256.
+1. Preserve the released `v0.25.0` package and evidence as the baseline.
+2. Keep root, Hermes, execution-engine CI, and the manual `credentialed-sdk`
+   gate green after any source change.
+3. Rebuild and revalidate a package only after material source or release-doc
+   changes.
+4. Keep `polymarket-execution-engine/evidence/current/manifest.json` as the
+   only current evidence manifest.
 
 ## Next source-hardening items
 
-1. `v0.25.0` is now in closure phase.
-2. Default-on Rust module governance is paused; see `CLOSURE_PHASE_PLAN.md`.
-3. The next approved source batch is P1 canary-prep; see
-   `CANARY_PRODUCTION_ROADMAP.md`.
-4. Only continue:
+1. Treat P1 canary-prep evidence as satisfied by the `v0.25.0` baseline.
+2. Make `v0.26` a controlled canary decision-prep phase, not an implicit live
+   canary attempt.
+3. Before any future canary attempt, produce a reviewed release-decision JSON,
+   operator approval reference, external secret-custody reference, alert-routing
+   reference, and rollback/runbook review bound to the released artifact and
+   evidence hashes.
+4. Continue only:
    - validation replay after material code changes;
    - release/evidence consistency fixes;
-   - small structural fixes that unblock the approved canary-prep batch.
+   - review-package and decision-package improvements that preserve fail-closed
+     live submit/cancel behavior.
 
 ## Recently landed hardening
 
