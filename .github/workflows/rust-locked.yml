@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - ".github/workflows/rust-locked.yml"
+      - "polymarket-execution-engine"
       - "polymarket-execution-engine/Cargo.toml"
       - "polymarket-execution-engine/Cargo.lock"
       - "polymarket-execution-engine/crates/**"
@@ -13,6 +14,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/rust-locked.yml"
+      - "polymarket-execution-engine"
       - "polymarket-execution-engine/Cargo.toml"
       - "polymarket-execution-engine/Cargo.lock"
       - "polymarket-execution-engine/crates/**"

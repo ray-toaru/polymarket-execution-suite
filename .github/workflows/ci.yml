@@ -4,9 +4,12 @@ on:
   push:
     paths:
       - ".github/**"
+      - ".gitmodules"
       - "requirements-ci.txt"
       - "scripts/**"
+      - "hermes-polymarket-control"
       - "hermes-polymarket-control/**"
+      - "polymarket-execution-engine"
       - "polymarket-execution-engine/**"
       - "VERSION"
       - "README.md"
@@ -21,9 +24,12 @@ on:
   pull_request:
     paths:
       - ".github/**"
+      - ".gitmodules"
       - "requirements-ci.txt"
       - "scripts/**"
+      - "hermes-polymarket-control"
       - "hermes-polymarket-control/**"
+      - "polymarket-execution-engine"
       - "polymarket-execution-engine/**"
       - "VERSION"
       - "README.md"
