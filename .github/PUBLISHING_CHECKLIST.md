@@ -15,7 +15,7 @@ This repository is release-sensitive because it pins independent Hermes and exec
 ## CI requirements
 
 - Keep `actions/checkout` configured with `submodules: recursive`.
-- If the submodules live in different private repositories that the default `GITHUB_TOKEN` cannot read, configure a read-only deploy key or fine-scoped PAT and wire it into checkout before enabling required checks.
+- Because the submodules are private sibling repositories, configure `CI_SUBMODULE_TOKEN` with read access to all three repositories and wire it into checkout before enabling required checks.
 - Require these workflows before merging release branches:
   - `ci`;
   - `rust-locked`.
