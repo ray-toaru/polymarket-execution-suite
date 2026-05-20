@@ -73,7 +73,7 @@ def main() -> int:
         return 2
     zip_path = Path(sys.argv[1])
     expected_version = sys.argv[2].strip()
-    expected_root = f"polymarket_dual_project_v{expected_version.replace('.', '_')}"
+    expected_root = f"polymarket_execution_suite_v{expected_version.replace('.', '_')}"
     failures: list[str] = []
     with zipfile.ZipFile(zip_path) as zf:
         names = zf.namelist()

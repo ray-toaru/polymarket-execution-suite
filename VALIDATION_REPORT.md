@@ -9,7 +9,7 @@ full gate run for the pinned source package. Current release decision remains
 Bound artifact:
 
 ```text
-polymarket-dual-project-v0.25.0.zip
+polymarket-execution-suite-v0.25.0.zip
 sha256=recorded in external .zip.sha256 and .zip.evidence.json sidecars
 ```
 

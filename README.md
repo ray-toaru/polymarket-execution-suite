@@ -1,4 +1,4 @@
-# Polymarket dual project v0.25.0
+# Polymarket execution suite v0.25.0
 
 v0.25.0 is a **shadow-ready SDK sign-only candidate**, not a production-ready or live-trading release.
 
@@ -44,6 +44,7 @@ Historical root documents and previous gate notes have been moved to `docs/archi
 Integration-level local/static validation entry points:
 
 ```bash
+python -m pip install -r requirements-ci.txt
 python scripts/check_version_consistency.py
 python scripts/validate_contracts.py
 HERMES_PROFILE=hm-pdp-test PYTHONPATH=hermes-polymarket-control/src python -m pytest -q hermes-polymarket-control/tests

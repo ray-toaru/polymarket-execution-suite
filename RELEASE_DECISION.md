@@ -213,8 +213,8 @@ Current evidence:
 - Real-funds canary lifecycle log:
   `polymarket-execution-engine/evidence/current/logs/66-real-funds-canary-lifecycle-drill.log`
 - Artifact SHA-256: recorded outside the zip in
-  `polymarket-dual-project-v0.25.0.zip.sha256` and
-  `polymarket-dual-project-v0.25.0.zip.evidence.json`
+  `polymarket-execution-suite-v0.25.0.zip.sha256` and
+  `polymarket-execution-suite-v0.25.0.zip.evidence.json`
 - The release artifact sidecars must be regenerated after this document update
   during the pre-publish check; the external sidecars are the artifact hash
   source of truth because the in-archive files cannot self-bind the containing

@@ -11,9 +11,9 @@ from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "VERSION").read_text().strip()
-ARCHIVE_ROOT = f"polymarket_dual_project_v{VERSION.replace('.', '_')}"
+ARCHIVE_ROOT = f"polymarket_execution_suite_v{VERSION.replace('.', '_')}"
 DIST = ROOT / "dist"
-OUT = DIST / f"polymarket-dual-project-v{VERSION}.zip"
+OUT = DIST / f"polymarket-execution-suite-v{VERSION}.zip"
 FORBIDDEN_PARTS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", "target", "dist"}
 FORBIDDEN_SUFFIXES = {".pyc", ".pyo", ".db", ".sqlite", ".sqlite3"}
 FORBIDDEN_FILENAMES = {".env"}

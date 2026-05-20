@@ -5,7 +5,7 @@ This repository is release-sensitive because it pins independent Hermes and exec
 ## Repository wiring
 
 - Create or select the private GitHub repositories for:
-  - the integration repository;
+  - `polymarket-execution-suite`;
   - `hermes-polymarket-control`;
   - `polymarket-execution-engine`.
 - Replace the local `.gitmodules` URLs with GitHub clone URLs that GitHub Actions can reach.
