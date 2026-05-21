@@ -11,32 +11,34 @@ Current evidence baseline:
 ```text
 source release: v0.25.0
 supplemental evidence tag: v0.25.0-evidence.20260521
-root commit: e22be0ba5260695f55d800ecff714cb43e811865
+root commit: final root commit recorded in .zip.evidence.json sidecar
 hermes-polymarket-control: bb16582e299f9e6f8da6044226e33900c4e2459d
-polymarket-execution-engine: 3be83cb53ead8a981a3829c7d538e747115e43f5
-root CI: 26216163302, success
-execution-engine CI: 26216163754, success
-artifact sha256: c0c22c91541d48c508a588b06a2fa5d7051bc6c8e29df626de67a59cc96c24e6
-current evidence manifest sha256: a67cff633141e1c619b4d422cbc6e09e427d004d9580996c4f00e31d7bebcafd
+canonical evidence execution-engine baseline: c77d6bee6ea9d3d1397bd86c2e6f7857575b26cb
+current local execution-engine review-package guard refresh: 76fdb3ee136b0350e4718fff60a1edcee1f67d03
+latest pushed root CI baseline: 26254755001, success
+latest pushed execution-engine CI baseline: 26254745573, success
+artifact sha256: recorded in the external .zip.sha256 sidecar for the generated release zip
+current evidence manifest sha256: 80b4b7fa8ef325ffb3cff6d839176a9af1ce28ce226c4d3ebef826c6c2b981d1
 ```
 
 Current v0.26 decision-prep source refresh:
 
 ```text
-source refresh root commit: e22be0ba5260695f55d800ecff714cb43e811865
+source refresh root commit: final root commit recorded in .zip.evidence.json sidecar
 hermes-polymarket-control: bb16582e299f9e6f8da6044226e33900c4e2459d
-polymarket-execution-engine: 3be83cb53ead8a981a3829c7d538e747115e43f5
-pushed root CI validating this refresh: 26216163302, success
-pushed execution-engine CI validating this refresh: 26216163754, success
+polymarket-execution-engine: 76fdb3ee136b0350e4718fff60a1edcee1f67d03
+latest pushed root CI baseline: 26254755001, success
+latest pushed execution-engine CI baseline: 26254745573, success
+targeted local post-CI checks: pass, 2026-05-21, no new CI run
 local full current gates: pass, 2026-05-21
 credentialed SDK evidence: local-current-gates-20260521
 ```
 
 This refresh parameterizes review-package generation and the blocked rehearsal
 package so future no-go review material can be regenerated from explicit
-artifact/evidence hash overrides and current CI run IDs. It does not change the
-v0.25.0 released artifact hash, current evidence manifest hash, or live-trading
-boundary.
+artifact/evidence hash overrides and current CI run IDs. The final zip hash is
+kept in external release sidecars rather than self-embedded in source files.
+It does not change the live-trading boundary.
 
 Current canonical evidence records `credentialed_non_trading_validation=pass`,
 `postgres_validation=pass`, `real_funds_canary_preflight_validation=pass`,
@@ -53,8 +55,8 @@ rehearsal sample, but it is not bound to the latest supplemental evidence:
 
 - package `artifact_sha256`: `6bc50ff7ba942d2d001e347d045a6773da09d73a0b242589d14ce3566aca2dd9`
 - package `evidence_manifest_sha256`: `11711ef30110d30ffb2556de507b9e1d3e3b181c9eea353cbc626da721f7481a`
-- current artifact SHA-256: `c0c22c91541d48c508a588b06a2fa5d7051bc6c8e29df626de67a59cc96c24e6`
-- current manifest SHA-256: `a67cff633141e1c619b4d422cbc6e09e427d004d9580996c4f00e31d7bebcafd`
+- current artifact SHA-256: recorded in the external `.zip.sha256` sidecar
+- current manifest SHA-256: `80b4b7fa8ef325ffb3cff6d839176a9af1ce28ce226c4d3ebef826c6c2b981d1`
 
 The package correctly preserves the safety boundary:
 
@@ -78,12 +80,12 @@ with explicit `--artifact-sha256` and `--evidence-manifest-sha256` overrides,
 so no manual JSON patching is required. Its review metadata is bound to the
 current supplemental evidence:
 
-- package `artifact_sha256`: `c0c22c91541d48c508a588b06a2fa5d7051bc6c8e29df626de67a59cc96c24e6`
-- package `evidence_manifest_sha256`: `a67cff633141e1c619b4d422cbc6e09e427d004d9580996c4f00e31d7bebcafd`
-- package `root_ci_run_id`: `26214412220`
-- package `execution_engine_ci_run_id`: `26214404116`
-- pushed root CI after package generation: `26216163302`
-- pushed execution-engine CI after package generation: `26216163754`
+- package `artifact_sha256`: supplied from the external `.zip.sha256` sidecar
+- package `evidence_manifest_sha256`: `80b4b7fa8ef325ffb3cff6d839176a9af1ce28ce226c4d3ebef826c6c2b981d1`
+- package `root_ci_run_id`: `26254755001`
+- package `execution_engine_ci_run_id`: `26254745573`
+- latest pushed root CI baseline after package generation: `26254755001`
+- latest pushed execution-engine CI baseline after package generation: `26254745573`
 - package `credentialed_sdk_run_id`: `local-current-gates-20260521`
 - `external_references_placeholders_remaining`: `[]`
 - `live_submit_allowed=false`

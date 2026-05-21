@@ -19,7 +19,7 @@ revisions:
 
 ```text
 hermes-polymarket-control: bb16582e299f9e6f8da6044226e33900c4e2459d
-polymarket-execution-engine: 3be83cb53ead8a981a3829c7d538e747115e43f5
+polymarket-execution-engine: 76fdb3ee136b0350e4718fff60a1edcee1f67d03
 ```
 
 The integration repository commit containing this decision pins those submodule
@@ -49,11 +49,12 @@ The GitHub CI boundary now follows the repository ownership model:
   current gates, SDK adapter checks, and the manual `credentialed-sdk`
   workflow.
 
-Pushed GitHub Actions runs validating this source/evidence refresh:
+Latest pushed GitHub Actions baseline validating the source/evidence refresh
+before the local review-package artifact-hash guard update:
 
 ```text
-polymarket-execution-suite ci: 26216163302, success
-polymarket-execution-engine ci: 26216163754, success
+polymarket-execution-suite ci: 26254755001, success
+polymarket-execution-engine ci: 26254745573, success
 ```
 
 The `credentialed-sdk` environment exists in `polymarket-execution-engine`; the
@@ -62,10 +63,15 @@ canonical evidence refreshed authenticated non-trading smoke and sign-only
 dry-run with explicit env gates. Secret values are not recorded in this
 decision.
 
-The current execution-engine source refresh at
-`3be83cb53ead8a981a3829c7d538e747115e43f5` is validated locally by
+The canonical execution-engine evidence baseline at
+`c77d6bee6ea9d3d1397bd86c2e6f7857575b26cb` is validated locally by
 `validation/run_current_gates.sh` with PostgreSQL and credentialed SDK sections
-enabled and remotely by GitHub Actions run `26216163754`.
+enabled and remotely by GitHub Actions run `26254745573`. The currently pinned
+execution-engine commit
+`76fdb3ee136b0350e4718fff60a1edcee1f67d03` only changes review-package
+validation/config/docs around explicit artifact-hash binding; targeted local
+checks passed on 2026-05-21 and no new CI run was triggered for that small
+post-CI guard update.
 
 ## Required evidence
 
@@ -93,10 +99,13 @@ Rationale:
 - Rust workspace, PostgreSQL migration/store/API E2E, SDK adapter/spike, SDK
   regression, credentialed non-trading smoke, sign-only dry-run, local static,
   contract, release artifact, and governance gates passed in this environment.
-- The current local refresh at
-  `polymarket-execution-engine: 3be83cb53ead8a981a3829c7d538e747115e43f5`
+- The canonical local evidence refresh at
+  `polymarket-execution-engine: c77d6bee6ea9d3d1397bd86c2e6f7857575b26cb`
   passed the current no-live gate chain, including PostgreSQL and credentialed
-  SDK sections under explicit local env gates.
+  SDK sections under explicit local env gates. The currently pinned
+  review-package guard update at
+  `polymarket-execution-engine: 76fdb3ee136b0350e4718fff60a1edcee1f67d03`
+  has targeted local validation only.
 - Shadow execution, reconciliation drift, rollback/kill-switch, migration drift,
   live canary readiness, blocked live canary, and productionization guard gates
   passed.
@@ -239,15 +248,15 @@ Rationale:
 Current evidence:
 
 - GitHub integration CI:
-  `ray-toaru/polymarket-execution-suite/actions/runs/26216163302`
+  `ray-toaru/polymarket-execution-suite/actions/runs/26254755001`
 - GitHub execution-engine CI:
-  `ray-toaru/polymarket-execution-engine/actions/runs/26216163754`
+  `ray-toaru/polymarket-execution-engine/actions/runs/26254745573`
 - Historical GitHub credentialed SDK audit context:
   `ray-toaru/polymarket-execution-engine/actions/runs/26175786984`
 - Environment: `polymarket-execution-engine/evidence/current/environment.json`
 - Manifest: `polymarket-execution-engine/evidence/current/manifest.json`
 - Manifest SHA-256:
-  `a67cff633141e1c619b4d422cbc6e09e427d004d9580996c4f00e31d7bebcafd`
+  `80b4b7fa8ef325ffb3cff6d839176a9af1ce28ce226c4d3ebef826c6c2b981d1`
 - Logs: `polymarket-execution-engine/evidence/current/logs/`
 - Real-funds canary preflight log:
   `polymarket-execution-engine/evidence/current/logs/65-real-funds-canary-preflight.log`

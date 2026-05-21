@@ -15,19 +15,20 @@ polymarket-execution-suite-v0.25.0.zip
 sha256=recorded in external .zip.sha256 and .zip.evidence.json sidecars
 ```
 
-Local release-candidate checkpoint, held before push to avoid unnecessary CI:
+Latest pushed CI/evidence checkpoint:
 
 ```text
-root_commit=current local checkpoint commit; run git log -1 --oneline before push
-execution_engine_commit=current local submodule checkpoint; run git -C polymarket-execution-engine log -1 --oneline before push
-evidence_manifest_sha256=af9dc98fcb3965b9fc3ab2911f3f73a3d13bcfe26b03da01e8e0c210b3a23c79
-release_zip_sha256=3ddd06c39d36046bd7d9ab833eb963786cb3c95a7ed94b99d9921dd474bf3e74
-github_ci_triggered=false
+root_ci_run_id=26254755001
+execution_engine_ci_run_id=26254745573
+hermes_ci_run_id=26198048337
+current_local_execution_engine_commit=76fdb3ee136b0350e4718fff60a1edcee1f67d03
+evidence_manifest_sha256=80b4b7fa8ef325ffb3cff6d839176a9af1ce28ce226c4d3ebef826c6c2b981d1
+release_zip_sha256=regenerated in external .zip.sha256 sidecar
 ```
 
-This checkpoint records local validation status only. It does not promote the
-release decision and does not authorize production deployment, live submit, live
-cancel, or real-funds canary execution.
+This checkpoint plus the local checks below records validation status only. It
+does not promote the release decision and does not authorize production
+deployment, live submit, live cancel, or real-funds canary execution.
 
 ## Local/static checks
 
@@ -55,14 +56,26 @@ be reproduced locally.
 Latest local targeted review-package checks passed with no new CI run:
 
 ```bash
+.venv/bin/python scripts/check_version_consistency.py
 .venv/bin/python scripts/validate_contracts.py
-.venv/bin/python -m compileall -q scripts polymarket-execution-engine/validation
+HERMES_PROFILE=hm-pdp-test PYTHONPATH=hermes-polymarket-control/src .venv/bin/python -m pytest -q hermes-polymarket-control/tests
+HERMES_PROFILE=hm-pdp-test .venv/bin/python -m compileall -q hermes-polymarket-control/src scripts polymarket-execution-engine/validation
 .venv/bin/python polymarket-execution-engine/validation/run_single_host_deployment_drill.py
 .venv/bin/python polymarket-execution-engine/validation/run_single_host_canary_candidate_drill.py
 .venv/bin/python polymarket-execution-engine/validation/run_single_host_go_candidate_drill.py
 .venv/bin/python polymarket-execution-engine/validation/run_real_funds_canary_blocked_rehearsal_package.py
 .venv/bin/python polymarket-execution-engine/validation/run_real_funds_canary_review_package_drill.py
 .venv/bin/python polymarket-execution-engine/validation/validate_controlled_canary_external_references.py --file dist/pmx-canary-review-reviewed/external-references.json
+.venv/bin/python scripts/package_release.py
+.venv/bin/python scripts/check_release_artifact.py dist/polymarket-execution-suite-v0.25.0.zip 0.25.0
+.venv/bin/python polymarket-execution-engine/validation/prepare_real_funds_canary_review.py --external-references-file dist/pmx-canary-review-reviewed/external-references.json --artifact-sha256 <release-zip-sha256-from-sidecar> --evidence-manifest-sha256 <current-evidence-manifest-sha256> --output-dir /tmp/pmx-canary-review-final-release-check
+.venv/bin/python scripts/prepare_canary_candidate_market.py --output /tmp/pmx-canary-review-final-release-check/candidate-market.json --audit-output /tmp/pmx-canary-review-final-release-check/candidate-market.audit.json --max-markets 5 --timeout-seconds 8
+cd polymarket-execution-engine && cargo run --manifest-path adapters/pmx-official-sdk-adapter/Cargo.toml --features live-submit --bin pmx-real-funds-canary -- --dry-run --approval-file /tmp/pmx-canary-review-final-release-check/approval.json --artifact-sha256 <release-zip-sha256-from-sidecar> --evidence-manifest-sha256 <current-evidence-manifest-sha256> --idempotency-key dry-run-final-release-check-20260521 --account-id acct-canary --execution-id exec-canary-dry-run-final-release-check-20260521 --plan-hash plan-canary-dry-run-final-release-check-20260521 --market-file /tmp/pmx-canary-review-final-release-check/candidate-market.json
+.venv/bin/python scripts/check_hermes_no_secrets.py
+.venv/bin/python polymarket-execution-engine/validation/check_docs_evidence_governance.py
+.venv/bin/python polymarket-execution-engine/validation/check_current_evidence_manifest.py
+.venv/bin/python scripts/clean_local_artifacts.py
+.venv/bin/python polymarket-execution-engine/scripts/check_release_hygiene.py . --dev-worktree
 ```
 
 The local reviewed package uses reference-only local custody via `pass`/GPG, a
@@ -76,11 +89,12 @@ cancelling, raw signed order exposure, or remote side effects.
 
 ## Full gate evidence
 
-The pushed GitHub Actions runs validating this source/evidence refresh are:
+The latest pushed GitHub Actions baseline runs for this source/evidence refresh
+are:
 
 ```text
-polymarket-execution-suite ci: 26216163302, success
-polymarket-execution-engine ci: 26216163754, success
+polymarket-execution-suite ci: 26254755001, success
+polymarket-execution-engine ci: 26254745573, success
 ```
 
 Repository ownership is intentionally split:
@@ -101,7 +115,7 @@ The latest execution-engine CI completed:
 - current gates.
 
 The latest canonical evidence refresh was generated at
-`2026-05-21T05:44:00.365574+00:00`. It records:
+`2026-05-21T21:32:55.762022+00:00`. It records:
 
 - PostgreSQL validation: `pass`;
 - credentialed non-trading smoke: `pass`;
