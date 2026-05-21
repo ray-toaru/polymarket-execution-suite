@@ -69,6 +69,12 @@ authorize the attempt.
 controlled canary. It should not treat the released `v0.25.0` credentialed
 non-trading/sign-only evidence as approval to place a real order.
 
+Current v0.26 audit status is recorded in `CANARY_DECISION_PREP_AUDIT.md`.
+The existing `dist/pmx-canary-review-reviewed/` package remains no-go review
+material and proves blocked rehearsal behavior, but it is not bound to the
+latest supplemental artifact and evidence manifest hashes. A regenerated
+decision package is required before any future canary review can proceed.
+
 Goal: validate a tiny real side-effect path under hard runtime, account, market,
 amount, approval, kill-switch, and reconciliation controls.
 

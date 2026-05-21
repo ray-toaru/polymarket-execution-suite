@@ -24,11 +24,17 @@ live cancel, or real-funds canary execution.
 1. Treat P1 canary-prep evidence as satisfied by the `v0.25.0` baseline.
 2. Make `v0.26` a controlled canary decision-prep phase, not an implicit live
    canary attempt.
-3. Before any future canary attempt, produce a reviewed release-decision JSON,
+3. Use `CANARY_DECISION_PREP_AUDIT.md` as the current v0.26 audit ledger. The
+   existing reviewed canary package is no-go rehearsal material, but it is not
+   bound to the latest supplemental artifact and evidence manifest hashes.
+4. Use the regenerated local `dist/pmx-canary-review-v0.26-current/` package as
+   no-go review material only; it is ignored by Git and must not be treated as
+   armed approval.
+5. Before any future canary attempt, produce a reviewed release-decision JSON,
    operator approval reference, external secret-custody reference, alert-routing
    reference, and rollback/runbook review bound to the released artifact and
    evidence hashes.
-4. Continue only:
+6. Continue only:
    - validation replay after material code changes;
    - release/evidence consistency fixes;
    - review-package and decision-package improvements that preserve fail-closed
