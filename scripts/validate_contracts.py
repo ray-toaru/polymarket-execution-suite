@@ -1006,12 +1006,19 @@ def validate_controlled_canary_release_decision_governance() -> None:
         "blocked-rehearsal.report.json",
         "--artifact-sha256",
         "--evidence-manifest-sha256",
+        "--market-file",
     ]:
         if needle not in rehearsal_text:
             fail(f"blocked real-funds canary rehearsal script missing token: {needle}")
     for needle in ["default no-go", "external-references.json", "release-decision.json", "real_funds_canary_authorized=false", "--external-references-file", "REPLACE_WITH_*", "run_real_funds_canary_blocked_rehearsal_package.py"]:
         if needle not in readiness_text:
             fail(f"real-funds canary operations readiness doc missing token: {needle}")
+    for needle in ["prepare_canary_candidate_market.py", "candidate-market.audit.json", "read-only public API candidate"]:
+        if needle not in readiness_text:
+            fail(f"real-funds canary operations readiness doc missing candidate-prep token: {needle}")
+    for needle in ["prepare_canary_candidate_market.py", "candidate-market.audit.json"]:
+        if needle not in review_text:
+            fail(f"real-funds canary review package missing candidate-prep token: {needle}")
 
 
 def validate_canary_candidate_market_prep_boundary() -> None:
