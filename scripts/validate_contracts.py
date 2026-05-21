@@ -945,7 +945,14 @@ def validate_controlled_canary_release_decision_governance() -> None:
         fail("real-funds canary review package must include release-decision.json")
     if "external-references.json" not in review_text or "DEFAULT_EXTERNAL_REFERENCES" not in review_text:
         fail("real-funds canary review package must include external-references.json")
-    for needle in ["--external-references-file", "external_references_placeholders_remaining", "validate_external_references_shape"]:
+    for needle in [
+        "--external-references-file",
+        "--artifact-sha256",
+        "--evidence-manifest-sha256",
+        "release sidecar binds the final zip hash",
+        "external_references_placeholders_remaining",
+        "validate_external_references_shape",
+    ]:
         if needle not in review_text:
             fail(f"real-funds canary review package missing external-reference candidate support token: {needle}")
     for needle in ["DEFAULT_ROOT_CI_RUN_ID", "DEFAULT_HERMES_CI_RUN_ID", "DEFAULT_EXECUTION_ENGINE_CI_RUN_ID", "DEFAULT_CREDENTIALED_SDK_RUN_ID"]:
@@ -995,6 +1002,10 @@ def validate_controlled_canary_release_decision_governance() -> None:
         "release_decision_gate",
         "remote_side_effects",
         "raw_signed_order_exposed",
+        "--output-dir",
+        "blocked-rehearsal.report.json",
+        "--artifact-sha256",
+        "--evidence-manifest-sha256",
     ]:
         if needle not in rehearsal_text:
             fail(f"blocked real-funds canary rehearsal script missing token: {needle}")

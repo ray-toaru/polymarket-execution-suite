@@ -53,7 +53,11 @@ The package correctly preserves the safety boundary:
 The current local v0.26 decision-prep package has been regenerated under
 `dist/pmx-canary-review-v0.26-current/`. The directory is intentionally ignored
 by Git because release packages and local review bundles are not source files.
-Its review metadata is bound to the current supplemental evidence:
+It was generated through
+`validation/run_real_funds_canary_blocked_rehearsal_package.py --output-dir`
+with explicit `--artifact-sha256` and `--evidence-manifest-sha256` overrides,
+so no manual JSON patching is required. Its review metadata is bound to the
+current supplemental evidence:
 
 - package `artifact_sha256`: `c0c22c91541d48c508a588b06a2fa5d7051bc6c8e29df626de67a59cc96c24e6`
 - package `evidence_manifest_sha256`: `4c53dd9b7abf14184df37932ba5eb645c942f75f075d31f40b587c8b612c7ffa`

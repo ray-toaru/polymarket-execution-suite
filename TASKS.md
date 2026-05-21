@@ -10,6 +10,8 @@
 - [x] Regenerate a v0.26 decision package bound to the current supplemental
   artifact SHA-256 and evidence manifest SHA-256.
 - [x] Re-run the blocked armed rehearsal against the regenerated no-go package.
+- [x] Automate v0.26 review-package generation with explicit artifact/evidence
+  hash overrides and persistent blocked-rehearsal output.
 - [x] Produce a reviewed release-decision JSON template for a future controlled
   canary attempt; default outcome must be no-go.
 - [x] Bind any future canary review package to the released `v0.25.0` artifact
