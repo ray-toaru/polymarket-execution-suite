@@ -955,6 +955,9 @@ def validate_controlled_canary_release_decision_governance() -> None:
     for needle in ["validate_controlled_canary_release_decision.py", "validate_controlled_canary_external_references.py", "credentialed_sdk_run_id"]:
         if needle not in drill_text:
             fail(f"real-funds canary review package drill missing token: {needle}")
+    for needle in ["run_real_funds_canary_blocked_rehearsal_package.py", "blocked real-funds canary rehearsal package failed"]:
+        if needle not in drill_text:
+            fail(f"real-funds canary review package drill missing blocked rehearsal token: {needle}")
     for needle in ["--file", "--allow-placeholders", "must reject unresolved placeholders", "review-with-concrete-references"]:
         if needle not in drill_text:
             fail(f"real-funds canary review package drill missing external-reference candidate token: {needle}")
@@ -979,7 +982,23 @@ def validate_controlled_canary_release_decision_governance() -> None:
     if external_example_data.get("evidence_manifest_sha256") != example_data.get("evidence_manifest_sha256"):
         fail("controlled canary external-reference example must bind the same evidence manifest hash as the release-decision example")
     readiness_text = readiness_doc.read_text()
-    for needle in ["default no-go", "external-references.json", "release-decision.json", "real_funds_canary_authorized=false", "--external-references-file", "REPLACE_WITH_*"]:
+    rehearsal = EXECUTOR / "validation/run_real_funds_canary_blocked_rehearsal_package.py"
+    if not rehearsal.exists():
+        fail("real-funds canary blocked rehearsal package script missing")
+    rehearsal_text = rehearsal.read_text()
+    for needle in [
+        "blocked_real_funds_canary_armed_no_go",
+        "--armed",
+        "--allow-live-submit-config",
+        "--allow-real-funds-canary-config",
+        "real-funds canary not allowed by release decision",
+        "release_decision_gate",
+        "remote_side_effects",
+        "raw_signed_order_exposed",
+    ]:
+        if needle not in rehearsal_text:
+            fail(f"blocked real-funds canary rehearsal script missing token: {needle}")
+    for needle in ["default no-go", "external-references.json", "release-decision.json", "real_funds_canary_authorized=false", "--external-references-file", "REPLACE_WITH_*", "run_real_funds_canary_blocked_rehearsal_package.py"]:
         if needle not in readiness_text:
             fail(f"real-funds canary operations readiness doc missing token: {needle}")
 
