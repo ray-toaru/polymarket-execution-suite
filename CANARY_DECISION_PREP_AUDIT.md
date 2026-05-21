@@ -11,22 +11,23 @@ Current evidence baseline:
 ```text
 source release: v0.25.0
 supplemental evidence tag: v0.25.0-evidence.20260521
-root commit: 73024a120cdc14038744b207aef4904ca2789919
+root commit: bda35dffa004b7e96e5faab5f967b4c46a2bf916
 hermes-polymarket-control: bb16582e299f9e6f8da6044226e33900c4e2459d
-polymarket-execution-engine: 69528924a9228ccc5262322ca64468e97a625648
-root CI: 26208090302, success
+polymarket-execution-engine: 3be83cb53ead8a981a3829c7d538e747115e43f5
+root CI: 26214412220, success
+execution-engine CI: 26214404116, success
 artifact sha256: c0c22c91541d48c508a588b06a2fa5d7051bc6c8e29df626de67a59cc96c24e6
-current evidence manifest sha256: 99ce4f47eb8e94fa0373f448180fde33643e0f2e19dcbeae148d8e95bbfaab5e
+current evidence manifest sha256: a67cff633141e1c619b4d422cbc6e09e427d004d9580996c4f00e31d7bebcafd
 ```
 
 Current v0.26 decision-prep source refresh:
 
 ```text
-root commit before this local refresh: 1bfda7435503ebcdc1f35c8d267c5e89473b5e48
+source refresh commit: bda35dffa004b7e96e5faab5f967b4c46a2bf916
 hermes-polymarket-control: bb16582e299f9e6f8da6044226e33900c4e2459d
-polymarket-execution-engine: 4b571a29481c4a826c90a3b3aa907b74d92dbb39
-latest pushed root CI before this local refresh: 26212663156, success
-latest pushed execution-engine CI before this local refresh: 26210917113, success
+polymarket-execution-engine: 3be83cb53ead8a981a3829c7d538e747115e43f5
+latest pushed root CI for this refresh: 26214412220, success
+latest pushed execution-engine CI baseline before this local refresh: 26214404116, success
 local full current gates: pass, 2026-05-21
 credentialed SDK evidence: local-current-gates-20260521
 ```
@@ -53,7 +54,7 @@ rehearsal sample, but it is not bound to the latest supplemental evidence:
 - package `artifact_sha256`: `6bc50ff7ba942d2d001e347d045a6773da09d73a0b242589d14ce3566aca2dd9`
 - package `evidence_manifest_sha256`: `11711ef30110d30ffb2556de507b9e1d3e3b181c9eea353cbc626da721f7481a`
 - current artifact SHA-256: `c0c22c91541d48c508a588b06a2fa5d7051bc6c8e29df626de67a59cc96c24e6`
-- current manifest SHA-256: `4c53dd9b7abf14184df37932ba5eb645c942f75f075d31f40b587c8b612c7ffa`
+- current manifest SHA-256: `a67cff633141e1c619b4d422cbc6e09e427d004d9580996c4f00e31d7bebcafd`
 
 The package correctly preserves the safety boundary:
 
@@ -78,9 +79,9 @@ so no manual JSON patching is required. Its review metadata is bound to the
 current supplemental evidence:
 
 - package `artifact_sha256`: `c0c22c91541d48c508a588b06a2fa5d7051bc6c8e29df626de67a59cc96c24e6`
-- package `evidence_manifest_sha256`: `99ce4f47eb8e94fa0373f448180fde33643e0f2e19dcbeae148d8e95bbfaab5e`
-- package `root_ci_run_id`: `26212663156`
-- package `execution_engine_ci_run_id`: `26210917113`
+- package `evidence_manifest_sha256`: `a67cff633141e1c619b4d422cbc6e09e427d004d9580996c4f00e31d7bebcafd`
+- package `root_ci_run_id`: `26214412220`
+- package `execution_engine_ci_run_id`: `26214404116`
 - package `credentialed_sdk_run_id`: `local-current-gates-20260521`
 - `external_references_placeholders_remaining`: `[]`
 - `live_submit_allowed=false`

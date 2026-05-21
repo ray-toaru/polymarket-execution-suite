@@ -36,7 +36,7 @@
 - [x] Re-run the execution-engine full current gates and root integration CI
   after decision-package, preflight, and review-package changes. Local
   `validation/run_current_gates.sh` passed with PostgreSQL enabled, execution
-  engine CI `26206281885` passed, and root integration CI `26206286587` passed.
+  engine CI `26214404116` passed, and root integration CI `26214412220` passed.
 - [x] Keep the release decision explicit that live submit, live cancel,
   production deployment, and actual real-funds canary fill remain blocked unless
   a later reviewed release decision changes that boundary.

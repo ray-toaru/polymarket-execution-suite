@@ -19,7 +19,7 @@ revisions:
 
 ```text
 hermes-polymarket-control: bb16582e299f9e6f8da6044226e33900c4e2459d
-polymarket-execution-engine: 69528924a9228ccc5262322ca64468e97a625648
+polymarket-execution-engine: 3be83cb53ead8a981a3829c7d538e747115e43f5
 ```
 
 The integration repository commit containing this decision pins those submodule
@@ -49,11 +49,11 @@ The GitHub CI boundary now follows the repository ownership model:
   current gates, SDK adapter checks, and the manual `credentialed-sdk`
   workflow.
 
-Latest verified GitHub Actions runs for this decision:
+Latest verified pushed GitHub Actions baseline for this decision:
 
 ```text
-polymarket-execution-suite ci: 26206286587, success
-polymarket-execution-engine ci: 26206281885, success
+polymarket-execution-suite ci: 26214412220, success
+polymarket-execution-engine ci: 26214404116, success
 ```
 
 The `credentialed-sdk` environment exists in `polymarket-execution-engine`; the
@@ -61,6 +61,11 @@ integration repository has no Polymarket credential environment. Current local
 canonical evidence refreshed authenticated non-trading smoke and sign-only
 dry-run with explicit env gates. Secret values are not recorded in this
 decision.
+
+The current execution-engine source refresh at
+`3be83cb53ead8a981a3829c7d538e747115e43f5` is validated locally by
+`validation/run_current_gates.sh` with PostgreSQL and credentialed SDK sections
+enabled; it has not been pushed to trigger a new GitHub CI run in this batch.
 
 ## Required evidence
 
@@ -89,7 +94,7 @@ Rationale:
   regression, credentialed non-trading smoke, sign-only dry-run, local static,
   contract, release artifact, and governance gates passed in this environment.
 - The current local refresh at
-  `polymarket-execution-engine: 69528924a9228ccc5262322ca64468e97a625648`
+  `polymarket-execution-engine: 3be83cb53ead8a981a3829c7d538e747115e43f5`
   passed the current no-live gate chain, including PostgreSQL and credentialed
   SDK sections under explicit local env gates.
 - Shadow execution, reconciliation drift, rollback/kill-switch, migration drift,
@@ -234,15 +239,15 @@ Rationale:
 Current evidence:
 
 - GitHub integration CI:
-  `ray-toaru/polymarket-execution-suite/actions/runs/26206286587`
+  `ray-toaru/polymarket-execution-suite/actions/runs/26214412220`
 - GitHub execution-engine CI:
-  `ray-toaru/polymarket-execution-engine/actions/runs/26206281885`
+  `ray-toaru/polymarket-execution-engine/actions/runs/26214404116`
 - Historical GitHub credentialed SDK audit context:
   `ray-toaru/polymarket-execution-engine/actions/runs/26175786984`
 - Environment: `polymarket-execution-engine/evidence/current/environment.json`
 - Manifest: `polymarket-execution-engine/evidence/current/manifest.json`
 - Manifest SHA-256:
-  `4c53dd9b7abf14184df37932ba5eb645c942f75f075d31f40b587c8b612c7ffa`
+  `a67cff633141e1c619b4d422cbc6e09e427d004d9580996c4f00e31d7bebcafd`
 - Logs: `polymarket-execution-engine/evidence/current/logs/`
 - Real-funds canary preflight log:
   `polymarket-execution-engine/evidence/current/logs/65-real-funds-canary-preflight.log`

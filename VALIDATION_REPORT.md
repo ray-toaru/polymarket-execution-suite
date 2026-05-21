@@ -59,11 +59,11 @@ cancelling, raw signed order exposure, or remote side effects.
 
 ## Full gate evidence
 
-The latest verified GitHub Actions runs are:
+The latest verified pushed GitHub Actions baseline runs are:
 
 ```text
-polymarket-execution-suite ci: 26206286587, success
-polymarket-execution-engine ci: 26206281885, success
+polymarket-execution-suite ci: 26214412220, success
+polymarket-execution-engine ci: 26214404116, success
 ```
 
 Repository ownership is intentionally split:

@@ -9,16 +9,15 @@ submit, live cancel, production deployment, or a real-funds canary fill.
 Current source and evidence references:
 
 ```text
-source-refresh commit: 4b571a29481c4a826c90a3b3aa907b74d92dbb39
-previous pushed root commit: 1bfda7435503ebcdc1f35c8d267c5e89473b5e48
+source-refresh root commit: bda35dffa004b7e96e5faab5f967b4c46a2bf916
 hermes-polymarket-control: bb16582e299f9e6f8da6044226e33900c4e2459d
-polymarket-execution-engine: 4b571a29481c4a826c90a3b3aa907b74d92dbb39
-latest pushed root CI before this local refresh: 26212663156, success
-latest pushed execution-engine CI before this local refresh: 26210917113, success
+polymarket-execution-engine: 3be83cb53ead8a981a3829c7d538e747115e43f5
+latest pushed root CI for this refresh: 26214412220, success
+latest pushed execution-engine CI baseline before this local refresh: 26214404116, success
 local full current gates: pass, 2026-05-21
 credentialed SDK evidence: local-current-gates-20260521
 artifact sha256: c0c22c91541d48c508a588b06a2fa5d7051bc6c8e29df626de67a59cc96c24e6
-evidence manifest sha256: 99ce4f47eb8e94fa0373f448180fde33643e0f2e19dcbeae148d8e95bbfaab5e
+evidence manifest sha256: a67cff633141e1c619b4d422cbc6e09e427d004d9580996c4f00e31d7bebcafd
 ```
 
 ## Decision
