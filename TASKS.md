@@ -20,6 +20,9 @@
 - [x] Add or refresh validation that rejects stale, expired, mismatched, or
   partial canary approval references before any live-submit feature path can be
   armed.
+- [x] Automate the blocked real-funds canary rehearsal package: a complete
+  review package plus `--armed` CLI invocation remains blocked by a `no_go`
+  adapter release decision before posting or remote side effects.
 - [ ] Re-run the execution-engine full current gates and root integration CI
   after any decision-package, preflight, or review-package change.
 - [ ] Keep the release decision explicit that live submit, live cancel,

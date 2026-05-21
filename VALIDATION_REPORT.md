@@ -41,6 +41,7 @@ Latest local targeted review-package checks passed with no new CI run:
 ```bash
 .venv/bin/python scripts/validate_contracts.py
 .venv/bin/python -m compileall -q scripts polymarket-execution-engine/validation
+.venv/bin/python polymarket-execution-engine/validation/run_real_funds_canary_blocked_rehearsal_package.py
 .venv/bin/python polymarket-execution-engine/validation/run_real_funds_canary_review_package_drill.py
 .venv/bin/python polymarket-execution-engine/validation/validate_controlled_canary_external_references.py --file dist/pmx-canary-review-reviewed/external-references.json
 ```
@@ -49,6 +50,10 @@ The local reviewed package uses reference-only local custody via `pass`/GPG, a
 `no_go` operator approval hash, and a manual GitHub-issue alert route. This is
 review material only: live submit, live cancel, production deployment,
 real-funds canary execution, and remote side effects remain blocked.
+The blocked rehearsal script also invokes the real-funds canary CLI with
+`--armed` and local allow-config flags, then verifies the `no_go` adapter
+release decision blocks at the release-decision gate before posting,
+cancelling, raw signed order exposure, or remote side effects.
 
 ## Full gate evidence
 
