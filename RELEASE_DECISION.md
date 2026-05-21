@@ -49,11 +49,11 @@ The GitHub CI boundary now follows the repository ownership model:
   current gates, SDK adapter checks, and the manual `credentialed-sdk`
   workflow.
 
-Latest verified pushed GitHub Actions baseline for this decision:
+Pushed GitHub Actions runs validating this source/evidence refresh:
 
 ```text
-polymarket-execution-suite ci: 26214412220, success
-polymarket-execution-engine ci: 26214404116, success
+polymarket-execution-suite ci: 26216163302, success
+polymarket-execution-engine ci: 26216163754, success
 ```
 
 The `credentialed-sdk` environment exists in `polymarket-execution-engine`; the
@@ -65,7 +65,7 @@ decision.
 The current execution-engine source refresh at
 `3be83cb53ead8a981a3829c7d538e747115e43f5` is validated locally by
 `validation/run_current_gates.sh` with PostgreSQL and credentialed SDK sections
-enabled; it has not been pushed to trigger a new GitHub CI run in this batch.
+enabled and remotely by GitHub Actions run `26216163754`.
 
 ## Required evidence
 
@@ -239,9 +239,9 @@ Rationale:
 Current evidence:
 
 - GitHub integration CI:
-  `ray-toaru/polymarket-execution-suite/actions/runs/26214412220`
+  `ray-toaru/polymarket-execution-suite/actions/runs/26216163302`
 - GitHub execution-engine CI:
-  `ray-toaru/polymarket-execution-engine/actions/runs/26214404116`
+  `ray-toaru/polymarket-execution-engine/actions/runs/26216163754`
 - Historical GitHub credentialed SDK audit context:
   `ray-toaru/polymarket-execution-engine/actions/runs/26175786984`
 - Environment: `polymarket-execution-engine/evidence/current/environment.json`

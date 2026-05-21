@@ -9,11 +9,11 @@ submit, live cancel, production deployment, or a real-funds canary fill.
 Current source and evidence references:
 
 ```text
-source-refresh root commit: bda35dffa004b7e96e5faab5f967b4c46a2bf916
+source-refresh root commit: e22be0ba5260695f55d800ecff714cb43e811865
 hermes-polymarket-control: bb16582e299f9e6f8da6044226e33900c4e2459d
 polymarket-execution-engine: 3be83cb53ead8a981a3829c7d538e747115e43f5
-latest pushed root CI for this refresh: 26214412220, success
-latest pushed execution-engine CI baseline before this local refresh: 26214404116, success
+pushed root CI validating this refresh: 26216163302, success
+pushed execution-engine CI validating this refresh: 26216163754, success
 local full current gates: pass, 2026-05-21
 credentialed SDK evidence: local-current-gates-20260521
 artifact sha256: c0c22c91541d48c508a588b06a2fa5d7051bc6c8e29df626de67a59cc96c24e6

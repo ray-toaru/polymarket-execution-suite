@@ -251,10 +251,10 @@ for Rust, PostgreSQL, SDK adapter, credentialed non-trading smoke, sign-only
 dry-run, release artifact, shadow execution, observability, and governance
 checks:
 
-- Latest integration GitHub CI:
-  `ray-toaru/polymarket-execution-suite/actions/runs/26214412220`, success.
-- Latest pushed execution-engine GitHub CI baseline:
-  `ray-toaru/polymarket-execution-engine/actions/runs/26214404116`, success.
+- Source/evidence refresh integration GitHub CI:
+  `ray-toaru/polymarket-execution-suite/actions/runs/26216163302`, success.
+- Source/evidence refresh execution-engine GitHub CI:
+  `ray-toaru/polymarket-execution-engine/actions/runs/26216163754`, success.
 - Historical credentialed SDK GitHub gate:
   `ray-toaru/polymarket-execution-engine/actions/runs/26175786984`, success.
 - GitHub CI ownership is split by repository: the integration repository owns

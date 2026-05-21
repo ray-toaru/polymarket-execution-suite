@@ -11,11 +11,11 @@ Current evidence baseline:
 ```text
 source release: v0.25.0
 supplemental evidence tag: v0.25.0-evidence.20260521
-root commit: bda35dffa004b7e96e5faab5f967b4c46a2bf916
+root commit: e22be0ba5260695f55d800ecff714cb43e811865
 hermes-polymarket-control: bb16582e299f9e6f8da6044226e33900c4e2459d
 polymarket-execution-engine: 3be83cb53ead8a981a3829c7d538e747115e43f5
-root CI: 26214412220, success
-execution-engine CI: 26214404116, success
+root CI: 26216163302, success
+execution-engine CI: 26216163754, success
 artifact sha256: c0c22c91541d48c508a588b06a2fa5d7051bc6c8e29df626de67a59cc96c24e6
 current evidence manifest sha256: a67cff633141e1c619b4d422cbc6e09e427d004d9580996c4f00e31d7bebcafd
 ```
@@ -23,11 +23,11 @@ current evidence manifest sha256: a67cff633141e1c619b4d422cbc6e09e427d004d958099
 Current v0.26 decision-prep source refresh:
 
 ```text
-source refresh commit: bda35dffa004b7e96e5faab5f967b4c46a2bf916
+source refresh root commit: e22be0ba5260695f55d800ecff714cb43e811865
 hermes-polymarket-control: bb16582e299f9e6f8da6044226e33900c4e2459d
 polymarket-execution-engine: 3be83cb53ead8a981a3829c7d538e747115e43f5
-latest pushed root CI for this refresh: 26214412220, success
-latest pushed execution-engine CI baseline before this local refresh: 26214404116, success
+pushed root CI validating this refresh: 26216163302, success
+pushed execution-engine CI validating this refresh: 26216163754, success
 local full current gates: pass, 2026-05-21
 credentialed SDK evidence: local-current-gates-20260521
 ```
@@ -82,6 +82,8 @@ current supplemental evidence:
 - package `evidence_manifest_sha256`: `a67cff633141e1c619b4d422cbc6e09e427d004d9580996c4f00e31d7bebcafd`
 - package `root_ci_run_id`: `26214412220`
 - package `execution_engine_ci_run_id`: `26214404116`
+- pushed root CI after package generation: `26216163302`
+- pushed execution-engine CI after package generation: `26216163754`
 - package `credentialed_sdk_run_id`: `local-current-gates-20260521`
 - `external_references_placeholders_remaining`: `[]`
 - `live_submit_allowed=false`
