@@ -15,6 +15,9 @@ This pass formalizes the v0.25.0 shadow-ready SDK sign-only baseline after the p
 - Renamed the active gate implementation to
   `polymarket-execution-engine/validation/run_current_gates_impl.sh`; the public
   entrypoint remains `polymarket-execution-engine/validation/run_current_gates.sh`.
+- Regenerated the v0.26 controlled-canary no-go review package locally, bound it
+  to the current artifact/evidence hashes and latest CI run IDs, and recorded
+  the current go/no-go decision as `no_go` in `CANARY_GO_NO_GO_REVIEW.md`.
 
 ## Still pending for later releases
 
@@ -23,3 +26,6 @@ This pass formalizes the v0.25.0 shadow-ready SDK sign-only baseline after the p
 - Actual real-funds canary execution evidence. The current implementation target
   is program readiness only; normal gates must still record no posting and no
   remote trading side effects.
+- A future reviewed `go` release decision, operator approval, secret-custody
+  review, alert/rollback/runbook review, runtime/reconcile review, account and
+  market whitelist review, and cap review before any real-funds canary attempt.

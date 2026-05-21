@@ -10,3 +10,7 @@ After local/static checks pass, remaining validation depends on tools not guaran
 - optional credentials for non-trading smoke and sign-only dry-run.
 
 Live submit, live cancel, and production deployment remain blocked.
+
+The current v0.26 controlled-canary review decision is `no_go`. A live
+real-funds canary remains blocked until a later reviewed release decision and
+the required external approval evidence explicitly change that boundary.

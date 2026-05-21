@@ -13,6 +13,20 @@ cd polymarket-execution-engine
 ./validation/run_current_gates.sh
 ```
 
+## Current v0.26 canary decision-prep state
+
+The current next phase is still decision preparation, not live execution. Read
+`CANARY_DECISION_PREP_AUDIT.md` and `CANARY_GO_NO_GO_REVIEW.md` before any
+canary-related work.
+
+Current review decision: `no_go`.
+
+The regenerated local review package under
+`dist/pmx-canary-review-v0.26-current/` is no-go review material only. It is
+ignored by Git, must not be treated as armed approval, and must not be used to
+run a live canary unless a later reviewed release decision explicitly changes
+the boundary.
+
 ## Important paths
 
 - `scripts/check_version_consistency.py`
@@ -30,4 +44,5 @@ cd polymarket-execution-engine
 - live submit;
 - live cancel;
 - production deployment;
+- real-funds canary fill;
 - public or Python-side signing material access.
