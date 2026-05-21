@@ -78,7 +78,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-markets", type=int, default=200, help="Maximum Gamma markets to inspect")
     parser.add_argument(
         "--max-order-notional-usd",
-        default="5.00",
+        default="1.00",
         help="Controlled canary order cap; candidate top ask notional must cover it",
     )
     parser.add_argument("--max-spread-bps", type=int, default=100, help="Maximum allowed spread in bps")
@@ -234,7 +234,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
             "spread_unavailable": 0,
             "spread_too_wide": 0,
             "insufficient_top_ask_notional": 0,
-            "min_order_size_above_order_cap": 0,
+            "min_order_size_above_order_size": 0,
         },
     }
 
@@ -303,8 +303,9 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
             if price * size < order_cap:
                 audit["rejections"]["insufficient_top_ask_notional"] += 1
                 continue
-            if min_order_size > order_cap:
-                audit["rejections"]["min_order_size_above_order_cap"] += 1
+            implied_order_size = order_cap / price
+            if min_order_size > implied_order_size:
+                audit["rejections"]["min_order_size_above_order_size"] += 1
                 continue
             candidates.append(
                 Candidate(
@@ -332,6 +333,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
         "token_id": selected.token_id,
         "source_market_hash": selected.source_market_hash,
         "spread_bps": selected.spread_bps,
+        "implied_order_size": decimal_text(order_cap / selected.best_ask),
         "top_ask_notional_usd": decimal_text(selected.best_ask * selected.ask_size),
         "liquidity_score": selected.liquidity_score,
     }

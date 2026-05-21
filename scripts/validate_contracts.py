@@ -1037,6 +1037,7 @@ def validate_canary_candidate_market_prep_boundary() -> None:
         "/book",
         "/spread",
         "max_order_notional_usd",
+        "implied_order_size",
         "max_spread_bps",
         "RealFundsCanaryMarketCandidate",
     ]:
