@@ -3,8 +3,10 @@
 ## Current conclusion
 
 `polymarket-execution-engine/evidence/current/manifest.json` records a passing
-full gate run for the pinned source package. Current release decision remains
-`shadow-ready SDK sign-only candidate`, not production-ready and not live-trading-ready.
+source-candidate gate run for the pinned source package, including credentialed
+non-trading smoke and sign-only dry-run under explicit local env gates. Current
+release decision remains `shadow-ready SDK sign-only candidate`, not
+production-ready and not live-trading-ready.
 
 Bound artifact:
 
@@ -60,10 +62,8 @@ cancelling, raw signed order exposure, or remote side effects.
 The latest verified GitHub Actions runs are:
 
 ```text
-polymarket-execution-suite ci: 26174576711, success
-hermes-polymarket-control ci: 26174554396, success
-polymarket-execution-engine ci: 26174564854, success
-polymarket-execution-engine credentialed-sdk: 26175786984, success
+polymarket-execution-suite ci: 26206286587, success
+polymarket-execution-engine ci: 26206281885, success
 ```
 
 Repository ownership is intentionally split:
@@ -83,27 +83,26 @@ The latest execution-engine CI completed:
 - static release and safety guards;
 - current gates.
 
-The latest canonical evidence refresh also records:
+The latest canonical evidence refresh was generated at
+`2026-05-21T05:44:00.365574+00:00`. It records:
 
-- credentialed non-trading smoke;
-- sign-only dry-run;
+- PostgreSQL validation: `pass`;
+- credentialed non-trading smoke: `pass`;
+- sign-only dry-run: `pass`;
 - shadow execution would-submit drill;
 - observability evidence guard;
 - migration drift dry-run;
 - release hygiene, release artifact check, contract validation, and docs/evidence governance.
 
 The latest local refresh completed the current gate chain with live
-submit/cancel blocked. In that local workspace refresh, PostgreSQL and
-credentialed SDK sections passed under explicit `PMX_TEST_DATABASE_URL`,
-`PMX_RUN_AUTHENTICATED_NON_TRADING_SMOKE`, `PMX_RUN_SIGN_ONLY_DRY_RUN`, and
-`PMX_ALLOW_SIGN_ONLY_DRY_RUN` prerequisites. Hermes validation is run with the
-`hm-pdp-test` profile.
+submit/cancel blocked. PostgreSQL passed under explicit
+`PMX_TEST_DATABASE_URL`; credentialed SDK sections passed under explicit
+`PMX_RUN_AUTHENTICATED_NON_TRADING_SMOKE=1`,
+`PMX_RUN_SIGN_ONLY_DRY_RUN=1`, and `PMX_ALLOW_SIGN_ONLY_DRY_RUN=1`.
+Hermes validation is run with the `hm-pdp-test` profile.
 
-GitHub-hosted `credentialed-sdk` passed for this report. Its protected
-environment exists in `polymarket-execution-engine`, not in the integration
-repository, and its secrets were mapped from the local account A `.env`
-variables. The gate covered authenticated non-trading smoke and sign-only
-dry-run only; it did not authorize live submit, live cancel, or real-funds
+The credentialed checks validate authenticated non-trading smoke and sign-only
+dry-run only. They do not authorize live submit, live cancel, or real-funds
 canary execution.
 
 Re-run command:

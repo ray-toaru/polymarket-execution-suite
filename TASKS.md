@@ -23,9 +23,11 @@
 - [x] Automate the blocked real-funds canary rehearsal package: a complete
   review package plus `--armed` CLI invocation remains blocked by a `no_go`
   adapter release decision before posting or remote side effects.
-- [ ] Re-run the execution-engine full current gates and root integration CI
-  after any decision-package, preflight, or review-package change.
-- [ ] Keep the release decision explicit that live submit, live cancel,
+- [x] Re-run the execution-engine full current gates and root integration CI
+  after decision-package, preflight, and review-package changes. Local
+  `validation/run_current_gates.sh` passed with PostgreSQL enabled, execution
+  engine CI `26206281885` passed, and root integration CI `26206286587` passed.
+- [x] Keep the release decision explicit that live submit, live cancel,
   production deployment, and actual real-funds canary fill remain blocked unless
   a later reviewed release decision changes that boundary.
 
@@ -51,8 +53,8 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [x] Rust tests
 - [x] PostgreSQL migration/store/API E2E with `PMX_TEST_DATABASE_URL`
 - [x] SDK adapter/spike checks and tests
-- [x] Credentialed non-trading smoke, explicitly enabled
-- [x] Sign-only dry-run, explicitly enabled
+- [x] Credentialed non-trading smoke refreshed in current canonical evidence
+- [x] Sign-only dry-run refreshed in current canonical evidence
 
 ## Still intentionally blocked
 

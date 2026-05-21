@@ -246,25 +246,26 @@
 
 ## Current validation evidence
 
-The current canonical evidence manifest records passing full gates for Rust,
-PostgreSQL, SDK, credentialed non-trading smoke, sign-only dry-run, release
-artifact, shadow execution, observability, and governance checks:
+The current canonical evidence manifest records passing source-candidate gates
+for Rust, PostgreSQL, SDK adapter, credentialed non-trading smoke, sign-only
+dry-run, release artifact, shadow execution, observability, and governance
+checks:
 
 - Latest integration GitHub CI:
-  `ray-toaru/polymarket-execution-suite/actions/runs/26174576711`, success.
-- Latest Hermes GitHub CI:
-  `ray-toaru/hermes-polymarket-control/actions/runs/26174554396`, success.
+  `ray-toaru/polymarket-execution-suite/actions/runs/26206286587`, success.
 - Latest execution-engine GitHub CI:
-  `ray-toaru/polymarket-execution-engine/actions/runs/26174564854`, success.
-- Latest credentialed SDK GitHub gate:
+  `ray-toaru/polymarket-execution-engine/actions/runs/26206281885`, success.
+- Historical credentialed SDK GitHub gate:
   `ray-toaru/polymarket-execution-engine/actions/runs/26175786984`, success.
 - GitHub CI ownership is split by repository: the integration repository owns
   version/contract/release-artifact checks; execution-engine owns Rust,
   PostgreSQL, current gates, SDK adapter checks, and the manual
   `credentialed-sdk` workflow.
 - The `credentialed-sdk` environment is configured only in
-  `polymarket-execution-engine`; the current GitHub gate uses environment
-  secrets mapped from the local account A `.env` variables.
+  `polymarket-execution-engine`; the integration repository does not own those
+  secrets.
+- `postgres_validation`: pass.
+- `credentialed_non_trading_validation`: pass.
 
 - `real_funds_canary_preflight_validation`: pass.
 - `real_funds_canary_lifecycle_validation`: pass.

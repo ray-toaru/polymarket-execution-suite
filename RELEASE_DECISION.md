@@ -18,8 +18,8 @@ This decision applies to the integration repository at the pinned submodule
 revisions:
 
 ```text
-hermes-polymarket-control: 78df12bd53207d719c861abd65a984a270a27efb
-polymarket-execution-engine: eda19644564e2a8394e0dcf07392768c4f81b50e
+hermes-polymarket-control: bb16582e299f9e6f8da6044226e33900c4e2459d
+polymarket-execution-engine: 69528924a9228ccc5262322ca64468e97a625648
 ```
 
 The integration repository commit containing this decision pins those submodule
@@ -29,9 +29,10 @@ this file changes that commit hash.
 This source includes Hermes canary readiness reference reporting under the
 `hm-pdp-test` profile, aggregate-only real-funds canary dry-run diagnostics,
 review-package generation, and a reviewed release-decision JSON gate for any
-future armed canary. The refreshed current evidence passed PostgreSQL and
-credentialed SDK sections under explicit local prerequisites; it still does not
-authorize production, live submit, live cancel, or real-funds order placement.
+future armed canary. The refreshed current evidence passed PostgreSQL under
+explicit local prerequisites and passed credentialed non-trading/sign-only
+dry-run sections under explicit local env gates; it still does not authorize
+production, live submit, live cancel, or real-funds order placement.
 
 The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
 live trading capability.
@@ -51,17 +52,15 @@ The GitHub CI boundary now follows the repository ownership model:
 Latest verified GitHub Actions runs for this decision:
 
 ```text
-polymarket-execution-suite ci: 26174576711, success
-hermes-polymarket-control ci: 26174554396, success
-polymarket-execution-engine ci: 26174564854, success
-polymarket-execution-engine credentialed-sdk: 26175786984, success
+polymarket-execution-suite ci: 26206286587, success
+polymarket-execution-engine ci: 26206281885, success
 ```
 
 The `credentialed-sdk` environment exists in `polymarket-execution-engine`; the
-integration repository has no Polymarket credential environment. The
-GitHub-hosted credentialed SDK gate passed with execution-engine environment
-secrets mapped from the local account A `.env` variables. Secret values are not
-recorded in this decision.
+integration repository has no Polymarket credential environment. Current local
+canonical evidence refreshed authenticated non-trading smoke and sign-only
+dry-run with explicit env gates. Secret values are not recorded in this
+decision.
 
 ## Required evidence
 
@@ -90,9 +89,9 @@ Rationale:
   regression, credentialed non-trading smoke, sign-only dry-run, local static,
   contract, release artifact, and governance gates passed in this environment.
 - The current local refresh at
-  `polymarket-execution-engine: 61c483996628f3dfb404490d135a9cc163823e7b`
+  `polymarket-execution-engine: 69528924a9228ccc5262322ca64468e97a625648`
   passed the current no-live gate chain, including PostgreSQL and credentialed
-  SDK sections under explicit local prerequisites.
+  SDK sections under explicit local env gates.
 - Shadow execution, reconciliation drift, rollback/kill-switch, migration drift,
   live canary readiness, blocked live canary, and productionization guard gates
   passed.
@@ -203,13 +202,13 @@ Rationale:
   without logging the fixture secret value.
 - Shadow execution evidence now runs by default in the current gate, and
   observability evidence is bound as an explicit manifest section.
-- Credentialed gates used explicit opt-in flags and existing `.env` credentials; no credential values are recorded in evidence.
-- GitHub-hosted credentialed SDK validation passed in
-  `ray-toaru/polymarket-execution-engine/actions/runs/26175786984`; it covered
-  authenticated non-trading smoke and sign-only dry-run only.
-- PostgreSQL gates used an isolated local PostgreSQL 16 instance on
-  `localhost:55432`; the `.env` `PMX_DATABASE_URL` target on `localhost:5432`
-  was not listening during validation.
+- Credentialed gates used explicit opt-in flags and existing local `.env`
+  credentials; no credential values are recorded in evidence.
+- Authenticated non-trading smoke and sign-only dry-run passed in current local
+  canonical evidence. They do not authorize live submit, live cancel, or
+  real-funds canary execution.
+- PostgreSQL gates used a local PostgreSQL 16 instance with
+  `PMX_TEST_DATABASE_URL`.
 - Current source state remains pre-live and fail-closed for live submit/cancel.
 - `PMX_ALLOW_LIVE_SUBMIT=0` and `PMX_ALLOW_LIVE_CANCEL=0` during validation;
   blocked canary evidence records `posted=false`, `cancelled=false`, and
@@ -235,17 +234,15 @@ Rationale:
 Current evidence:
 
 - GitHub integration CI:
-  `ray-toaru/polymarket-execution-suite/actions/runs/26174576711`
-- GitHub Hermes CI:
-  `ray-toaru/hermes-polymarket-control/actions/runs/26174554396`
+  `ray-toaru/polymarket-execution-suite/actions/runs/26206286587`
 - GitHub execution-engine CI:
-  `ray-toaru/polymarket-execution-engine/actions/runs/26174564854`
-- GitHub credentialed SDK:
+  `ray-toaru/polymarket-execution-engine/actions/runs/26206281885`
+- Historical GitHub credentialed SDK audit context:
   `ray-toaru/polymarket-execution-engine/actions/runs/26175786984`
 - Environment: `polymarket-execution-engine/evidence/current/environment.json`
 - Manifest: `polymarket-execution-engine/evidence/current/manifest.json`
 - Manifest SHA-256:
-  `3c0c6679678ba4938a57ace08e1193783472dc886cc09aec0ab967adb44afdcb`
+  `4c53dd9b7abf14184df37932ba5eb645c942f75f075d31f40b587c8b612c7ffa`
 - Logs: `polymarket-execution-engine/evidence/current/logs/`
 - Real-funds canary preflight log:
   `polymarket-execution-engine/evidence/current/logs/65-real-funds-canary-preflight.log`
