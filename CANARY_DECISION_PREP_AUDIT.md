@@ -16,17 +16,18 @@ hermes-polymarket-control: bb16582e299f9e6f8da6044226e33900c4e2459d
 polymarket-execution-engine: 69528924a9228ccc5262322ca64468e97a625648
 root CI: 26208090302, success
 artifact sha256: c0c22c91541d48c508a588b06a2fa5d7051bc6c8e29df626de67a59cc96c24e6
-current evidence manifest sha256: 4c53dd9b7abf14184df37932ba5eb645c942f75f075d31f40b587c8b612c7ffa
+current evidence manifest sha256: 99ce4f47eb8e94fa0373f448180fde33643e0f2e19dcbeae148d8e95bbfaab5e
 ```
 
 Current v0.26 decision-prep source refresh:
 
 ```text
-root commit: c0464b35614a0cbd11d0e0967ad9f8aa4effe424
+root commit before this local refresh: 1bfda7435503ebcdc1f35c8d267c5e89473b5e48
 hermes-polymarket-control: bb16582e299f9e6f8da6044226e33900c4e2459d
-polymarket-execution-engine: d7e135667f95985e3a6e0ffdd8c1bda614b75aa5
-root CI: 26210922346, success
-execution-engine CI: 26210917113, success
+polymarket-execution-engine: 4b571a29481c4a826c90a3b3aa907b74d92dbb39
+latest pushed root CI before this local refresh: 26212663156, success
+latest pushed execution-engine CI before this local refresh: 26210917113, success
+local full current gates: pass, 2026-05-21
 credentialed SDK evidence: local-current-gates-20260521
 ```
 
@@ -77,8 +78,8 @@ so no manual JSON patching is required. Its review metadata is bound to the
 current supplemental evidence:
 
 - package `artifact_sha256`: `c0c22c91541d48c508a588b06a2fa5d7051bc6c8e29df626de67a59cc96c24e6`
-- package `evidence_manifest_sha256`: `4c53dd9b7abf14184df37932ba5eb645c942f75f075d31f40b587c8b612c7ffa`
-- package `root_ci_run_id`: `26210922346`
+- package `evidence_manifest_sha256`: `99ce4f47eb8e94fa0373f448180fde33643e0f2e19dcbeae148d8e95bbfaab5e`
+- package `root_ci_run_id`: `26212663156`
 - package `execution_engine_ci_run_id`: `26210917113`
 - package `credentialed_sdk_run_id`: `local-current-gates-20260521`
 - `external_references_placeholders_remaining`: `[]`

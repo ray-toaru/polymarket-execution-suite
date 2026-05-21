@@ -922,7 +922,7 @@ def validate_controlled_canary_release_decision_governance() -> None:
             fail(f"controlled canary release-decision template must keep {flag}=false")
         if example_data.get(flag) is not False:
             fail(f"controlled canary release-decision example must keep {flag}=false")
-    if example_data.get("artifact_sha256") != "a022e81e1255e3d80a6aee3bc94c6513023a1cf7118857fb0c267ff79df4cd1d":
+    if example_data.get("artifact_sha256") != "c0c22c91541d48c508a588b06a2fa5d7051bc6c8e29df626de67a59cc96c24e6":
         fail("controlled canary release-decision example must bind v0.25.0 artifact SHA-256")
     if invalid_data.get("decision") != "go" or invalid_data.get("live_submit_authorized") is not True:
         fail("controlled canary invalid partial fixture must exercise rejected go/live-submit path")
