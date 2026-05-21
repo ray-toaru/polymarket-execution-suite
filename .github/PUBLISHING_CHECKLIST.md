@@ -14,6 +14,11 @@ This repository is release-sensitive because it pins independent Hermes and exec
 
 ## CI requirements
 
+- Prefer local validation for routine edits. Do not push solely to spend a
+  GitHub Actions run after each small documentation, script, or fixture change.
+  Use the relevant local command first, then reserve remote CI for release
+  candidates, submodule pointer updates, GitHub Environment or secret changes,
+  and runner-only behavior that local validation cannot cover.
 - Keep `actions/checkout` configured with `submodules: recursive`.
 - Because the submodules are private sibling repositories, configure `CI_SUBMODULE_TOKEN` with read access to all three repositories and wire it into checkout before enabling required checks.
 - Require the integration repository `ci` workflow before merging release

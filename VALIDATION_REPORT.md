@@ -30,6 +30,12 @@ python polymarket-execution-engine/validation/check_docs_evidence_governance.py
 python polymarket-execution-engine/scripts/check_release_hygiene.py . --dev-worktree
 ```
 
+Use local/static checks as the default validation path for routine edits. Do
+not push solely to trigger GitHub CI for every small change. Remote CI is the
+confirmation layer for release candidates, submodule pointer updates, GitHub
+Environment or secret wiring, runner-specific behavior, and changes that cannot
+be reproduced locally.
+
 ## Full gate evidence
 
 The latest verified GitHub Actions runs are:
