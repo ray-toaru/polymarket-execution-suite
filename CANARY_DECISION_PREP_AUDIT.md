@@ -19,6 +19,23 @@ artifact sha256: c0c22c91541d48c508a588b06a2fa5d7051bc6c8e29df626de67a59cc96c24e
 current evidence manifest sha256: 4c53dd9b7abf14184df37932ba5eb645c942f75f075d31f40b587c8b612c7ffa
 ```
 
+Current v0.26 decision-prep source refresh:
+
+```text
+root commit: c0464b35614a0cbd11d0e0967ad9f8aa4effe424
+hermes-polymarket-control: bb16582e299f9e6f8da6044226e33900c4e2459d
+polymarket-execution-engine: d7e135667f95985e3a6e0ffdd8c1bda614b75aa5
+root CI: 26210922346, success
+execution-engine CI: 26210917113, success
+credentialed SDK evidence: local-current-gates-20260521
+```
+
+This refresh parameterizes review-package generation and the blocked rehearsal
+package so future no-go review material can be regenerated from explicit
+artifact/evidence hash overrides and current CI run IDs. It does not change the
+v0.25.0 released artifact hash, current evidence manifest hash, or live-trading
+boundary.
+
 Current canonical evidence records `credentialed_non_trading_validation=pass`,
 `postgres_validation=pass`, `real_funds_canary_preflight_validation=pass`,
 `real_funds_canary_lifecycle_validation=pass`, and
@@ -61,6 +78,9 @@ current supplemental evidence:
 
 - package `artifact_sha256`: `c0c22c91541d48c508a588b06a2fa5d7051bc6c8e29df626de67a59cc96c24e6`
 - package `evidence_manifest_sha256`: `4c53dd9b7abf14184df37932ba5eb645c942f75f075d31f40b587c8b612c7ffa`
+- package `root_ci_run_id`: `26210922346`
+- package `execution_engine_ci_run_id`: `26210917113`
+- package `credentialed_sdk_run_id`: `local-current-gates-20260521`
 - `external_references_placeholders_remaining`: `[]`
 - `live_submit_allowed=false`
 - `live_cancel_allowed=false`
