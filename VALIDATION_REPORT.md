@@ -21,9 +21,10 @@ Latest pushed CI/evidence checkpoint:
 root_ci_run_id=26254755001
 execution_engine_ci_run_id=26254745573
 hermes_ci_run_id=26198048337
-current_local_execution_engine_commit=76fdb3ee136b0350e4718fff60a1edcee1f67d03
-evidence_manifest_sha256=80b4b7fa8ef325ffb3cff6d839176a9af1ce28ce226c4d3ebef826c6c2b981d1
-release_zip_sha256=regenerated in external .zip.sha256 sidecar
+current_local_hermes_commit=cd6491df9a3a07028996159788e0b1366a44c0d9
+current_local_execution_engine_commit=399996403fa2bd4d5af4490fcd1c31dfc7a9814b
+evidence_manifest_sha256=b8a9cf6a92c54363333c703ec7ee3754db1d4c1b8ae78f7136b61aafe7bc56b4
+release_zip_sha256=recorded in external .zip.sha256 and .zip.evidence.json sidecars
 ```
 
 This checkpoint plus the local checks below records validation status only. It
@@ -115,7 +116,7 @@ The latest execution-engine CI completed:
 - current gates.
 
 The latest canonical evidence refresh was generated at
-`2026-05-21T21:32:55.762022+00:00`. It records:
+`2026-05-21T23:22:48.922574+00:00`. It records:
 
 - PostgreSQL validation: `pass`;
 - credentialed non-trading smoke: `pass`;

@@ -17,7 +17,7 @@ This pass formalizes the v0.25.0 shadow-ready SDK sign-only baseline after the p
   entrypoint remains `polymarket-execution-engine/validation/run_current_gates.sh`.
 - Regenerated the v0.26 controlled-canary no-go review package locally, bound it
   to the current artifact/evidence hashes and latest CI run IDs, and recorded
-  the current go/no-go decision as `no_go` in `CANARY_GO_NO_GO_REVIEW.md`.
+  the current go/no-go decision as `no_go` in `docs/future/CANARY_GO_NO_GO_REVIEW.md`.
 
 ## Local release-candidate checkpoint
 

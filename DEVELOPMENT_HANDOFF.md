@@ -16,7 +16,7 @@ cd polymarket-execution-engine
 ## Current v0.26 canary decision-prep state
 
 The current next phase is still decision preparation, not live execution. Read
-`CANARY_DECISION_PREP_AUDIT.md` and `CANARY_GO_NO_GO_REVIEW.md` before any
+`docs/future/CANARY_DECISION_PREP_AUDIT.md` and `docs/future/CANARY_GO_NO_GO_REVIEW.md` before any
 canary-related work.
 
 Current review decision: `no_go`.

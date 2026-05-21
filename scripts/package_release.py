@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from zipfile import ZIP_DEFLATED, ZipFile
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 import hashlib
 import json
 import subprocess
@@ -17,6 +17,7 @@ OUT = DIST / f"polymarket-execution-suite-v{VERSION}.zip"
 FORBIDDEN_PARTS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", "target", "dist"}
 FORBIDDEN_SUFFIXES = {".pyc", ".pyo", ".db", ".sqlite", ".sqlite3"}
 FORBIDDEN_FILENAMES = {".env"}
+DETERMINISTIC_MTIME = (1980, 1, 1, 0, 0, 0)
 EXCLUDED_PREFIXES = {
     "docs/archive",
     "external_reviews",
@@ -54,6 +55,8 @@ def allowed(path: Path) -> bool:
     rel_posix = rel.as_posix()
     if any(part in FORBIDDEN_PARTS for part in rel.parts):
         return False
+    if any(part.endswith(".egg-info") for part in rel.parts):
+        return False
     if path.suffix in FORBIDDEN_SUFFIXES:
         return False
     if path.name in FORBIDDEN_FILENAMES:
@@ -61,6 +64,25 @@ def allowed(path: Path) -> bool:
     if any(rel_posix == prefix or rel_posix.startswith(prefix + "/") for prefix in EXCLUDED_PREFIXES):
         return False
     return True
+
+
+def executable_in_archive(path: Path) -> bool:
+    try:
+        first = path.open("rb").read(2)
+    except OSError:
+        return False
+    return first == b"#!"
+
+
+def write_deterministic(zf: ZipFile, path: Path) -> None:
+    archive_name = str(Path(ARCHIVE_ROOT) / path.relative_to(ROOT))
+    info = ZipInfo(archive_name, DETERMINISTIC_MTIME)
+    info.compress_type = ZIP_DEFLATED
+    info.create_system = 3
+    mode = 0o755 if executable_in_archive(path) else 0o644
+    info.external_attr = (mode & 0xFFFF) << 16
+    with path.open("rb") as fh:
+        zf.writestr(info, fh.read())
 
 
 def main() -> int:
@@ -73,7 +95,7 @@ def main() -> int:
     with ZipFile(OUT, "w", ZIP_DEFLATED) as zf:
         for path in sorted(ROOT.rglob("*")):
             if path.is_file() and allowed(path):
-                zf.write(path, str(Path(ARCHIVE_ROOT) / path.relative_to(ROOT)))
+                write_deterministic(zf, path)
     sidecar = OUT.with_suffix(OUT.suffix + ".sha256")
     artifact_sha256 = sha256(OUT)
     sidecar.write_text(f"{artifact_sha256}  {OUT.name}\n")

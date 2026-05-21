@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import re
+import hashlib
 import sys
 import zipfile
 from pathlib import Path
@@ -41,10 +42,19 @@ def forbidden(member: str, expected_root: str | None = None) -> bool:
         rel = member[len(expected_root) + 1 :]
     return (
         any(part in FORBIDDEN_PARTS for part in parts)
+        or any(part.endswith(".egg-info") for part in parts)
         or Path(name).suffix in FORBIDDEN_SUFFIXES
         or name in FORBIDDEN_FILENAMES
         or any(rel == prefix[:-1] or rel.startswith(prefix) for prefix in FORBIDDEN_PREFIX_SUFFIXES)
     )
+
+
+def sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def stale_root_doc(member: str, expected_root: str) -> bool:
@@ -55,6 +65,17 @@ def stale_root_doc(member: str, expected_root: str) -> bool:
     if "/" in rel:
         return False
     return any(pattern.match(rel) for pattern in STALE_ROOT_DOCS)
+
+
+def historical_root_doc_content(member: str, expected_root: str, zf: zipfile.ZipFile) -> bool:
+    prefix = expected_root + "/"
+    if not member.startswith(prefix):
+        return False
+    rel = member[len(prefix) :]
+    if "/" in rel or not rel.endswith(".md"):
+        return False
+    first_line = zf.read(member).decode(errors="replace").splitlines()[:1]
+    return bool(first_line and re.search(r"\bHistorical v0\.", first_line[0], re.IGNORECASE))
 
 
 
@@ -75,6 +96,37 @@ def main() -> int:
     expected_version = sys.argv[2].strip()
     expected_root = f"polymarket_execution_suite_v{expected_version.replace('.', '_')}"
     failures: list[str] = []
+    expected_hash = sha256(zip_path)
+    sidecar = zip_path.with_suffix(zip_path.suffix + ".sha256")
+    evidence_sidecar = zip_path.with_suffix(zip_path.suffix + ".evidence.json")
+    if not sidecar.exists():
+        failures.append(f"SHA-256 sidecar missing: {sidecar}")
+    else:
+        parts = sidecar.read_text().strip().split()
+        if len(parts) < 2:
+            failures.append("SHA-256 sidecar must contain '<sha256>  <artifact-name>'")
+        else:
+            if parts[0] != expected_hash:
+                failures.append("SHA-256 sidecar hash does not match artifact")
+            if parts[1] != zip_path.name:
+                failures.append("SHA-256 sidecar artifact name does not match zip name")
+    if not evidence_sidecar.exists():
+        failures.append(f"evidence sidecar missing: {evidence_sidecar}")
+        evidence = None
+    else:
+        evidence = json.loads(evidence_sidecar.read_text())
+        artifact = evidence.get("artifact", {})
+        if artifact.get("name") != zip_path.name:
+            failures.append("evidence sidecar artifact.name does not match zip name")
+        if artifact.get("sha256") != expected_hash:
+            failures.append("evidence sidecar artifact.sha256 does not match artifact")
+        if artifact.get("sha256_sidecar") != sidecar.name:
+            failures.append("evidence sidecar artifact.sha256_sidecar does not match sidecar")
+        canonical_evidence = evidence.get("canonical_evidence", {})
+        if canonical_evidence.get("manifest_path") != "polymarket-execution-engine/evidence/current/manifest.json":
+            failures.append("evidence sidecar canonical_evidence.manifest_path is not current manifest")
+        if not canonical_evidence.get("manifest_sha256"):
+            failures.append("evidence sidecar canonical_evidence.manifest_sha256 is missing")
     with zipfile.ZipFile(zip_path) as zf:
         names = zf.namelist()
         roots = {name.split('/', 1)[0] for name in names if name and '/' in name}
@@ -93,12 +145,29 @@ def main() -> int:
         stale_docs = sorted({name for name in names if stale_root_doc(name, expected_root)})
         if stale_docs:
             failures.append("stale root docs in archive: " + ", ".join(stale_docs[:20]))
+        historical_docs = sorted(
+            {name for name in names if historical_root_doc_content(name, expected_root, zf)}
+        )
+        if historical_docs:
+            failures.append("historical root docs in archive: " + ", ".join(historical_docs[:20]))
         stale_engine_docs = sorted({name for name in names if stale_engine_doc(name, expected_root)})
         if stale_engine_docs:
             failures.append("stale execution-engine docs in archive: " + ", ".join(stale_engine_docs[:20]))
         forbidden_evidence_templates = sorted({name for name in names if f"{expected_root}/polymarket-execution-engine/evidence/v" in name})
         if forbidden_evidence_templates:
             failures.append("non-canonical evidence version directory in archive: " + ", ".join(forbidden_evidence_templates[:20]))
+        bad_shebang_modes = []
+        for info in zf.infolist():
+            if info.is_dir():
+                continue
+            data = zf.read(info.filename)
+            if not data.startswith(b"#!"):
+                continue
+            mode = (info.external_attr >> 16) & 0o777
+            if mode != 0o755:
+                bad_shebang_modes.append(f"{info.filename} mode={oct(mode)}")
+        if bad_shebang_modes:
+            failures.append("shebang scripts must be executable in archive: " + ", ".join(bad_shebang_modes[:20]))
         required_agents = [
             f"{expected_root}/AGENTS.md",
             f"{expected_root}/hermes-polymarket-control/AGENTS.md",
@@ -131,13 +200,19 @@ def main() -> int:
         if current_manifest not in names:
             failures.append("canonical evidence manifest missing from archive")
         else:
-            data = json.loads(zf.read(current_manifest).decode())
+            manifest_bytes = zf.read(current_manifest)
+            data = json.loads(manifest_bytes.decode())
             if data.get("version") != expected_version:
                 failures.append("canonical evidence manifest version mismatch")
             if data.get("canonical_evidence_dir") != "polymarket-execution-engine/evidence/current":
                 failures.append("canonical evidence manifest has bad canonical_evidence_dir")
             if data.get("release_decision", {}).get("validated_release") is True and not data.get("artifact", {}).get("sha256"):
                 failures.append("validated evidence manifest must include artifact sha256")
+            if evidence is not None:
+                sidecar_manifest_sha = evidence.get("canonical_evidence", {}).get("manifest_sha256")
+                archive_manifest_sha = hashlib.sha256(manifest_bytes).hexdigest()
+                if sidecar_manifest_sha != archive_manifest_sha:
+                    failures.append("evidence sidecar manifest_sha256 does not match archived manifest")
         release_manifest = f"{expected_root}/polymarket-execution-engine/release/manifest.json"
         if release_manifest not in names:
             failures.append("release manifest missing")

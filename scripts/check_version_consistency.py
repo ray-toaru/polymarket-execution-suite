@@ -33,6 +33,9 @@ ACTIVE_DOCS = [
     "DOC_STATUS.md",
     "IMPLEMENTATION_STATUS.md",
     "ROADMAP.md",
+    "docs/future/CANARY_DECISION_PREP_AUDIT.md",
+    "docs/future/CANARY_GO_NO_GO_REVIEW.md",
+    "docs/future/CANARY_PRODUCTION_ROADMAP.md",
     "NO_LOCAL_ACTIONS_REMAINING.md",
 ]
 

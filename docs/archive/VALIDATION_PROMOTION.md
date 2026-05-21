@@ -67,7 +67,7 @@ Each refactor must be behavior-preserving and followed by Rust gates.
 
 The later shadow execution, reconciliation drill, rollback/kill-switch drill,
 observability, canary-prep, and production-control themes are now tracked in
-`CANARY_PRODUCTION_ROADMAP.md`. This historical v0.23.1 plan is retained for
+`../../docs/future/CANARY_PRODUCTION_ROADMAP.md`. This historical v0.23.1 plan is retained for
 audit context only and is not the active development roadmap.
 
 ## Pause conditions

@@ -24,7 +24,8 @@ live cancel, or real-funds canary execution.
 1. Treat P1 canary-prep evidence as satisfied by the `v0.25.0` baseline.
 2. Make `v0.26` a controlled canary decision-prep phase, not an implicit live
    canary attempt.
-3. Use `CANARY_DECISION_PREP_AUDIT.md` as the current v0.26 audit ledger. The
+3. Use `docs/future/CANARY_DECISION_PREP_AUDIT.md` as active next-phase governance material,
+   not as part of the v0.25.0 release decision. The
    existing reviewed canary package is no-go rehearsal material, but it is not
    bound to the latest supplemental artifact and evidence manifest hashes.
 4. Use the regenerated local `dist/pmx-canary-review-v0.26-current/` package as

@@ -41,7 +41,7 @@ def main() -> int:
         path
         for path in ROOT.rglob("*")
         if path.is_dir()
-        and path.name in dir_names
+        and (path.name in dir_names or path.name.endswith(".egg-info"))
         and (args.include_venv or not is_under_venv(path))
     ]
     for path in sorted(dirs, key=lambda p: len(p.parts), reverse=True):

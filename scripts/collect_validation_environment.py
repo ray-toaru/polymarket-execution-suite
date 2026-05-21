@@ -91,6 +91,7 @@ def main() -> int:
             "cargo": run(["cargo", "--version"]),
             "psql": run(["psql", "--version"]),
             "python": run([sys.executable, "--version"]),
+            "pip_freeze": run([sys.executable, "-m", "pip", "freeze", "--all"]),
         },
         "git": {
             "integration": git_info(ROOT),

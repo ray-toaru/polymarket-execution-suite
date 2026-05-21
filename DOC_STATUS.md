@@ -1,6 +1,6 @@
 # Documentation and evidence status — v0.25.0 shadow-ready SDK sign-only baseline
 
-## Current canonical root documents
+## Current canonical documents
 
 - `AGENTS.md` — repository-level AI agent working rules and safety guardrails.
 - `README.md`
@@ -11,12 +11,17 @@
 - `CURRENT_PROGRESS.md`
 - `ROADMAP.md`
 - `TASKS.md`
-- `CANARY_DECISION_PREP_AUDIT.md`
-- `CANARY_GO_NO_GO_REVIEW.md`
+- `docs/future/CANARY_DECISION_PREP_AUDIT.md`
+- `docs/future/CANARY_GO_NO_GO_REVIEW.md`
 - `VALIDATION_REPORT.md`
 - `REVIEW_AUDIT.md`
 - `DEVELOPMENT_HANDOFF.md`
 - `NO_LOCAL_ACTIONS_REMAINING.md`
+
+Canary decision-prep documents are active next-phase governance material, not
+the v0.25.0 release decision itself. They must continue to state `no_go` unless
+a future reviewed release decision explicitly changes the live/production
+boundary.
 
 ## Historical documents
 
@@ -27,6 +32,8 @@ docs/archive/
 ```
 
 They may mention old versions and must not be used as current release evidence.
+`docs/archive/VALIDATION_PROMOTION.md` is the archived historical v0.23.1
+validation-promotion plan.
 
 ## Current evidence rule
 

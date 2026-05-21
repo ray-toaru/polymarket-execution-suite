@@ -861,9 +861,18 @@ def validate_current_docs_and_release_governance() -> None:
         fail("release manifest must bind canonical evidence manifest")
     if canonical.get("historical_evidence_policy") != "archive-excluded-from-release-package":
         fail("release manifest must state archive-excluded-from-release-package")
-    stale_root = [path.name for path in ROOT.glob("*.md") if path.name.startswith("V0_") or path.name.startswith("VALIDATION_V0_")]
+    stale_root = []
+    historical_root = []
+    for path in ROOT.glob("*.md"):
+        if path.name.startswith("V0_") or path.name.startswith("VALIDATION_V0_"):
+            stale_root.append(path.name)
+        first_line = path.read_text(errors="replace").splitlines()[:1]
+        if first_line and re.search(r"\bHistorical v0\.", first_line[0], re.IGNORECASE):
+            historical_root.append(path.name)
     if stale_root:
         fail("stale versioned root docs remain outside docs/archive: " + ", ".join(sorted(stale_root)))
+    if historical_root:
+        fail("historical version root docs remain outside docs/archive: " + ", ".join(sorted(historical_root)))
     active_versioned_engine_docs = [
         path.name
         for path in (EXECUTOR / "docs").glob("V0_*.md")

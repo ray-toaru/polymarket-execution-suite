@@ -1,6 +1,11 @@
 # Tasks — post-v0.25.0
 
-## v0.26 controlled canary decision-prep
+This root task list tracks post-release work. It is not v0.25.0 release
+evidence and does not change the current `shadow-ready SDK sign-only candidate`
+release decision. Detailed canary decision-prep material lives under
+`docs/future/`.
+
+## Next-phase controlled canary decision-prep
 
 - [x] Audit the current v0.26 canary decision-prep state against the latest
   `v0.25.0-evidence.20260521` baseline.

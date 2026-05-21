@@ -5,15 +5,16 @@ on:
     paths:
       - ".github/**"
       - ".gitmodules"
+      - "constraints-ci.txt"
       - "requirements-ci.txt"
       - "scripts/**"
+      - "docs/**"
       - "hermes-polymarket-control"
       - "polymarket-execution-engine"
       - "VERSION"
       - "README.md"
       - "ROADMAP.md"
       - "TASKS.md"
-      - "CANARY_PRODUCTION_ROADMAP.md"
       - "PROJECT_ARCHITECTURE.md"
       - "DEPENDENCY_POLICY.md"
       - "DESIGN_DECISION_RECORD.md"
@@ -26,15 +27,16 @@ on:
     paths:
       - ".github/**"
       - ".gitmodules"
+      - "constraints-ci.txt"
       - "requirements-ci.txt"
       - "scripts/**"
+      - "docs/**"
       - "hermes-polymarket-control"
       - "polymarket-execution-engine"
       - "VERSION"
       - "README.md"
       - "ROADMAP.md"
       - "TASKS.md"
-      - "CANARY_PRODUCTION_ROADMAP.md"
       - "PROJECT_ARCHITECTURE.md"
       - "DEPENDENCY_POLICY.md"
       - "DESIGN_DECISION_RECORD.md"
@@ -69,8 +71,8 @@ jobs:
       - name: Install Hermes test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements-ci.txt
-          python -m pip install -e "hermes-polymarket-control[test]"
+          python -m pip install -c constraints-ci.txt -r requirements-ci.txt
+          python -m pip install -c constraints-ci.txt -e "hermes-polymarket-control[test]"
 
       - name: Check version consistency
         run: python scripts/check_version_consistency.py
