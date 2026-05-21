@@ -220,11 +220,13 @@
   service helpers that reject remote side effects and raw signed order exposure.
 - Real-funds canary program readiness now includes a local-only
   `pmx-real-funds-canary` CLI behind the `live-submit` feature, SDK read-only
-  automatic market selection, default dry-run behavior, and readiness evidence
-  that records no posting and no remote side effects.
-- Real-funds canary dry-run market discovery now emits aggregate safe-market
+  validation of an externally supplied candidate market, default dry-run
+  behavior, and readiness evidence that records no posting and no remote side
+  effects.
+- Real-funds canary dry-run candidate validation emits aggregate safety
   diagnostics without token identifiers, signed material, secrets, or raw order
-  payloads.
+  payloads. Active market discovery is intentionally outside the execution
+  engine boundary.
 - Real-funds canary armed mode now requires a reviewed release-decision JSON
   bound to the same artifact SHA-256 and evidence-manifest SHA-256 as the
   approval file.
