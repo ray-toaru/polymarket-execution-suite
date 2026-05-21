@@ -15,6 +15,20 @@ polymarket-execution-suite-v0.25.0.zip
 sha256=recorded in external .zip.sha256 and .zip.evidence.json sidecars
 ```
 
+Local release-candidate checkpoint, held before push to avoid unnecessary CI:
+
+```text
+root_commit=current local checkpoint commit; run git log -1 --oneline before push
+execution_engine_commit=current local submodule checkpoint; run git -C polymarket-execution-engine log -1 --oneline before push
+evidence_manifest_sha256=af9dc98fcb3965b9fc3ab2911f3f73a3d13bcfe26b03da01e8e0c210b3a23c79
+release_zip_sha256=3ddd06c39d36046bd7d9ab833eb963786cb3c95a7ed94b99d9921dd474bf3e74
+github_ci_triggered=false
+```
+
+This checkpoint records local validation status only. It does not promote the
+release decision and does not authorize production deployment, live submit, live
+cancel, or real-funds canary execution.
+
 ## Local/static checks
 
 ```bash
@@ -43,6 +57,9 @@ Latest local targeted review-package checks passed with no new CI run:
 ```bash
 .venv/bin/python scripts/validate_contracts.py
 .venv/bin/python -m compileall -q scripts polymarket-execution-engine/validation
+.venv/bin/python polymarket-execution-engine/validation/run_single_host_deployment_drill.py
+.venv/bin/python polymarket-execution-engine/validation/run_single_host_canary_candidate_drill.py
+.venv/bin/python polymarket-execution-engine/validation/run_single_host_go_candidate_drill.py
 .venv/bin/python polymarket-execution-engine/validation/run_real_funds_canary_blocked_rehearsal_package.py
 .venv/bin/python polymarket-execution-engine/validation/run_real_funds_canary_review_package_drill.py
 .venv/bin/python polymarket-execution-engine/validation/validate_controlled_canary_external_references.py --file dist/pmx-canary-review-reviewed/external-references.json
@@ -93,6 +110,15 @@ The latest canonical evidence refresh was generated at
 - observability evidence guard;
 - migration drift dry-run;
 - release hygiene, release artifact check, contract validation, and docs/evidence governance.
+- single-host limited deployment validation: `pass`; deployment templates are
+  dry-run/fail-closed and do not authorize live submit, live cancel, production
+  deployment, or real-funds canary execution.
+- single-host canary candidate validation: `pass`; reviewed package material
+  binds the release artifact and evidence manifest, but remains `no_go`,
+  dry-run only, and no-remote-side-effect.
+- single-host temporary `go` candidate validation: `pass`; no `go` file is
+  committed and missing reviewed release-decision input still blocks armed
+  execution.
 
 The latest local refresh completed the current gate chain with live
 submit/cancel blocked. PostgreSQL passed under explicit

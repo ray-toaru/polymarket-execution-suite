@@ -156,6 +156,24 @@ Current evidence coverage:
 - `50-production-deployment-preflight-drill.log` proves artifact SHA-256,
   artifact sidecar, evidence sidecar, evidence manifest hash, and migration
   evidence can be verified while deployment remains blocked.
+- `single_host_deployment_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `69-single-host-deployment-drill.log` proves the single-host deployment
+  templates for `pmx-api` and the canary runner remain fail-closed, dry-run
+  only, reference-only for local custody, and do not authorize production or
+  live side effects.
+- `single_host_canary_candidate_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `70-single-host-canary-candidate-drill.log` proves the single-host canary
+  candidate package can be generated and preflighted against the dry-run runner
+  while the release decision remains `no_go` and no live side effects are
+  authorized.
+- `single_host_go_candidate_validation` is present in
+  `polymarket-execution-engine/evidence/current/manifest.json`.
+- `71-single-host-go-candidate-drill.log` proves a temporary `go` adapter
+  release-decision candidate can be generated for operator review without
+  committing a `go` file, and that missing reviewed release-decision input still
+  blocks armed execution.
 - `50-production-deployment-preflight-drill.log` also verifies
   `production_preflight_config_diff_review_validation` and the
   `64-production-preflight-config-diff-review.log` SHA-256 before deployment

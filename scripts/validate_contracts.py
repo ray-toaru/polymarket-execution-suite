@@ -1014,6 +1014,121 @@ def validate_controlled_canary_release_decision_governance() -> None:
             fail(f"real-funds canary operations readiness doc missing token: {needle}")
 
 
+def validate_single_host_deployment_governance() -> None:
+    deploy = EXECUTOR / "deploy/single-host"
+    required = [
+        deploy / "README.md",
+        deploy / "env/pmx-api.env.example",
+        deploy / "env/pmx-real-funds-canary.env.example",
+        deploy / "systemd/pmx-api.service",
+        deploy / "systemd/pmx-real-funds-canary@.service",
+        deploy / "bin/pmx-single-host-preflight.sh",
+        deploy / "bin/pmx-single-host-rollback.sh",
+        deploy / "bin/pmx-single-host-canary-package-preflight.sh",
+        EXECUTOR / "validation/run_single_host_deployment_drill.py",
+        EXECUTOR / "validation/run_single_host_canary_candidate_drill.py",
+        EXECUTOR / "validation/run_single_host_go_candidate_drill.py",
+    ]
+    for path in required:
+        if not path.exists():
+            fail(f"single-host deployment governance file missing: {path.relative_to(ROOT)}")
+    readme = (deploy / "README.md").read_text()
+    canary_service = (deploy / "systemd/pmx-real-funds-canary@.service").read_text()
+    validator = (EXECUTOR / "validation/run_single_host_deployment_drill.py").read_text()
+    candidate_validator = (EXECUTOR / "validation/run_single_host_canary_candidate_drill.py").read_text()
+    go_candidate_validator = (EXECUTOR / "validation/run_single_host_go_candidate_drill.py").read_text()
+    package_preflight = (deploy / "bin/pmx-single-host-canary-package-preflight.sh").read_text()
+    gate_impl = (EXECUTOR / "validation/run_current_gates_impl.sh").read_text()
+    writer = (EXECUTOR / "validation/write_current_evidence_manifest.py").read_text()
+    combined_templates = "\n".join(
+        path.read_text()
+        for path in required
+        if path.exists()
+        and "deploy/single-host" in path.as_posix()
+        and path.name != "pmx-single-host-canary-package-preflight.sh"
+    )
+    for needle in [
+        "single-host limited deployment",
+        "not production-ready evidence",
+        "PMX_LIVE_SUBMIT_ENABLED=0",
+        "PMX_ALLOW_REAL_FUNDS_CANARY=0",
+        "pass://polymarket-execution-engine/controlled-canary",
+        "reviewed `go` release decision",
+    ]:
+        if needle not in readme:
+            fail(f"single-host deployment README missing token: {needle}")
+    if "--dry-run" not in canary_service:
+        fail("single-host canary service must run dry-run mode")
+    for forbidden in ["--armed", "--allow-live-submit-config", "--allow-real-funds-canary-config"]:
+        if forbidden in canary_service:
+            fail(f"single-host canary service must not include {forbidden}")
+    for needle in [
+        "single_host_deployment_validation",
+        "69-single-host-deployment-drill.log",
+        "live_submit_allowed",
+        "production_deployment_allowed",
+        "secrets_included",
+        "PMX_PRODUCTION_DEPLOYMENT_ENABLED=1",
+    ]:
+        if needle not in validator:
+            fail(f"single-host deployment validator missing token: {needle}")
+    if "69-single-host-deployment-drill.log" not in gate_impl:
+        fail("current gates must emit single-host deployment drill log")
+    if "70-single-host-canary-candidate-drill.log" not in gate_impl:
+        fail("current gates must emit single-host canary candidate drill log")
+    if "71-single-host-go-candidate-drill.log" not in gate_impl:
+        fail("current gates must emit single-host go candidate drill log")
+    if '"single_host_deployment_validation"' not in writer or "69-single-host-deployment-drill.log" not in writer:
+        fail("current evidence manifest writer must include single-host deployment validation")
+    if '"single_host_canary_candidate_validation"' not in writer or "70-single-host-canary-candidate-drill.log" not in writer:
+        fail("current evidence manifest writer must include single-host canary candidate validation")
+    if '"single_host_go_candidate_validation"' not in writer or "71-single-host-go-candidate-drill.log" not in writer:
+        fail("current evidence manifest writer must include single-host go candidate validation")
+    for needle in [
+        "candidate_package_generated",
+        "release_decision",
+        "no_go",
+        "PMX_EXECUTION_ENGINE_ROOT",
+        "single_host_canary_candidate_validation",
+        "70-single-host-canary-candidate-drill.log",
+    ]:
+        if needle not in candidate_validator:
+            fail(f"single-host canary candidate validator missing token: {needle}")
+    for needle in [
+        "validate_controlled_canary_external_references.py",
+        "single-host canary package preflight only accepts no_go release decisions",
+        "release decision must keep",
+        "single-host canary package preflight passed",
+    ]:
+        if needle not in package_preflight:
+            fail(f"single-host canary package preflight missing token: {needle}")
+    for needle in [
+        "temporary_go_candidate_generated",
+        "go_candidate_committed",
+        "candidate_go_not_committed",
+        "missing_release_decision_blocks_armed",
+        "--release-decision-file is required with --armed",
+        "FORBIDDEN_GO_DECISION_GLOBS",
+        "single_host_go_candidate_validation",
+        "71-single-host-go-candidate-drill.log",
+    ]:
+        if needle not in go_candidate_validator:
+            fail(f"single-host go candidate validator missing token: {needle}")
+    for forbidden in [
+        "-----BEGIN",
+        "clob_secret=",
+        "raw_signature=",
+        "raw_signed_payload=",
+        "signed_order_envelope=",
+        "PMX_ALLOW_LIVE_SUBMIT=1",
+        "PMX_ALLOW_LIVE_CANCEL=1",
+        "PMX_ALLOW_REAL_FUNDS_CANARY=1",
+        "PMX_PRODUCTION_DEPLOYMENT_ENABLED=1",
+    ]:
+        if forbidden in combined_templates:
+            fail(f"single-host deployment files contain forbidden token: {forbidden}")
+
+
 def main() -> None:
     spec = yaml.safe_load(OPENAPI.read_text())
     validate_paths_and_statuses(spec)
@@ -1037,6 +1152,7 @@ def main() -> None:
     validate_current_evidence_manifest_guard()
     validate_current_docs_and_release_governance()
     validate_controlled_canary_release_decision_governance()
+    validate_single_host_deployment_governance()
     print(json.dumps({"status": "ok", "paths": len(spec["paths"]), "schemas": len(spec["components"]["schemas"])}))
 
 

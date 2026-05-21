@@ -230,6 +230,16 @@
   approval file.
 - Local real-funds canary review package generation now binds artifact/evidence
   hashes and produces review-only material that is not an armed approval.
+- Single-host limited deployment templates now cover `pmx-api`, a dry-run
+  canary runner, preflight, rollback, and reference-only local custody defaults
+  while keeping live submit, live cancel, production deployment, and real-funds
+  canary execution disabled.
+- Single-host canary candidate preflight now verifies generated review-package
+  material remains `no_go`, reference-only, dry-run only, and bound to artifact
+  and evidence hashes before any future operator review.
+- Single-host `go` candidate drill now creates only a temporary operator-review
+  candidate, keeps `go_candidate_committed=false`, and verifies the armed CLI
+  still requires an explicit reviewed release-decision file.
 - Hermes control-plane can build a blocked canary readiness report from
   approval/evidence references under the `hm-pdp-test` profile without signing,
   direct CLOB access, or remote side effects.
@@ -271,6 +281,9 @@ checks:
 - `real_funds_canary_lifecycle_validation`: pass.
 - `real_funds_canary_ready_validation`: pass.
 - `real_funds_canary_review_package_validation`: pass.
+- `single_host_deployment_validation`: pass.
+- `single_host_canary_candidate_validation`: pass.
+- `single_host_go_candidate_validation`: pass.
 - `65-real-funds-canary-preflight.log`: pass, no post, no cancel, no remote side
   effect.
 - `67-real-funds-canary-ready-drill.log`: pass, program ready, no actual

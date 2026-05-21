@@ -119,6 +119,18 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [x] Production deployment preflight drill included in current gates
 - [x] Artifact SHA-256, artifact sidecar, evidence sidecar, manifest hash, and
   migration evidence are verified while deployment remains blocked
+- [x] Single-host limited deployment templates added for `pmx-api` and dry-run
+  canary runner with fail-closed systemd/env defaults; current evidence records
+  `single_host_deployment_validation=pass` without enabling live submit, live
+  cancel, production deployment, or real-funds canary execution
+- [x] Single-host canary candidate package preflight added; current evidence
+  records `single_host_canary_candidate_validation=pass` for a `no_go`,
+  dry-run-only candidate package bound to the release artifact and evidence
+  manifest
+- [x] Single-host temporary `go` candidate drill added; current evidence records
+  `single_host_go_candidate_validation=pass`, proves no `go` decision file is
+  committed, and confirms missing reviewed release decision still blocks armed
+  execution
 - [x] Production secret custody drill included in current gates
 - [x] Sensitive environment values are checked absent from logs, manifest, and
   package artifact without printing the values

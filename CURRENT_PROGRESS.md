@@ -19,6 +19,35 @@ This pass formalizes the v0.25.0 shadow-ready SDK sign-only baseline after the p
   to the current artifact/evidence hashes and latest CI run IDs, and recorded
   the current go/no-go decision as `no_go` in `CANARY_GO_NO_GO_REVIEW.md`.
 
+## Local release-candidate checkpoint
+
+As of 2026-05-21, the local branch is intentionally held before push to avoid
+triggering CI for a small evidence/documentation refresh. The checked local
+state is:
+
+- root commit: this documentation checkpoint commit; use `git log -1 --oneline`
+  for the exact local hash before push;
+- execution-engine commit: current local submodule checkpoint; use
+  `git -C polymarket-execution-engine log -1 --oneline` for the exact local
+  hash before push;
+- evidence manifest SHA-256:
+  `af9dc98fcb3965b9fc3ab2911f3f73a3d13bcfe26b03da01e8e0c210b3a23c79`;
+- release zip SHA-256:
+  `3ddd06c39d36046bd7d9ab833eb963786cb3c95a7ed94b99d9921dd474bf3e74`.
+- single-host limited deployment scaffold is present under
+  `polymarket-execution-engine/deploy/single-host/` and validated by
+  `single_host_deployment_validation=pass`.
+- single-host canary candidate package preflight is validated by
+  `single_host_canary_candidate_validation=pass`; it remains `no_go` and
+  dry-run only.
+- single-host temporary `go` candidate generation is validated by
+  `single_host_go_candidate_validation=pass`; no `go` decision file is
+  committed.
+
+This checkpoint is local validation evidence only. It does not change the
+release decision, does not approve production deployment, and does not approve
+live submit, live cancel, or real-funds canary execution.
+
 ## Still pending for later releases
 
 - Live submit/cancel promotion evidence.
