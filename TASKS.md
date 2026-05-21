@@ -6,9 +6,11 @@
   canary attempt; default outcome must be no-go.
 - [x] Bind any future canary review package to the released `v0.25.0` artifact
   SHA-256, evidence manifest SHA-256, and GitHub evidence run IDs.
-- [ ] Collect external secret-custody/KMS, operator-approval, alert-routing,
-  dashboard, rollback, and incident-runbook references without storing secret
-  values in the repository.
+- [x] Collect local review-package references for secret custody, no-go
+  operator approval, manual alert routing, dashboard, rollback, and
+  incident-runbook evidence without storing secret values in the repository.
+  These references are review material only and do not claim production pager,
+  production dashboard, or live readiness.
 - [x] Add reference-only external-reference templates and validators for
   secret-custody/KMS, operator approval, alert routing, dashboard, rollback,
   incident runbook, and retry-policy references.
