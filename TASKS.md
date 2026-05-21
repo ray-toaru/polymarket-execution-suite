@@ -12,6 +12,9 @@
 - [x] Add reference-only external-reference templates and validators for
   secret-custody/KMS, operator approval, alert routing, dashboard, rollback,
   incident runbook, and retry-policy references.
+- [x] Add candidate-file validation and review-package wiring for externally
+  collected references; unresolved placeholders are rejected unless explicitly
+  running a local placeholder review.
 - [x] Add or refresh validation that rejects stale, expired, mismatched, or
   partial canary approval references before any live-submit feature path can be
   armed.

@@ -945,6 +945,9 @@ def validate_controlled_canary_release_decision_governance() -> None:
         fail("real-funds canary review package must include release-decision.json")
     if "external-references.json" not in review_text or "DEFAULT_EXTERNAL_REFERENCES" not in review_text:
         fail("real-funds canary review package must include external-references.json")
+    for needle in ["--external-references-file", "external_references_placeholders_remaining", "validate_external_references_shape"]:
+        if needle not in review_text:
+            fail(f"real-funds canary review package missing external-reference candidate support token: {needle}")
     for needle in ["DEFAULT_ROOT_CI_RUN_ID", "DEFAULT_HERMES_CI_RUN_ID", "DEFAULT_EXECUTION_ENGINE_CI_RUN_ID", "DEFAULT_CREDENTIALED_SDK_RUN_ID"]:
         if needle not in review_text:
             fail(f"real-funds canary review package must bind GitHub evidence run id token: {needle}")
@@ -952,8 +955,15 @@ def validate_controlled_canary_release_decision_governance() -> None:
     for needle in ["validate_controlled_canary_release_decision.py", "validate_controlled_canary_external_references.py", "credentialed_sdk_run_id"]:
         if needle not in drill_text:
             fail(f"real-funds canary review package drill missing token: {needle}")
+    for needle in ["--file", "--allow-placeholders", "must reject unresolved placeholders", "review-with-concrete-references"]:
+        if needle not in drill_text:
+            fail(f"real-funds canary review package drill missing external-reference candidate token: {needle}")
     external_text = external_validator.read_text()
     for needle in [
+        "argparse",
+        "placeholder_paths",
+        "--allow-placeholders",
+        "Validate an operator-supplied external reference candidate",
         "invalid sensitive fixture must be rejected",
         "forbidden sensitive reference key",
         "fixture-sensitive-value-must-not-be-logged",
@@ -969,7 +979,7 @@ def validate_controlled_canary_release_decision_governance() -> None:
     if external_example_data.get("evidence_manifest_sha256") != example_data.get("evidence_manifest_sha256"):
         fail("controlled canary external-reference example must bind the same evidence manifest hash as the release-decision example")
     readiness_text = readiness_doc.read_text()
-    for needle in ["default no-go", "external-references.json", "release-decision.json", "real_funds_canary_authorized=false"]:
+    for needle in ["default no-go", "external-references.json", "release-decision.json", "real_funds_canary_authorized=false", "--external-references-file", "REPLACE_WITH_*"]:
         if needle not in readiness_text:
             fail(f"real-funds canary operations readiness doc missing token: {needle}")
 
