@@ -40,6 +40,9 @@
 - [x] Keep the release decision explicit that live submit, live cancel,
   production deployment, and actual real-funds canary fill remain blocked unless
   a later reviewed release decision changes that boundary.
+- [x] Record the current v0.26 controlled-canary go/no-go review as `no_go`,
+  with required external approval evidence listed before any future transition
+  to `go`.
 
 ## Completed in governance cleanup
 
