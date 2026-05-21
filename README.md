@@ -53,6 +53,16 @@ python polymarket-execution-engine/validation/check_docs_evidence_governance.py
 python polymarket-execution-engine/scripts/check_release_hygiene.py . --dev-worktree
 ```
 
+Controlled canary review packages require an operator-reviewed market candidate
+file. The root helper below reads only public market/book/spread APIs and writes
+the execution-engine input shape; it does not authorize live trading.
+
+```bash
+python scripts/prepare_canary_candidate_market.py \
+  --output candidate-market.json \
+  --audit-output candidate-market.audit.json
+```
+
 Full Rust/SDK/PostgreSQL validation requires an external Rust 1.88 + PostgreSQL environment:
 
 ```bash

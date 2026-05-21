@@ -1014,6 +1014,51 @@ def validate_controlled_canary_release_decision_governance() -> None:
             fail(f"real-funds canary operations readiness doc missing token: {needle}")
 
 
+def validate_canary_candidate_market_prep_boundary() -> None:
+    prep_script = ROOT / "scripts/prepare_canary_candidate_market.py"
+    if not prep_script.exists():
+        fail("root canary candidate market prep script missing")
+    text = prep_script.read_text()
+    for needle in [
+        "candidate-market.json",
+        "public read-only",
+        "urllib.request",
+        "remote_side_effects",
+        "authorized_for_live",
+        "False",
+        "/markets",
+        "/book",
+        "/spread",
+        "max_order_notional_usd",
+        "max_spread_bps",
+        "RealFundsCanaryMarketCandidate",
+    ]:
+        if needle not in text:
+            fail(f"canary candidate market prep script missing boundary token: {needle}")
+    for forbidden in [
+        "post_order",
+        "post_orders",
+        "cancel_order",
+        "cancel_orders",
+        "private_key",
+        "clob_secret",
+        "api_secret",
+        "POLYMARKET_PRIVATE_KEY",
+        "PMX_ALLOW_LIVE_SUBMIT=1",
+        "PMX_ALLOW_REAL_FUNDS_CANARY=1",
+    ]:
+        if forbidden in text:
+            fail(f"canary candidate market prep script contains forbidden token: {forbidden}")
+    live_canary = (SDK_ADAPTER_SRC / "sdk_runtime/live_canary.rs").read_text()
+    for forbidden in [
+        "simplified_markets",
+        "sampling_markets",
+        "sampling_simplified_markets",
+    ]:
+        if forbidden in live_canary:
+            fail(f"execution-engine live canary runtime must not perform active market discovery: {forbidden}")
+
+
 def validate_single_host_deployment_governance() -> None:
     deploy = EXECUTOR / "deploy/single-host"
     required = [
@@ -1152,6 +1197,7 @@ def main() -> None:
     validate_current_evidence_manifest_guard()
     validate_current_docs_and_release_governance()
     validate_controlled_canary_release_decision_governance()
+    validate_canary_candidate_market_prep_boundary()
     validate_single_host_deployment_governance()
     print(json.dumps({"status": "ok", "paths": len(spec["paths"]), "schemas": len(spec["components"]["schemas"])}))
 
