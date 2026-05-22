@@ -85,7 +85,7 @@ Minimum gates before any live attempt:
   canary build only.
 - `PMX_ALLOW_REAL_FUNDS_CANARY=1` and `allow_real_funds_canary=true` enabled
   only for the canary process.
-- Local approval file binds scope `REAL_FUNDS_CANARY`, `FOK_LIMIT_FILL`, the
+- Local approval file binds scope `REAL_FUNDS_CANARY`, `GTC_LIMIT_POST_ONLY_CANCEL`, the
   release artifact SHA-256, and the current evidence manifest SHA-256.
 - Per-order cap is `1` USD and per-day cap is `5` USD for the first canary.
 - Kill switch open and reversible.

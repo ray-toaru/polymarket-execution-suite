@@ -1080,7 +1080,9 @@ def validate_canary_candidate_market_prep_boundary() -> None:
         "target_size",
         "estimated_order_notional_usd",
         "exchange_rule_snapshot",
-        "marketable_buy_min_notional_usd",
+        "post_only_buy_limit_price",
+        "post_only_price_unavailable",
+        "limit_price",
         "max_spread_bps",
         "RealFundsCanaryMarketCandidate",
         "--human-review-ref",
@@ -1094,8 +1096,6 @@ def validate_canary_candidate_market_prep_boundary() -> None:
     for forbidden in [
         "post_order",
         "post_orders",
-        "cancel_order",
-        "cancel_orders",
         "private_key",
         "clob_secret",
         "api_secret",
@@ -1114,7 +1114,7 @@ def validate_canary_candidate_market_prep_boundary() -> None:
     ]:
         if forbidden in live_canary:
             fail(f"execution-engine live canary runtime contains forbidden token: {forbidden}")
-    for needle in ["limit_order()", "size(size)"]:
+    for needle in ["limit_order()", "size(size)", "SdkOrderType::GTC", ".post_only(true)", "cancel_order"]:
         if needle not in live_canary:
             fail(f"execution-engine live canary runtime missing size-driven order token: {needle}")
     real_funds_gate = (SDK_ADAPTER_SRC / "gates/real_funds.rs").read_text()
@@ -1123,7 +1123,7 @@ def validate_canary_candidate_market_prep_boundary() -> None:
         "target_notional_lte",
         "target_size",
         "exchange_rule_snapshot_valid",
-        "marketable_buy_notional_floor_ok",
+        "post_only_limit_terms_valid",
     ]:
         if needle not in real_funds_gate:
             fail(f"execution-engine real-funds gate missing size/notional derivation token: {needle}")

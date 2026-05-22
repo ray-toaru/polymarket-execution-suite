@@ -66,7 +66,7 @@ real funds.
 
 - A reviewed release-decision JSON with `decision=go`, bound to the exact
   artifact SHA-256 and evidence manifest SHA-256 under review.
-- Operator approval for `REAL_FUNDS_CANARY` and `FOK_LIMIT_FILL`, with 1 USD
+- Operator approval for `REAL_FUNDS_CANARY` and `GTC_LIMIT_POST_ONLY_CANCEL`, with 1 USD
   per-order and 5 USD per-day caps for the first canary.
 - Secret-custody reference reviewed without storing secret values in the
   repository, logs, review package, or release artifact.

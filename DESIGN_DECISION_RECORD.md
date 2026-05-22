@@ -26,4 +26,4 @@ Accepted. Current release evidence must live under `polymarket-execution-engine/
 
 ## DDR-007: Controlled real-funds canary requires bound human-reviewed market input
 
-Accepted for v0.26.0. The execution engine may consume an externally prepared candidate market file only when its SHA-256 is bound into the approval and reviewed release decision, and the candidate explicitly declares BUY/FOK plus an external human review reference.
+Accepted for v0.26.0. The execution engine may consume an externally prepared candidate market file only when its SHA-256 is bound into the approval and reviewed release decision, and the candidate explicitly declares BUY/GTC post-only plus an external human review reference.

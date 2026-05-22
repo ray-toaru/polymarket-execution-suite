@@ -29,7 +29,7 @@ that contains this file. The release package is the source archive
 The package advances controlled canary preparation:
 
 - reviewed candidate-market binding;
-- BUY/FOK canary size semantics where `target_size` is a reviewed share
+- BUY/GTC post-only canary size semantics where `target_size` is a reviewed share
   quantity and `notional_usd = limit_price * target_size`;
 - explicit service-layer SDK gateway wiring behind injected signer/gateway
   dependencies, with the default service/API path still fail-closed;

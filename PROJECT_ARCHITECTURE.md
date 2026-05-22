@@ -47,4 +47,4 @@ pmx-release    release/version scaffold
 
 ## Conservative pre-live policy
 
-v0.26.0 is controlled real-funds canary source-candidate work. Runtime worker `DEGRADED`, `STALE`, or `UNKNOWN` status must not be treated as live-trading safe. Live submit/cancel remain blocked unless current gates, artifact/evidence binding, one-time approval consumption, human-reviewed BUY/FOK market selection, runtime/reconcile checks, balance/allowance checks, and a reviewed `go` decision all pass.
+v0.26.0 is controlled real-funds canary source-candidate work. Runtime worker `DEGRADED`, `STALE`, or `UNKNOWN` status must not be treated as live-trading safe. Live submit/cancel remain blocked unless current gates, artifact/evidence binding, one-time approval consumption, human-reviewed BUY/GTC post-only market selection, runtime/reconcile checks, balance/allowance checks, and a reviewed `go` decision all pass.

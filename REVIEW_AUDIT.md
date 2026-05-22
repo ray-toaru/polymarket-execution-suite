@@ -16,7 +16,7 @@
 - Armed real-funds canary requires a reviewed release-decision JSON in addition
   to approval, artifact, evidence, env, config, market, and balance gates.
 - v0.26.0 additionally binds the candidate market file SHA-256 into both
-  approval and release decision, requires BUY/FOK plus a human review reference,
+  approval and release decision, requires BUY/GTC post-only plus a human review reference,
   and consumes a one-time approval marker before any armed post attempt.
 - Hermes can report canary readiness references under `hm-pdp-test`, but still
   cannot sign, submit, cancel, hold executor DB credentials, or call CLOB.

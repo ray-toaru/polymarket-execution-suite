@@ -1,6 +1,6 @@
 # Polymarket execution suite v0.26.0
 
-v0.26.0 is a **controlled real-funds canary source-candidate**, not a production-ready or live-trading release. It advances the one-time BUY/FOK canary guardrails, but live execution still requires current gates plus a reviewed `go` decision and operator approval.
+v0.26.0 is a **controlled real-funds canary source-candidate**, not a production-ready or live-trading release. It advances the one-time BUY/GTC post-only canary guardrails, but live execution still requires current gates plus a reviewed `go` decision and operator approval.
 
 This repository is the integration repository. It pins two independent implementation repositories as
 submodules:
@@ -69,9 +69,10 @@ python scripts/prepare_canary_candidate_market.py \
 The reviewed candidate carries a share `target_size`. The canary order uses
 `size = target_size`; `notional_usd` is derived as `limit_price * target_size`
 for risk caps. It must also bind an `exchange_rule_snapshot` with fresh
-evidence for the effective order mode. For the current immediate-fill
-`BUY/FOK` path, the local gate checks the reviewed marketable BUY notional
-floor before any armed command can post.
+evidence for the effective order mode. For the current `BUY/GTC` post-only
+path, the local gate checks `post_only=true` and a non-crossing limit price
+before any armed command can post. An armed canary must cancel the posted order
+and fail if cancel confirmation is missing.
 
 Release packaging writes `dist/INDEX.json` and `dist/README.md`. Only the
 indexed `polymarket-execution-suite-v0.26.0.zip` plus its detached sidecars are
