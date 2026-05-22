@@ -68,7 +68,10 @@ python scripts/prepare_canary_candidate_market.py \
 
 The reviewed candidate carries a share `target_size`. The canary order uses
 `size = target_size`; `notional_usd` is derived as `limit_price * target_size`
-only for risk caps.
+for risk caps. It must also bind an `exchange_rule_snapshot` with fresh
+evidence for the effective order mode. For the current immediate-fill
+`BUY/FOK` path, the local gate checks the reviewed marketable BUY notional
+floor before any armed command can post.
 
 Release packaging writes `dist/INDEX.json` and `dist/README.md`. Only the
 indexed `polymarket-execution-suite-v0.26.0.zip` plus its detached sidecars are

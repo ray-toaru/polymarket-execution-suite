@@ -1079,6 +1079,8 @@ def validate_canary_candidate_market_prep_boundary() -> None:
         "max_order_notional_usd",
         "target_size",
         "estimated_order_notional_usd",
+        "exchange_rule_snapshot",
+        "marketable_buy_min_notional_usd",
         "max_spread_bps",
         "RealFundsCanaryMarketCandidate",
         "--human-review-ref",
@@ -1116,7 +1118,13 @@ def validate_canary_candidate_market_prep_boundary() -> None:
         if needle not in live_canary:
             fail(f"execution-engine live canary runtime missing size-driven order token: {needle}")
     real_funds_gate = (SDK_ADAPTER_SRC / "gates/real_funds.rs").read_text()
-    for needle in ["candidate_notional_usd", "target_notional_lte", "target_size"]:
+    for needle in [
+        "candidate_notional_usd",
+        "target_notional_lte",
+        "target_size",
+        "exchange_rule_snapshot_valid",
+        "marketable_buy_notional_floor_ok",
+    ]:
         if needle not in real_funds_gate:
             fail(f"execution-engine real-funds gate missing size/notional derivation token: {needle}")
 

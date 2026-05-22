@@ -42,6 +42,8 @@ class Candidate:
     target_size: Decimal
     spread_bps: int
     min_order_size: Decimal
+    marketable_buy_min_notional_usd: Decimal
+    min_tick_size: Decimal
     liquidity_score: int
     source_market_hash: str
     book_snapshot_timestamp: str
@@ -62,6 +64,26 @@ class Candidate:
             "target_size": decimal_text(self.target_size),
             "spread_bps": self.spread_bps,
             "min_order_size": decimal_text(self.min_order_size),
+            "exchange_rule_snapshot": {
+                "schema_version": 1,
+                "venue": "polymarket_clob",
+                "order_mode": "immediate_fill",
+                "order_type": "FOK",
+                "side": "BUY",
+                "target_size_semantics": "outcome_shares",
+                "min_share_size": decimal_text(self.min_order_size),
+                "marketable_buy_min_notional_usd": decimal_text(
+                    self.marketable_buy_min_notional_usd
+                ),
+                "min_tick_size": decimal_text(self.min_tick_size),
+                "source": "public_clob_book_plus_reviewed_remote_rule",
+                "captured_at": self.book_snapshot_timestamp,
+                "expires_at": (
+                    dt.datetime.fromisoformat(self.book_snapshot_timestamp)
+                    + dt.timedelta(minutes=15)
+                ).isoformat(),
+                "evidence_ref": self.human_review_ref,
+            },
             "liquidity_score": self.liquidity_score,
             "book_snapshot_timestamp": self.book_snapshot_timestamp,
             "human_review_ref": self.human_review_ref,
@@ -108,6 +130,14 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Optional canary BUY size in outcome shares. When omitted, the helper "
             "uses the CLOB book min_order_size for the selected market."
+        ),
+    )
+    parser.add_argument(
+        "--marketable-buy-min-notional-usd",
+        default="1.00",
+        help=(
+            "Reviewed current minimum notional for immediate-fill BUY orders. "
+            "This is rule evidence, not a permanent protocol constant; update it only with fresh evidence."
         ),
     )
     parser.add_argument(
@@ -328,6 +358,7 @@ def candidate_from_market(
             audit,
         )
     min_order_size = as_decimal(book.get("min_order_size")) or Decimal("0")
+    min_tick_size = as_decimal(book.get("min_tick_size")) or Decimal("0.01")
     target_size = requested_target_size or min_order_size
     if target_size <= 0:
         raise CandidateError("selected market min_order_size is unavailable for automatic target size", audit)
@@ -336,8 +367,16 @@ def candidate_from_market(
     if min_order_size > target_size:
         raise CandidateError("selected market min order size is above target size", audit)
     estimated_notional = price * target_size
+    marketable_buy_min_notional = args.marketable_buy_min_notional_usd
+    if marketable_buy_min_notional <= 0:
+        raise CandidateError("marketable BUY minimum notional must be positive", audit)
     if estimated_notional > order_cap:
         raise CandidateError("selected market target-size notional is above canary order cap", audit)
+    if estimated_notional < marketable_buy_min_notional:
+        raise CandidateError(
+            "selected market target-size notional is below reviewed marketable BUY minimum",
+            audit,
+        )
     slug = str(market.get("slug") or args.market_slug or "")
     audit["selected"] = {
         "market_id": condition_id,
@@ -349,6 +388,7 @@ def candidate_from_market(
         "target_size": decimal_text(target_size),
         "target_size_source": "operator_override" if requested_target_size else "book_min_order_size",
         "estimated_order_notional_usd": decimal_text(estimated_notional),
+        "marketable_buy_min_notional_usd": decimal_text(marketable_buy_min_notional),
         "top_ask_notional_usd": decimal_text(price * size),
         "liquidity_score": liquidity_score(size),
     }
@@ -366,6 +406,8 @@ def candidate_from_market(
         target_size=target_size,
         spread_bps=bps,
         min_order_size=min_order_size,
+        marketable_buy_min_notional_usd=marketable_buy_min_notional,
+        min_tick_size=min_tick_size,
         liquidity_score=liquidity_score(size),
         source_market_hash=market_fingerprint(market),
         book_snapshot_timestamp=snapshot_at,
@@ -395,8 +437,12 @@ def load_market_by_slug(args: argparse.Namespace, slug: str) -> dict[str, Any]:
 def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
     order_cap = as_decimal(args.max_order_notional_usd)
     target_size = as_decimal(args.target_size) if args.target_size else None
+    marketable_buy_min_notional = as_decimal(args.marketable_buy_min_notional_usd)
     if order_cap is None or order_cap <= 0:
         raise CandidateError("--max-order-notional-usd must be a positive decimal")
+    if marketable_buy_min_notional is None or marketable_buy_min_notional <= 0:
+        raise CandidateError("--marketable-buy-min-notional-usd must be a positive decimal")
+    args.marketable_buy_min_notional_usd = marketable_buy_min_notional
     if args.target_size and (target_size is None or target_size <= 0):
         raise CandidateError("--target-size must be a positive decimal")
     if args.max_markets <= 0:
@@ -430,6 +476,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
         "target_size": decimal_text(target_size) if target_size else "book_min_order_size",
         "target_size_source": "operator_override" if target_size else "book_min_order_size",
         "max_order_notional_usd": decimal_text(order_cap),
+        "marketable_buy_min_notional_usd": decimal_text(marketable_buy_min_notional),
         "max_spread_bps": args.max_spread_bps,
         "inspected_markets": 0,
         "inspected_tokens": 0,
@@ -445,6 +492,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
             "spread_too_wide": 0,
             "target_size_above_top_ask_size": 0,
             "target_notional_above_cap": 0,
+            "target_notional_below_marketable_buy_minimum": 0,
             "min_order_size_above_target_size": 0,
         },
     }
@@ -523,6 +571,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
                 continue
             top_ask = best_ask(book)
             min_order_size = as_decimal(book.get("min_order_size")) or Decimal("0")
+            min_tick_size = as_decimal(book.get("min_tick_size")) or Decimal("0.01")
             if top_ask is None:
                 audit["rejections"]["book_unavailable"] += 1
                 continue
@@ -555,6 +604,9 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
             if price * candidate_target_size > order_cap:
                 audit["rejections"]["target_notional_above_cap"] += 1
                 continue
+            if price * candidate_target_size < marketable_buy_min_notional:
+                audit["rejections"]["target_notional_below_marketable_buy_minimum"] += 1
+                continue
             candidates.append(
                 Candidate(
                     market_id=condition_id,
@@ -570,6 +622,8 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
                     target_size=candidate_target_size,
                     spread_bps=bps,
                     min_order_size=min_order_size,
+                    marketable_buy_min_notional_usd=marketable_buy_min_notional,
+                    min_tick_size=min_tick_size,
                     liquidity_score=liquidity_score(size),
                     source_market_hash=market_fingerprint(market),
                     book_snapshot_timestamp=snapshot_at,
@@ -591,6 +645,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
         "target_size": decimal_text(selected.target_size),
         "target_size_source": "operator_override" if target_size else "book_min_order_size",
         "estimated_order_notional_usd": decimal_text(selected.best_ask * selected.target_size),
+        "marketable_buy_min_notional_usd": decimal_text(marketable_buy_min_notional),
         "top_ask_notional_usd": decimal_text(selected.best_ask * selected.ask_size),
         "liquidity_score": selected.liquidity_score,
     }
