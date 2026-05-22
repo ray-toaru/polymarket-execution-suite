@@ -108,6 +108,18 @@ def archive_bytes(path: Path) -> bytes:
     data = path.read_bytes()
     if rel == "polymarket-execution-engine/evidence/current/manifest.json":
         manifest = json.loads(data.decode())
+        manifest["generated_at"] = "archive-normalized"
+        manifest["archive_normalization"] = {
+            "reason": (
+                "The workspace manifest records the post-package artifact hash and generation "
+                "timestamp. The copy embedded in the artifact normalizes volatile fields so the "
+                "archive can be deterministically bound by external sidecars without self-reference."
+            ),
+            "normalized_fields": [
+                "generated_at",
+                "external_artifact_sidecar.sha256",
+            ],
+        }
         external = manifest.get("external_artifact_sidecar")
         if isinstance(external, dict):
             external["sha256"] = None
