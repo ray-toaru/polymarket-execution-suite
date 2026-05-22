@@ -208,6 +208,13 @@ def main() -> int:
                 failures.append("canonical evidence manifest has bad canonical_evidence_dir")
             if data.get("release_decision", {}).get("validated_release") is True and not data.get("artifact", {}).get("sha256"):
                 failures.append("validated evidence manifest must include artifact sha256")
+            external_artifact = data.get("external_artifact_sidecar", {})
+            if isinstance(external_artifact, dict):
+                embedded_zip_hash = external_artifact.get("sha256")
+                if embedded_zip_hash not in (None, expected_hash):
+                    failures.append(
+                        "canonical evidence manifest carries a stale external_artifact_sidecar.sha256"
+                    )
             if evidence is not None:
                 sidecar_manifest_sha = evidence.get("canonical_evidence", {}).get("manifest_sha256")
                 archive_manifest_sha = hashlib.sha256(manifest_bytes).hexdigest()

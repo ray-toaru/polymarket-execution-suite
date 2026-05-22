@@ -1,4 +1,4 @@
-# Review audit — v0.25.0 shadow-ready SDK sign-only baseline
+# Review audit — v0.26.0 controlled real-funds canary source-candidate
 
 ## Confirmed source-level improvements
 
@@ -15,6 +15,9 @@
   token identifiers, raw signed material, or secrets.
 - Armed real-funds canary requires a reviewed release-decision JSON in addition
   to approval, artifact, evidence, env, config, market, and balance gates.
+- v0.26.0 additionally binds the candidate market file SHA-256 into both
+  approval and release decision, requires BUY/FOK plus a human review reference,
+  and consumes a one-time approval marker before any armed post attempt.
 - Hermes can report canary readiness references under `hm-pdp-test`, but still
   cannot sign, submit, cancel, hold executor DB credentials, or call CLOB.
 
@@ -34,5 +37,4 @@ recorded in external .zip.sha256 and .zip.evidence.json sidecars
 
 ## Current conclusion
 
-v0.25.0 shadow-ready SDK sign-only baseline is a `shadow-ready SDK sign-only candidate`. It is not a
-production/live-trading release.
+v0.26.0 controlled canary source is not a production/live-trading release.

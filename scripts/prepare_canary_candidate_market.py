@@ -41,11 +41,15 @@ class Candidate:
     min_order_size: Decimal
     liquidity_score: int
     source_market_hash: str
+    book_snapshot_timestamp: str
+    human_review_ref: str
 
     def to_engine_json(self) -> dict[str, Any]:
         return {
             "market_id": self.market_id,
             "token_id": self.token_id,
+            "side": "BUY",
+            "order_type": "FOK",
             "active": self.active,
             "accepting_orders": self.accepting_orders,
             "closed": self.closed,
@@ -55,6 +59,8 @@ class Candidate:
             "spread_bps": self.spread_bps,
             "min_order_size": decimal_text(self.min_order_size),
             "liquidity_score": self.liquidity_score,
+            "book_snapshot_timestamp": self.book_snapshot_timestamp,
+            "human_review_ref": self.human_review_ref,
         }
 
 
@@ -73,6 +79,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--output", required=True, type=Path, help="Path for candidate-market.json")
     parser.add_argument("--audit-output", type=Path, help="Optional audit sidecar JSON path")
+    parser.add_argument(
+        "--human-review-ref",
+        required=True,
+        help="External operator review/ticket reference approving this candidate market for BUY/FOK canary only.",
+    )
     parser.add_argument("--gamma-url", default=DEFAULT_GAMMA_URL, help="Gamma API base URL")
     parser.add_argument("--clob-url", default=DEFAULT_CLOB_URL, help="CLOB API base URL")
     parser.add_argument("--max-markets", type=int, default=200, help="Maximum Gamma markets to inspect")
@@ -194,6 +205,10 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
         raise CandidateError("--max-markets must be positive")
     if args.max_spread_bps < 0:
         raise CandidateError("--max-spread-bps must be non-negative")
+    human_review_ref = args.human_review_ref.strip()
+    if not human_review_ref or "REPLACE_WITH" in human_review_ref:
+        raise CandidateError("--human-review-ref must be a concrete external review reference")
+    snapshot_at = dt.datetime.now(dt.UTC).isoformat()
 
     markets = fetch_json(
         args.gamma_url,
@@ -212,10 +227,13 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
         raise CandidateError("Gamma /markets response was not a JSON array")
 
     audit: dict[str, Any] = {
-        "generated_at": dt.datetime.now(dt.UTC).isoformat(),
+        "generated_at": snapshot_at,
         "source": "public-read-only",
         "remote_side_effects": False,
         "authorized_for_live": False,
+        "side": "BUY",
+        "order_type": "FOK",
+        "human_review_ref_hash": hashlib.sha256(human_review_ref.encode()).hexdigest(),
         "gamma_url": args.gamma_url,
         "clob_url": args.clob_url,
         "max_markets": args.max_markets,
@@ -321,6 +339,8 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
                     min_order_size=min_order_size,
                     liquidity_score=liquidity_score(size),
                     source_market_hash=market_fingerprint(market),
+                    book_snapshot_timestamp=snapshot_at,
+                    human_review_ref=human_review_ref,
                 )
             )
 

@@ -1,10 +1,11 @@
 # Canary and Production Roadmap
 
-Current baseline: `v0.25.0` is a shadow-ready SDK sign-only candidate. Live
-submit, live cancel, and production deployment remain blocked until a later
-reviewed release decision changes that boundary with current evidence.
+Current source phase: `v0.26.0` is a controlled real-funds canary
+source-candidate. Live submit, live cancel, and production deployment remain
+blocked until a later reviewed release decision changes that boundary with
+current evidence.
 
-## P0: Freeze the v0.25 baseline
+## P0: Preserve the v0.25 baseline while advancing v0.26
 
 Status: current baseline.
 

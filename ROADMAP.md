@@ -1,17 +1,17 @@
-# Roadmap — post-v0.25.0
+# Roadmap — v0.26 controlled canary
 
 ## Current baseline
 
-`v0.25.0` has been released as a GitHub prerelease:
+`v0.25.0` remains the released GitHub prerelease baseline:
 `https://github.com/ray-toaru/polymarket-execution-suite/releases/tag/v0.25.0`.
 
-The release decision remains `shadow-ready SDK sign-only candidate`. It is not
-production-ready, not live-canary-approved, and does not authorize live submit,
-live cancel, or real-funds canary execution.
+Current source is v0.26.0 controlled canary work. It is not production-ready,
+not live-canary-approved, and does not authorize live submit, live cancel, or
+real-funds canary execution without a reviewed `go` decision.
 
 ## Immediate next validation
 
-1. Preserve the released `v0.25.0` package and evidence as the baseline.
+1. Preserve the released `v0.25.0` package and evidence as the historical baseline.
 2. Keep root, Hermes, execution-engine CI, and the manual `credentialed-sdk`
    gate green after any source change.
 3. Rebuild and revalidate a package only after material source or release-doc
@@ -21,8 +21,8 @@ live cancel, or real-funds canary execution.
 
 ## Next source-hardening items
 
-1. Treat P1 canary-prep evidence as satisfied by the `v0.25.0` baseline.
-2. Make `v0.26` a controlled canary decision-prep phase, not an implicit live
+1. Treat prior canary-prep evidence as satisfied by the `v0.25.0` baseline.
+2. Make `v0.26` a controlled canary source-candidate phase, not an implicit live
    canary attempt.
 3. Use `docs/future/CANARY_DECISION_PREP_AUDIT.md` as active next-phase governance material,
    not as part of the v0.25.0 release decision. The

@@ -1,6 +1,6 @@
-# Polymarket execution suite v0.25.0
+# Polymarket execution suite v0.26.0
 
-v0.25.0 is a **shadow-ready SDK sign-only candidate**, not a production-ready or live-trading release.
+v0.26.0 is a **controlled real-funds canary source-candidate**, not a production-ready or live-trading release. It advances the one-time BUY/FOK canary guardrails, but live execution still requires current gates plus a reviewed `go` decision and operator approval.
 
 This repository is the integration repository. It pins two independent implementation repositories as
 submodules:
@@ -29,7 +29,7 @@ Use these current documents first:
 
 - `AGENTS.md` — repository-level agent instructions, safety boundaries, and validation rules.
 
-- `PROJECT_ARCHITECTURE.md` — v0.25 architecture baseline from the v0.3 design split.
+- `PROJECT_ARCHITECTURE.md` — v0.26 architecture baseline from the v0.3 design split.
 - `DEPENDENCY_POLICY.md` — pinned runtime/toolchain/dependency policy.
 - `DESIGN_DECISION_RECORD.md` — accepted architectural decisions.
 - `IMPLEMENTATION_STATUS.md` — implemented, blocked, and intentionally disabled areas.
@@ -60,7 +60,8 @@ the execution-engine input shape; it does not authorize live trading.
 ```bash
 python scripts/prepare_canary_candidate_market.py \
   --output candidate-market.json \
-  --audit-output candidate-market.audit.json
+  --audit-output candidate-market.audit.json \
+  --human-review-ref change-ticket://reviewed-canary-market
 ```
 
 Full Rust/SDK/PostgreSQL validation requires an external Rust 1.88 + PostgreSQL environment:

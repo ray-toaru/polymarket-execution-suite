@@ -1,4 +1,4 @@
-# Development handoff — v0.25.0 shadow-ready SDK sign-only candidate
+# Development handoff — v0.26.0 controlled real-funds canary source-candidate
 
 ## Start here
 

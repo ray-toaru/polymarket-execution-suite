@@ -1,9 +1,8 @@
-# Tasks — post-v0.25.0
+# Tasks — v0.26 controlled canary
 
-This root task list tracks post-release work. It is not v0.25.0 release
-evidence and does not change the current `shadow-ready SDK sign-only candidate`
-release decision. Detailed canary decision-prep material lives under
-`docs/future/`.
+This root task list tracks v0.26.0 controlled canary source work. It is not
+live-execution evidence and does not authorize live submit, live cancel,
+production deployment, or an actual real-funds fill.
 
 ## Next-phase controlled canary decision-prep
 
@@ -19,7 +18,7 @@ release decision. Detailed canary decision-prep material lives under
   hash overrides and persistent blocked-rehearsal output.
 - [x] Produce a reviewed release-decision JSON template for a future controlled
   canary attempt; default outcome must be no-go.
-- [x] Bind any future canary review package to the released `v0.25.0` artifact
+- [x] Bind any future canary review package to the reviewed release artifact
   SHA-256, evidence manifest SHA-256, and GitHub evidence run IDs.
 - [x] Collect local review-package references for secret custody, no-go
   operator approval, manual alert routing, dashboard, rollback, and

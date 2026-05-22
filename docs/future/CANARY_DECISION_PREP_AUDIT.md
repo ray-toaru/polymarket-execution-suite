@@ -2,14 +2,14 @@
 
 ## Current conclusion
 
-The next phase is decision preparation only. The project remains a
-`shadow-ready SDK sign-only candidate`; it is not production-ready,
-live-trading-ready, or approved for a real-funds canary fill.
+The current v0.26 phase is controlled canary source preparation only. The
+project is not production-ready, live-trading-ready, or approved for a
+real-funds canary fill.
 
 Current evidence baseline:
 
 ```text
-source release: v0.25.0
+historical source release baseline: v0.25.0
 supplemental evidence tag: v0.25.0-evidence.20260521
 root commit: final root commit recorded in .zip.evidence.json sidecar
 hermes-polymarket-control: bb16582e299f9e6f8da6044226e33900c4e2459d

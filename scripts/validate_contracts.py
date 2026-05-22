@@ -926,13 +926,16 @@ def validate_controlled_canary_release_decision_governance() -> None:
         "production_deployment_authorized",
         "real_funds_canary_authorized",
         "remote_side_effects_authorized",
+        "allow_real_funds_canary",
     ]:
         if template_data.get(flag) is not False:
             fail(f"controlled canary release-decision template must keep {flag}=false")
         if example_data.get(flag) is not False:
             fail(f"controlled canary release-decision example must keep {flag}=false")
-    if example_data.get("artifact_sha256") != "c0c22c91541d48c508a588b06a2fa5d7051bc6c8e29df626de67a59cc96c24e6":
-        fail("controlled canary release-decision example must bind v0.25.0 artifact SHA-256")
+    if example_data.get("artifact_sha256") != "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb":
+        fail("controlled canary release-decision example must bind illustrative v0.26.0 artifact SHA-256")
+    if example_data.get("market_candidate_sha256") != "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd":
+        fail("controlled canary release-decision example must bind illustrative v0.26.0 market candidate SHA-256")
     if invalid_data.get("decision") != "go" or invalid_data.get("live_submit_authorized") is not True:
         fail("controlled canary invalid partial fixture must exercise rejected go/live-submit path")
     if invalid_mismatched_data.get("artifact_sha256") == example_data.get("artifact_sha256"):
@@ -943,9 +946,11 @@ def validate_controlled_canary_release_decision_governance() -> None:
         "invalid mismatched fixture must be rejected",
         "go decision missing external references",
         "go decision is expired",
-        "go decision artifact hash does not match",
+        "artifact hash does not match",
+        "market candidate hash does not match",
         "live_submit_authorized",
         "real_funds_canary_authorized",
+        "reviewed_release_decision_present",
     ]:
         if needle not in validator_text:
             fail(f"controlled canary release-decision validator missing token: {needle}")
@@ -1049,6 +1054,9 @@ def validate_canary_candidate_market_prep_boundary() -> None:
         "implied_order_size",
         "max_spread_bps",
         "RealFundsCanaryMarketCandidate",
+        "--human-review-ref",
+        "human_review_ref",
+        "order_type",
     ]:
         if needle not in text:
             fail(f"canary candidate market prep script missing boundary token: {needle}")

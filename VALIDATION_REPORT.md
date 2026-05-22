@@ -1,30 +1,28 @@
-# Validation report — v0.25.0 shadow-ready SDK sign-only baseline
+# Validation report — v0.26.0 controlled real-funds canary source-candidate
 
 ## Current conclusion
 
 `polymarket-execution-engine/evidence/current/manifest.json` records a passing
-source-candidate gate run for the pinned source package, including credentialed
-non-trading smoke and sign-only dry-run under explicit local env gates. Current
-release decision remains `shadow-ready SDK sign-only candidate`, not
-production-ready and not live-trading-ready.
+v0.26.0 source-candidate gate run for the pinned package. v0.26.0 adds
+controlled canary guardrails in source, but the current release decision remains
+not production-ready and not live-trading-ready until a reviewed `go` decision
+passes.
 
 Bound artifact:
 
 ```text
-polymarket-execution-suite-v0.25.0.zip
+polymarket-execution-suite-v0.26.0.zip
 sha256=recorded in external .zip.sha256 and .zip.evidence.json sidecars
 ```
 
-Latest pushed CI/evidence checkpoint before this root submodule-pointer update:
+Latest local evidence checkpoint:
 
 ```text
-root_ci_run_id=26267900817
-root_ci_scope=previous root pointer
-execution_engine_ci_run_id=26268276210
-hermes_ci_run_id=26267887116
-current_local_hermes_commit=cd6491df9a3a07028996159788e0b1366a44c0d9
-current_local_execution_engine_commit=776af54961e4b584dc11f2318266c1889d146c2c
-evidence_manifest_sha256=b8a9cf6a92c54363333c703ec7ee3754db1d4c1b8ae78f7136b61aafe7bc56b4
+local_current_gates=pass
+postgres_validation=pass
+credentialed_non_trading_validation=skipped
+sign_only_dry_run_validation=skipped
+evidence_manifest_sha256=recorded in external .zip.evidence.json sidecar
 release_zip_sha256=recorded in external .zip.sha256 and .zip.evidence.json sidecars
 ```
 
@@ -69,9 +67,9 @@ HERMES_PROFILE=hm-pdp-test .venv/bin/python -m compileall -q hermes-polymarket-c
 .venv/bin/python polymarket-execution-engine/validation/run_real_funds_canary_review_package_drill.py
 .venv/bin/python polymarket-execution-engine/validation/validate_controlled_canary_external_references.py --file dist/pmx-canary-review-reviewed/external-references.json
 .venv/bin/python scripts/package_release.py
-.venv/bin/python scripts/check_release_artifact.py dist/polymarket-execution-suite-v0.25.0.zip 0.25.0
+.venv/bin/python scripts/check_release_artifact.py dist/polymarket-execution-suite-v0.26.0.zip 0.26.0
 .venv/bin/python polymarket-execution-engine/validation/prepare_real_funds_canary_review.py --external-references-file dist/pmx-canary-review-reviewed/external-references.json --artifact-sha256 <release-zip-sha256-from-sidecar> --evidence-manifest-sha256 <current-evidence-manifest-sha256> --output-dir /tmp/pmx-canary-review-final-release-check
-.venv/bin/python scripts/prepare_canary_candidate_market.py --output /tmp/pmx-canary-review-final-release-check/candidate-market.json --audit-output /tmp/pmx-canary-review-final-release-check/candidate-market.audit.json --max-markets 5 --timeout-seconds 8
+.venv/bin/python scripts/prepare_canary_candidate_market.py --output /tmp/pmx-canary-review-final-release-check/candidate-market.json --audit-output /tmp/pmx-canary-review-final-release-check/candidate-market.audit.json --max-markets 5 --timeout-seconds 8 --human-review-ref change-ticket://reviewed-canary-market
 cd polymarket-execution-engine && cargo run --manifest-path adapters/pmx-official-sdk-adapter/Cargo.toml --features live-submit --bin pmx-real-funds-canary -- --dry-run --approval-file /tmp/pmx-canary-review-final-release-check/approval.json --artifact-sha256 <release-zip-sha256-from-sidecar> --evidence-manifest-sha256 <current-evidence-manifest-sha256> --idempotency-key dry-run-final-release-check-20260521 --account-id acct-canary --execution-id exec-canary-dry-run-final-release-check-20260521 --plan-hash plan-canary-dry-run-final-release-check-20260521 --market-file /tmp/pmx-canary-review-final-release-check/candidate-market.json
 .venv/bin/python scripts/check_hermes_no_secrets.py
 .venv/bin/python polymarket-execution-engine/validation/check_docs_evidence_governance.py

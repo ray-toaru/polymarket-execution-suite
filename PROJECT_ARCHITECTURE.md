@@ -1,8 +1,8 @@
-# Project architecture — v0.25.0
+# Project architecture — v0.26.0
 
 ## Baseline
 
-v0.25.0 keeps the v0.3 architectural split as the design baseline. The integration repository pins
+v0.26.0 keeps the v0.3 architectural split as the design baseline. The integration repository pins
 the two implementation planes as submodules:
 
 ```text
@@ -47,4 +47,4 @@ pmx-release    release/version scaffold
 
 ## Conservative pre-live policy
 
-v0.25.0 is shadow-ready SDK sign-only candidate work. Runtime worker `DEGRADED`, `STALE`, or `UNKNOWN` status must not be treated as live-trading safe. Live submit/cancel remain blocked until runtime freshness, audit redaction, idempotency, PostgreSQL lifecycle, SDK adapter, rollback, reconciliation, and production controls have formal evidence and a later release decision.
+v0.26.0 is controlled real-funds canary source-candidate work. Runtime worker `DEGRADED`, `STALE`, or `UNKNOWN` status must not be treated as live-trading safe. Live submit/cancel remain blocked unless current gates, artifact/evidence binding, one-time approval consumption, human-reviewed BUY/FOK market selection, runtime/reconcile checks, balance/allowance checks, and a reviewed `go` decision all pass.

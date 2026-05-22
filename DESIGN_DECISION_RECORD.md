@@ -1,4 +1,4 @@
-# Design decision record — v0.25.0
+# Design decision record — v0.26.0
 
 ## DDR-001: Two independent projects
 
@@ -23,3 +23,7 @@ Accepted. Live submit/cancel require compile-time feature gates, explicit runtim
 ## DDR-006: Evidence must be canonical and artifact-bound
 
 Accepted. Current release evidence must live under `polymarket-execution-engine/evidence/current/` with a manifest that records gate status, log paths, log hashes, provenance, and artifact hash when available. Historical evidence must be archived and excluded from normal release packaging.
+
+## DDR-007: Controlled real-funds canary requires bound human-reviewed market input
+
+Accepted for v0.26.0. The execution engine may consume an externally prepared candidate market file only when its SHA-256 is bound into the approval and reviewed release decision, and the candidate explicitly declares BUY/FOK plus an external human review reference.

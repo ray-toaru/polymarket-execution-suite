@@ -1,6 +1,6 @@
-# Current progress — v0.25.0
+# Current progress — v0.26.0
 
-This pass formalizes the v0.25.0 shadow-ready SDK sign-only baseline after the prior shadow-ready work.
+This pass advances the repository from the v0.25.0 shadow-ready baseline toward a v0.26.0 controlled real-funds canary source-candidate.
 
 ## Done in this cleanup pass
 
