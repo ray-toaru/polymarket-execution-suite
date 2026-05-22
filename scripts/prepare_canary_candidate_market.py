@@ -17,7 +17,7 @@ import sys
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_FLOOR
 from pathlib import Path
 from typing import Any
 
@@ -250,7 +250,10 @@ def best_ask(book: dict[str, Any]) -> tuple[Decimal, Decimal] | None:
 def post_only_buy_limit_price(best_ask_price: Decimal, min_tick_size: Decimal) -> Decimal | None:
     if best_ask_price <= 0 or min_tick_size <= 0:
         return None
-    limit_price = best_ask_price - min_tick_size
+    ticks = (best_ask_price / min_tick_size).to_integral_value(rounding=ROUND_FLOOR)
+    limit_price = ticks * min_tick_size
+    if limit_price >= best_ask_price:
+        limit_price -= min_tick_size
     return limit_price if limit_price > 0 else None
 
 
