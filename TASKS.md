@@ -199,7 +199,7 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [x] Guarded real-funds canary preflight implemented and included in current
   gates
 - [x] Real-funds canary approval fixture binds scope, artifact hash, evidence
-  manifest hash, FOK limit-fill style, and 1 USD / 5 USD caps
+  manifest hash, GTC post-only cancel style, and 1 USD / 5 USD caps
 - [x] Current evidence records `real_funds_canary_preflight_validation=pass`
   while live submit, live cancel, posting, and remote side effects remain
   disabled

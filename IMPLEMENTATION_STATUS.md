@@ -208,9 +208,10 @@
   `live-submit`, `PMX_ALLOW_LIVE_SUBMIT`, `PMX_ALLOW_REAL_FUNDS_CANARY`,
   config, approval, artifact-hash, evidence-manifest-hash, balance/allowance,
   market-safety, and cap preconditions.
-- The real-funds canary SDK path constructs a FOK limit-fill order and contains
-  the only permitted adapter `post_order` call site; normal gates validate this
-  without posting or cancelling.
+- The real-funds canary SDK path constructs a GTC post-only BUY limit order,
+  immediately cancels it after accepted posting, and contains the only permitted
+  adapter `post_order` call site; normal gates validate this without posting or
+  cancelling.
 - PostgreSQL migration `0004_real_funds_canary` adds idempotent, hash-bound,
   redaction-preserving local canary run storage without raw signed order
   exposure.

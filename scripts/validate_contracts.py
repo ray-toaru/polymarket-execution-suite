@@ -1127,6 +1127,33 @@ def validate_canary_candidate_market_prep_boundary() -> None:
     ]:
         if needle not in real_funds_gate:
             fail(f"execution-engine real-funds gate missing size/notional derivation token: {needle}")
+    active_texts = {
+        "README.md": (ROOT / "README.md").read_text(),
+        "IMPLEMENTATION_STATUS.md": (ROOT / "IMPLEMENTATION_STATUS.md").read_text(),
+        "REAL_FUNDS_CANARY.md": (EXECUTOR / "docs/REAL_FUNDS_CANARY.md").read_text(),
+        "REAL_FUNDS_CANARY_CLOSEOUT.md": (EXECUTOR / "docs/REAL_FUNDS_CANARY_CLOSEOUT.md").read_text(),
+        "REAL_FUNDS_CANARY_SEMANTICS_AUDIT.md": (
+            EXECUTOR / "docs/REAL_FUNDS_CANARY_SEMANTICS_AUDIT.md"
+        ).read_text(),
+    }
+    for path, doc_text in active_texts.items():
+        if "FOK limit-fill" in doc_text or "FOK_LIMIT_FILL" in doc_text:
+            fail(f"active canary docs must not describe the current canary as FOK limit-fill: {path}")
+    closeout_script = ROOT / "scripts/prepare_canary_closeout.py"
+    if not closeout_script.exists():
+        fail("canary closeout script missing")
+    closeout_text = closeout_script.read_text()
+    for needle in [
+        "GTC_LIMIT_POST_ONLY_CANCEL",
+        "notional_rule",
+        "limit_price * size",
+        "order_remote_status_canceled",
+        "trade_query_zero_matching_trades",
+        "account_activity_zero_open_positions",
+        "not a formal exchange/account statement export",
+    ]:
+        if needle not in closeout_text:
+            fail(f"canary closeout script missing evidence/semantics token: {needle}")
 
 
 def validate_single_host_deployment_governance() -> None:
