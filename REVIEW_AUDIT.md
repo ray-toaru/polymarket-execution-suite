@@ -21,6 +21,9 @@
 - The first authorized v0.26.0 real-funds canary completed as a GTC post-only
   order that was cancelled with `size_matched=0`; a subsequent read-only trades
   query found zero matching fills for the remote order id.
+- A broader public Data API readback for the canary account/market/token found
+  zero activity, zero trades, zero open positions, zero closed positions, and
+  value `0`.
 - New canary tooling requires future armed runs to provide `--report-file`, so
   the post/cancel receipt is persisted instead of relying on terminal output.
 - Hermes can report canary readiness references under `hm-pdp-test`, but still

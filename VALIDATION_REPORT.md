@@ -8,8 +8,11 @@ source-candidate. It is not production-ready and not live-trading-ready.
 On 2026-05-22, one explicitly authorized BUY/GTC post-only controlled canary
 was posted and immediately cancelled against the reviewed market candidate. The
 saved readback evidence records `remote_status=CANCELED`, `size_matched=0`, and
-zero matching trades for the submitted order id. This validates the one-time
-canary exercise only; it is not evidence for general production/live readiness.
+zero matching trades for the submitted order id. A broader public Data API
+readback for the same account/market/token also records zero activity, zero
+trades, zero open positions, zero closed positions, and value `0`. This
+validates the one-time canary exercise only; it is not evidence for general
+production/live readiness.
 
 The current package is valid only when the following detached sidecars are
 present next to the source archive:
