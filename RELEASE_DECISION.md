@@ -31,6 +31,10 @@ The package advances controlled canary preparation:
 - reviewed candidate-market binding;
 - BUY/FOK canary size semantics where `target_size` is a reviewed share
   quantity and `notional_usd = limit_price * target_size`;
+- explicit service-layer SDK gateway wiring behind injected signer/gateway
+  dependencies, with the default service/API path still fail-closed;
+- cancel-only fallback semantics at the service layer for remote-posted orders,
+  with remote-unknown cancel outcomes requiring operator review;
 - release-review package generation;
 - no-go and blocked rehearsal material;
 - PostgreSQL, SDK, local static, governance, and deployment-template evidence.

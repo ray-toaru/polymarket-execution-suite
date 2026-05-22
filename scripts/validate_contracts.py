@@ -332,9 +332,25 @@ def validate_v09_official_adapter_boundary() -> None:
     if not re.search(r'(?m)^live-submit\s*=\s*\[', adapter_toml):
         fail("official adapter must expose an explicit live-submit feature gate")
     live_canary = SDK_ADAPTER_SRC / "sdk_runtime/live_canary.rs"
-    adapter_boundary_text = adapter_text.replace(live_canary.read_text() if live_canary.exists() else "", "")
+    gateway_bridge = SDK_ADAPTER_SRC / "sdk_runtime/gateway.rs"
+    adapter_boundary_text = adapter_text
+    for allowed_post_order_file in [live_canary, gateway_bridge]:
+        if allowed_post_order_file.exists():
+            adapter_boundary_text = adapter_boundary_text.replace(allowed_post_order_file.read_text(), "")
     if 'post_order(' in adapter_boundary_text or 'post_orders(' in adapter_text:
-        fail("official adapter boundary must not call post_order/post_orders outside guarded real-funds canary")
+        fail("official adapter boundary must not call post_order/post_orders outside guarded canary/gateway bridge paths")
+    if gateway_bridge.exists():
+        gateway_text = gateway_bridge.read_text()
+        for needle in [
+            "allow_live_submit",
+            "OfficialSdkGateway",
+            "official-sdk-signed:",
+            "signed_payload_ref",
+            "SignedOrderEnvelope",
+            "redact_sensitive_text",
+        ]:
+            if needle not in gateway_text:
+                fail(f"official SDK gateway bridge missing boundary token: {needle}")
     if 'allow_live_submit: false' not in adapter_text:
         fail("official adapter default must keep live submit disabled")
     for doc in [
