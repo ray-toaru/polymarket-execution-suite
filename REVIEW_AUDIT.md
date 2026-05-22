@@ -18,6 +18,11 @@
 - v0.26.0 additionally binds the candidate market file SHA-256 into both
   approval and release decision, requires BUY/GTC post-only plus a human review reference,
   and consumes a one-time approval marker before any armed post attempt.
+- The first authorized v0.26.0 real-funds canary completed as a GTC post-only
+  order that was cancelled with `size_matched=0`; a subsequent read-only trades
+  query found zero matching fills for the remote order id.
+- New canary tooling requires future armed runs to provide `--report-file`, so
+  the post/cancel receipt is persisted instead of relying on terminal output.
 - Hermes can report canary readiness references under `hm-pdp-test`, but still
   cannot sign, submit, cancel, hold executor DB credentials, or call CLOB.
 
@@ -37,4 +42,5 @@ recorded in external .zip.sha256 and .zip.evidence.json sidecars
 
 ## Current conclusion
 
-v0.26.0 controlled canary source is not a production/live-trading release.
+v0.26.0 controlled canary source has one closed real-funds canary exercise, but
+it is still not a production/live-trading release.
