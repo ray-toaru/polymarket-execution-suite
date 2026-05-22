@@ -18,8 +18,8 @@ This decision applies to the integration repository at the pinned submodule
 revisions:
 
 ```text
-hermes-polymarket-control: bb16582e299f9e6f8da6044226e33900c4e2459d
-polymarket-execution-engine: 76fdb3ee136b0350e4718fff60a1edcee1f67d03
+hermes-polymarket-control: cd6491df9a3a07028996159788e0b1366a44c0d9
+polymarket-execution-engine: 776af54961e4b584dc11f2318266c1889d146c2c
 ```
 
 The integration repository commit containing this decision pins those submodule
@@ -49,12 +49,13 @@ The GitHub CI boundary now follows the repository ownership model:
   current gates, SDK adapter checks, and the manual `credentialed-sdk`
   workflow.
 
-Latest pushed GitHub Actions baseline validating the source/evidence refresh
-before the local review-package artifact-hash guard update:
+Latest pushed GitHub Actions confirmations available before this root
+submodule-pointer update:
 
 ```text
-polymarket-execution-suite ci: 26254755001, success
-polymarket-execution-engine ci: 26254745573, success
+polymarket-execution-suite ci: 26267900817, success (previous root pointer)
+hermes-polymarket-control ci: 26267887116, success
+polymarket-execution-engine ci: 26268276210, success
 ```
 
 The `credentialed-sdk` environment exists in `polymarket-execution-engine`; the
@@ -64,14 +65,14 @@ dry-run with explicit env gates. Secret values are not recorded in this
 decision.
 
 The canonical execution-engine evidence baseline at
-`c77d6bee6ea9d3d1397bd86c2e6f7857575b26cb` is validated locally by
+`399996403fa2bd4d5af4490fcd1c31dfc7a9814b` is validated locally by
 `validation/run_current_gates.sh` with PostgreSQL and credentialed SDK sections
-enabled and remotely by GitHub Actions run `26254745573`. The currently pinned
+enabled. The currently pinned
 execution-engine commit
-`76fdb3ee136b0350e4718fff60a1edcee1f67d03` only changes review-package
-validation/config/docs around explicit artifact-hash binding; targeted local
-checks passed on 2026-05-21 and no new CI run was triggered for that small
-post-CI guard update.
+`776af54961e4b584dc11f2318266c1889d146c2c` only changes the current manifest
+guard so CI can validate a previous manifest before regenerating this run's
+logs; targeted local checks passed and GitHub Actions run `26268276210`
+passed.
 
 ## Required evidence
 
@@ -100,12 +101,12 @@ Rationale:
   regression, credentialed non-trading smoke, sign-only dry-run, local static,
   contract, release artifact, and governance gates passed in this environment.
 - The canonical local evidence refresh at
-  `polymarket-execution-engine: c77d6bee6ea9d3d1397bd86c2e6f7857575b26cb`
+  `polymarket-execution-engine: 399996403fa2bd4d5af4490fcd1c31dfc7a9814b`
   passed the current no-live gate chain, including PostgreSQL and credentialed
   SDK sections under explicit local env gates. The currently pinned
-  review-package guard update at
-  `polymarket-execution-engine: 76fdb3ee136b0350e4718fff60a1edcee1f67d03`
-  has targeted local validation only.
+  manifest-guard CI-ordering update at
+  `polymarket-execution-engine: 776af54961e4b584dc11f2318266c1889d146c2c`
+  has targeted local validation and passed execution-engine GitHub CI.
 - Shadow execution, reconciliation drift, rollback/kill-switch, migration drift,
   live canary readiness, blocked live canary, and productionization guard gates
   passed.
@@ -248,15 +249,15 @@ Rationale:
 Current evidence:
 
 - GitHub integration CI:
-  `ray-toaru/polymarket-execution-suite/actions/runs/26254755001`
+  `ray-toaru/polymarket-execution-suite/actions/runs/26267900817`
 - GitHub execution-engine CI:
-  `ray-toaru/polymarket-execution-engine/actions/runs/26254745573`
+  `ray-toaru/polymarket-execution-engine/actions/runs/26268276210`
 - Historical GitHub credentialed SDK audit context:
   `ray-toaru/polymarket-execution-engine/actions/runs/26175786984`
 - Environment: `polymarket-execution-engine/evidence/current/environment.json`
 - Manifest: `polymarket-execution-engine/evidence/current/manifest.json`
 - Manifest SHA-256:
-  `80b4b7fa8ef325ffb3cff6d839176a9af1ce28ce226c4d3ebef826c6c2b981d1`
+  `b8a9cf6a92c54363333c703ec7ee3754db1d4c1b8ae78f7136b61aafe7bc56b4`
 - Logs: `polymarket-execution-engine/evidence/current/logs/`
 - Real-funds canary preflight log:
   `polymarket-execution-engine/evidence/current/logs/65-real-funds-canary-preflight.log`
