@@ -384,9 +384,13 @@ def validate_v12_service_layer() -> None:
         'CompilePlanByIdCommand',
         'evaluate_decision_by_id',
         'compile_plan_by_id',
+        'ApprovalHashInput',
+        'approval_receipt_hash',
+        'approval_hash does not match canonical approval receipt',
         'service_id_bound_flow_persists_and_blocks_submit',
         'service_flow_persists_and_blocks_submit',
         'service_rejects_object_graph_mismatch',
+        'service_rejects_tampered_approval_hash',
     ]:
         combined = root_toml + "\n" + SERVICE_TOML.read_text() + "\n" + service_text
         if needle not in combined:
