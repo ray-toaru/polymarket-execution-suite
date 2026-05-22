@@ -47,7 +47,7 @@ def command_output(command: list[str]) -> str | None:
     )
     if completed.returncode != 0:
         return None
-    return completed.stdout.strip()
+    return completed.stdout.rstrip("\n")
 
 
 def git_branch(path: Path = ROOT) -> str | None:
@@ -57,12 +57,11 @@ def git_branch(path: Path = ROOT) -> str | None:
 def submodule_records() -> list[dict[str, str]]:
     raw = command_output(["git", "submodule", "status"]) or ""
     records: list[dict[str, str]] = []
-    for line in raw.splitlines():
-        line = line.strip()
-        if not line:
+    for raw_line in raw.splitlines():
+        if not raw_line.strip():
             continue
-        status = line[0]
-        rest = line[1:].strip() if status in {" ", "+", "-", "U"} else line
+        status = raw_line[0]
+        rest = raw_line[1:].strip() if status in {" ", "+", "-", "U"} else raw_line.strip()
         parts = rest.split()
         if len(parts) < 2:
             continue
@@ -104,6 +103,24 @@ def executable_in_archive(path: Path) -> bool:
     return first == b"#!"
 
 
+def archive_bytes(path: Path) -> bytes:
+    rel = path.relative_to(ROOT).as_posix()
+    data = path.read_bytes()
+    if rel == "polymarket-execution-engine/evidence/current/manifest.json":
+        manifest = json.loads(data.decode())
+        external = manifest.get("external_artifact_sidecar")
+        if isinstance(external, dict):
+            external["sha256"] = None
+            external["binding_note"] = (
+                "Archived manifest copy: external artifact hash is normalized to null "
+                "to avoid archive self-reference. Use the external .zip.sha256 and "
+                ".zip.evidence.json sidecars, or the post-package workspace manifest, "
+                "for final artifact binding."
+            )
+        data = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode()
+    return data
+
+
 def write_deterministic(zf: ZipFile, path: Path) -> None:
     archive_name = str(Path(ARCHIVE_ROOT) / path.relative_to(ROOT))
     info = ZipInfo(archive_name, DETERMINISTIC_MTIME)
@@ -111,8 +128,7 @@ def write_deterministic(zf: ZipFile, path: Path) -> None:
     info.create_system = 3
     mode = 0o755 if executable_in_archive(path) else 0o644
     info.external_attr = (mode & 0xFFFF) << 16
-    with path.open("rb") as fh:
-        zf.writestr(info, fh.read())
+    zf.writestr(info, archive_bytes(path))
 
 
 def write_dist_index(artifact_sha256: str, manifest_sha256: str | None) -> None:
@@ -187,7 +203,11 @@ def main() -> int:
     sidecar = OUT.with_suffix(OUT.suffix + ".sha256")
     artifact_sha256 = sha256(OUT)
     evidence_manifest = ROOT / "polymarket-execution-engine" / "evidence" / "current" / "manifest.json"
-    manifest_sha256 = sha256(evidence_manifest) if evidence_manifest.exists() else None
+    manifest_sha256 = (
+        hashlib.sha256(archive_bytes(evidence_manifest)).hexdigest()
+        if evidence_manifest.exists()
+        else None
+    )
     sidecar.write_text(f"{artifact_sha256}  {OUT.name}\n")
     evidence_sidecar = OUT.with_suffix(OUT.suffix + ".evidence.json")
     evidence_sidecar.write_text(
