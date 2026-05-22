@@ -31,12 +31,15 @@ USER_AGENT = "pmx-canary-candidate-prep/0.1"
 class Candidate:
     market_id: str
     token_id: str
+    outcome: str
+    market_slug: str
     active: bool
     accepting_orders: bool
     closed: bool
     archived: bool
     best_ask: Decimal
     ask_size: Decimal
+    target_size: Decimal
     spread_bps: int
     min_order_size: Decimal
     liquidity_score: int
@@ -56,6 +59,7 @@ class Candidate:
             "archived": self.archived,
             "best_ask": decimal_text(self.best_ask),
             "ask_size": decimal_text(self.ask_size),
+            "target_size": decimal_text(self.target_size),
             "spread_bps": self.spread_bps,
             "min_order_size": decimal_text(self.min_order_size),
             "liquidity_score": self.liquidity_score,
@@ -86,11 +90,30 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--gamma-url", default=DEFAULT_GAMMA_URL, help="Gamma API base URL")
     parser.add_argument("--clob-url", default=DEFAULT_CLOB_URL, help="CLOB API base URL")
+    parser.add_argument(
+        "--market-url",
+        help="Optional Polymarket event/market URL to use instead of scanning high-volume markets.",
+    )
+    parser.add_argument(
+        "--market-slug",
+        help="Optional Gamma market/event slug to use instead of scanning high-volume markets.",
+    )
+    parser.add_argument(
+        "--outcome",
+        help="Outcome label for --market-url/--market-slug selection, for example Yes or No.",
+    )
     parser.add_argument("--max-markets", type=int, default=200, help="Maximum Gamma markets to inspect")
+    parser.add_argument(
+        "--target-size",
+        help=(
+            "Optional canary BUY size in outcome shares. When omitted, the helper "
+            "uses the CLOB book min_order_size for the selected market."
+        ),
+    )
     parser.add_argument(
         "--max-order-notional-usd",
         default="1.00",
-        help="Controlled canary order cap; candidate top ask notional must cover it",
+        help="Controlled canary order cap; selected target-size notional must not exceed it",
     )
     parser.add_argument("--max-spread-bps", type=int, default=100, help="Maximum allowed spread in bps")
     parser.add_argument("--timeout-seconds", type=float, default=10.0, help="HTTP timeout per request")
@@ -136,16 +159,9 @@ def decimal_text(value: Decimal) -> str:
 
 def parse_token_ids(market: dict[str, Any]) -> list[str]:
     for key in ("clobTokenIds", "clob_token_ids", "clobTokenIDs"):
-        raw = market.get(key)
-        if isinstance(raw, str):
-            try:
-                parsed = json.loads(raw)
-            except json.JSONDecodeError:
-                parsed = [part.strip() for part in raw.split(",")]
-            if isinstance(parsed, list):
-                return [str(item) for item in parsed if str(item).strip()]
-        if isinstance(raw, list):
-            return [str(item) for item in raw if str(item).strip()]
+        parsed = parse_jsonish_list(market.get(key))
+        if parsed:
+            return parsed
     tokens = market.get("tokens")
     if isinstance(tokens, list):
         ids = []
@@ -155,6 +171,36 @@ def parse_token_ids(market: dict[str, Any]) -> list[str]:
                 if token_id:
                     ids.append(str(token_id))
         return ids
+    return []
+
+
+def parse_outcomes(market: dict[str, Any]) -> list[str]:
+    for key in ("outcomes", "outcomeLabels", "outcome_labels"):
+        parsed = parse_jsonish_list(market.get(key))
+        if parsed:
+            return parsed
+    tokens = market.get("tokens")
+    if isinstance(tokens, list):
+        outcomes = []
+        for token in tokens:
+            if isinstance(token, dict):
+                outcome = token.get("outcome") or token.get("name")
+                if outcome:
+                    outcomes.append(str(outcome))
+        return outcomes
+    return []
+
+
+def parse_jsonish_list(raw: Any) -> list[str]:
+    if isinstance(raw, str):
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            parsed = [part.strip() for part in raw.split(",")]
+        if isinstance(parsed, list):
+            return [str(item) for item in parsed if str(item).strip()]
+    if isinstance(raw, list):
+        return [str(item) for item in raw if str(item).strip()]
     return []
 
 
@@ -197,10 +243,162 @@ def market_fingerprint(market: dict[str, Any]) -> str:
     return hashlib.sha256(compact.encode("utf-8")).hexdigest()
 
 
+def slug_from_market_url(url: str) -> str:
+    parsed = urllib.parse.urlparse(url.strip())
+    parts = [part for part in parsed.path.split("/") if part]
+    for marker in ("event", "markets"):
+        if marker in parts:
+            index = parts.index(marker)
+            if index + 1 < len(parts):
+                return parts[index + 1]
+    if parts:
+        return parts[-1]
+    raise CandidateError("--market-url does not contain a Polymarket slug")
+
+
+def normalized_outcome(value: str) -> str:
+    return value.strip().casefold()
+
+
+def candidate_from_market(
+    args: argparse.Namespace,
+    market: dict[str, Any],
+    *,
+    requested_outcome: str,
+    order_cap: Decimal,
+    requested_target_size: Decimal | None,
+    snapshot_at: str,
+    human_review_ref: str,
+    audit: dict[str, Any],
+) -> Candidate:
+    active = as_bool(market.get("active"))
+    accepting_orders = as_bool(
+        market.get("acceptingOrders", market.get("accepting_orders", market.get("enableOrderBook")))
+    )
+    closed = as_bool(market.get("closed"))
+    archived = as_bool(market.get("archived"))
+    if not active:
+        raise CandidateError("selected market is not active", audit)
+    if not accepting_orders:
+        raise CandidateError("selected market is not accepting orders", audit)
+    if closed:
+        raise CandidateError("selected market is closed", audit)
+    if archived:
+        raise CandidateError("selected market is archived", audit)
+    condition_id = market_id(market)
+    if not condition_id:
+        raise CandidateError("selected market is missing condition id", audit)
+    token_ids = parse_token_ids(market)
+    outcomes = parse_outcomes(market)
+    if not token_ids:
+        raise CandidateError("selected market is missing CLOB token ids", audit)
+    if not outcomes:
+        raise CandidateError("selected market is missing outcome labels", audit)
+    if len(token_ids) != len(outcomes):
+        raise CandidateError("selected market outcome/token count mismatch", audit)
+
+    wanted = normalized_outcome(requested_outcome)
+    matched = [
+        (outcome, token_id)
+        for outcome, token_id in zip(outcomes, token_ids, strict=True)
+        if normalized_outcome(outcome) == wanted
+    ]
+    if not matched:
+        raise CandidateError(
+            f"requested outcome {requested_outcome!r} not found in selected market outcomes",
+            audit,
+        )
+    outcome, token_id = matched[0]
+    book = fetch_json(args.clob_url, "/book", {"token_id": token_id}, args.timeout_seconds)
+    if not isinstance(book, dict):
+        raise CandidateError("selected market book response was not an object", audit)
+    top_ask = best_ask(book)
+    if top_ask is None:
+        raise CandidateError("selected market has no usable top ask", audit)
+    price, size = top_ask
+    spread = fetch_json(args.clob_url, "/spread", {"token_id": token_id}, args.timeout_seconds)
+    if not isinstance(spread, dict):
+        raise CandidateError("selected market spread response was not an object", audit)
+    bps = spread_bps(spread)
+    if bps is None:
+        raise CandidateError("selected market spread is unavailable", audit)
+    if bps > args.max_spread_bps:
+        raise CandidateError(
+            f"selected market spread {bps} bps exceeds max {args.max_spread_bps} bps",
+            audit,
+        )
+    min_order_size = as_decimal(book.get("min_order_size")) or Decimal("0")
+    target_size = requested_target_size or min_order_size
+    if target_size <= 0:
+        raise CandidateError("selected market min_order_size is unavailable for automatic target size", audit)
+    if size < target_size:
+        raise CandidateError("selected market top ask size is below target size", audit)
+    if min_order_size > target_size:
+        raise CandidateError("selected market min order size is above target size", audit)
+    estimated_notional = price * target_size
+    if estimated_notional > order_cap:
+        raise CandidateError("selected market target-size notional is above canary order cap", audit)
+    slug = str(market.get("slug") or args.market_slug or "")
+    audit["selected"] = {
+        "market_id": condition_id,
+        "token_id_hash": hashlib.sha256(token_id.encode()).hexdigest(),
+        "outcome": outcome,
+        "market_slug": slug,
+        "source_market_hash": market_fingerprint(market),
+        "spread_bps": bps,
+        "target_size": decimal_text(target_size),
+        "target_size_source": "operator_override" if requested_target_size else "book_min_order_size",
+        "estimated_order_notional_usd": decimal_text(estimated_notional),
+        "top_ask_notional_usd": decimal_text(price * size),
+        "liquidity_score": liquidity_score(size),
+    }
+    return Candidate(
+        market_id=condition_id,
+        token_id=token_id,
+        outcome=outcome,
+        market_slug=slug,
+        active=True,
+        accepting_orders=True,
+        closed=False,
+        archived=False,
+        best_ask=price,
+        ask_size=size,
+        target_size=target_size,
+        spread_bps=bps,
+        min_order_size=min_order_size,
+        liquidity_score=liquidity_score(size),
+        source_market_hash=market_fingerprint(market),
+        book_snapshot_timestamp=snapshot_at,
+        human_review_ref=human_review_ref,
+    )
+
+
+def load_market_by_slug(args: argparse.Namespace, slug: str) -> dict[str, Any]:
+    markets = fetch_json(args.gamma_url, "/markets", {"slug": slug}, args.timeout_seconds)
+    if isinstance(markets, list) and markets:
+        market = markets[0]
+        if isinstance(market, dict):
+            return market
+    events = fetch_json(args.gamma_url, "/events", {"slug": slug}, args.timeout_seconds)
+    if isinstance(events, list) and events:
+        event = events[0]
+        if isinstance(event, dict):
+            event_markets = event.get("markets")
+            if isinstance(event_markets, list) and event_markets:
+                market = event_markets[0]
+                if isinstance(market, dict):
+                    market.setdefault("slug", slug)
+                    return market
+    raise CandidateError(f"Gamma API did not return a market for slug {slug!r}")
+
+
 def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
     order_cap = as_decimal(args.max_order_notional_usd)
+    target_size = as_decimal(args.target_size) if args.target_size else None
     if order_cap is None or order_cap <= 0:
         raise CandidateError("--max-order-notional-usd must be a positive decimal")
+    if args.target_size and (target_size is None or target_size <= 0):
+        raise CandidateError("--target-size must be a positive decimal")
     if args.max_markets <= 0:
         raise CandidateError("--max-markets must be positive")
     if args.max_spread_bps < 0:
@@ -208,7 +406,63 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
     human_review_ref = args.human_review_ref.strip()
     if not human_review_ref or "REPLACE_WITH" in human_review_ref:
         raise CandidateError("--human-review-ref must be a concrete external review reference")
+    if args.market_url and args.market_slug:
+        raise CandidateError("use only one of --market-url or --market-slug")
+    if (args.market_url or args.market_slug) and not args.outcome:
+        raise CandidateError("--outcome is required with --market-url or --market-slug")
     snapshot_at = dt.datetime.now(dt.UTC).isoformat()
+
+    requested_slug = args.market_slug or (slug_from_market_url(args.market_url) if args.market_url else None)
+    audit: dict[str, Any] = {
+        "generated_at": snapshot_at,
+        "source": "public-read-only",
+        "remote_side_effects": False,
+        "authorized_for_live": False,
+        "side": "BUY",
+        "order_type": "FOK",
+        "market_url": args.market_url,
+        "market_slug": requested_slug,
+        "requested_outcome": args.outcome,
+        "human_review_ref_hash": hashlib.sha256(human_review_ref.encode()).hexdigest(),
+        "gamma_url": args.gamma_url,
+        "clob_url": args.clob_url,
+        "max_markets": args.max_markets,
+        "target_size": decimal_text(target_size) if target_size else "book_min_order_size",
+        "target_size_source": "operator_override" if target_size else "book_min_order_size",
+        "max_order_notional_usd": decimal_text(order_cap),
+        "max_spread_bps": args.max_spread_bps,
+        "inspected_markets": 0,
+        "inspected_tokens": 0,
+        "rejections": {
+            "inactive": 0,
+            "not_accepting_orders": 0,
+            "closed": 0,
+            "archived": 0,
+            "missing_market_id": 0,
+            "missing_token_id": 0,
+            "book_unavailable": 0,
+            "spread_unavailable": 0,
+            "spread_too_wide": 0,
+            "target_size_above_top_ask_size": 0,
+            "target_notional_above_cap": 0,
+            "min_order_size_above_target_size": 0,
+        },
+    }
+
+    if requested_slug:
+        market = load_market_by_slug(args, requested_slug)
+        candidate = candidate_from_market(
+            args,
+            market,
+            requested_outcome=args.outcome,
+            order_cap=order_cap,
+            requested_target_size=target_size,
+            snapshot_at=snapshot_at,
+            human_review_ref=human_review_ref,
+            audit=audit,
+        )
+        audit["candidate_count"] = 1
+        return candidate, audit
 
     markets = fetch_json(
         args.gamma_url,
@@ -225,36 +479,6 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
     )
     if not isinstance(markets, list):
         raise CandidateError("Gamma /markets response was not a JSON array")
-
-    audit: dict[str, Any] = {
-        "generated_at": snapshot_at,
-        "source": "public-read-only",
-        "remote_side_effects": False,
-        "authorized_for_live": False,
-        "side": "BUY",
-        "order_type": "FOK",
-        "human_review_ref_hash": hashlib.sha256(human_review_ref.encode()).hexdigest(),
-        "gamma_url": args.gamma_url,
-        "clob_url": args.clob_url,
-        "max_markets": args.max_markets,
-        "max_order_notional_usd": decimal_text(order_cap),
-        "max_spread_bps": args.max_spread_bps,
-        "inspected_markets": 0,
-        "inspected_tokens": 0,
-        "rejections": {
-            "inactive": 0,
-            "not_accepting_orders": 0,
-            "closed": 0,
-            "archived": 0,
-            "missing_market_id": 0,
-            "missing_token_id": 0,
-            "book_unavailable": 0,
-            "spread_unavailable": 0,
-            "spread_too_wide": 0,
-            "insufficient_top_ask_notional": 0,
-            "min_order_size_above_order_size": 0,
-        },
-    }
 
     candidates: list[Candidate] = []
     for market in markets[: args.max_markets]:
@@ -318,23 +542,32 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
             if bps > args.max_spread_bps:
                 audit["rejections"]["spread_too_wide"] += 1
                 continue
-            if price * size < order_cap:
-                audit["rejections"]["insufficient_top_ask_notional"] += 1
+            candidate_target_size = target_size or min_order_size
+            if candidate_target_size <= 0:
+                audit["rejections"]["min_order_size_above_target_size"] += 1
                 continue
-            implied_order_size = order_cap / price
-            if min_order_size > implied_order_size:
-                audit["rejections"]["min_order_size_above_order_size"] += 1
+            if size < candidate_target_size:
+                audit["rejections"]["target_size_above_top_ask_size"] += 1
+                continue
+            if min_order_size > candidate_target_size:
+                audit["rejections"]["min_order_size_above_target_size"] += 1
+                continue
+            if price * candidate_target_size > order_cap:
+                audit["rejections"]["target_notional_above_cap"] += 1
                 continue
             candidates.append(
                 Candidate(
                     market_id=condition_id,
                     token_id=token_id,
+                    outcome="UNKNOWN",
+                    market_slug=str(market.get("slug") or ""),
                     active=True,
                     accepting_orders=True,
                     closed=False,
                     archived=False,
                     best_ask=price,
                     ask_size=size,
+                    target_size=candidate_target_size,
                     spread_bps=bps,
                     min_order_size=min_order_size,
                     liquidity_score=liquidity_score(size),
@@ -350,10 +583,14 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
     audit["candidate_count"] = len(candidates)
     audit["selected"] = {
         "market_id": selected.market_id,
-        "token_id": selected.token_id,
+        "token_id_hash": hashlib.sha256(selected.token_id.encode()).hexdigest(),
+        "outcome": selected.outcome,
+        "market_slug": selected.market_slug,
         "source_market_hash": selected.source_market_hash,
         "spread_bps": selected.spread_bps,
-        "implied_order_size": decimal_text(order_cap / selected.best_ask),
+        "target_size": decimal_text(selected.target_size),
+        "target_size_source": "operator_override" if target_size else "book_min_order_size",
+        "estimated_order_notional_usd": decimal_text(selected.best_ask * selected.target_size),
         "top_ask_notional_usd": decimal_text(selected.best_ask * selected.ask_size),
         "liquidity_score": selected.liquidity_score,
     }

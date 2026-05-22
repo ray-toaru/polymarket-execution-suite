@@ -1051,10 +1051,13 @@ def validate_canary_candidate_market_prep_boundary() -> None:
         "/book",
         "/spread",
         "max_order_notional_usd",
-        "implied_order_size",
+        "target_size",
+        "estimated_order_notional_usd",
         "max_spread_bps",
         "RealFundsCanaryMarketCandidate",
         "--human-review-ref",
+        "--market-url",
+        "--outcome",
         "human_review_ref",
         "order_type",
     ]:
@@ -1079,9 +1082,17 @@ def validate_canary_candidate_market_prep_boundary() -> None:
         "simplified_markets",
         "sampling_markets",
         "sampling_simplified_markets",
+        ".market_order(",
     ]:
         if forbidden in live_canary:
-            fail(f"execution-engine live canary runtime must not perform active market discovery: {forbidden}")
+            fail(f"execution-engine live canary runtime contains forbidden token: {forbidden}")
+    for needle in ["limit_order()", "size(size)"]:
+        if needle not in live_canary:
+            fail(f"execution-engine live canary runtime missing size-driven order token: {needle}")
+    real_funds_gate = (SDK_ADAPTER_SRC / "gates/real_funds.rs").read_text()
+    for needle in ["candidate_notional_usd", "target_notional_lte", "target_size"]:
+        if needle not in real_funds_gate:
+            fail(f"execution-engine real-funds gate missing size/notional derivation token: {needle}")
 
 
 def validate_single_host_deployment_governance() -> None:
@@ -1167,6 +1178,9 @@ def validate_single_host_deployment_governance() -> None:
     for needle in [
         "validate_controlled_canary_external_references.py",
         "single-host canary package preflight only accepts no_go release decisions",
+        "candidate-market.json",
+        "market_candidate_sha256",
+        "target_size",
         "release decision must keep",
         "single-host canary package preflight passed",
     ]:

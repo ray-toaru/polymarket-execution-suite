@@ -59,6 +59,8 @@ the execution-engine input shape; it does not authorize live trading.
 
 ```bash
 python scripts/prepare_canary_candidate_market.py \
+  --market-url <polymarket-event-or-market-url> \
+  --outcome Yes \
   --output candidate-market.json \
   --audit-output candidate-market.audit.json \
   --human-review-ref change-ticket://reviewed-canary-market
