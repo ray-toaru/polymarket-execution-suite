@@ -66,6 +66,15 @@ python scripts/prepare_canary_candidate_market.py \
   --human-review-ref change-ticket://reviewed-canary-market
 ```
 
+The reviewed candidate carries a share `target_size`. The canary order uses
+`size = target_size`; `notional_usd` is derived as `limit_price * target_size`
+only for risk caps.
+
+Release packaging writes `dist/INDEX.json` and `dist/README.md`. Only the
+indexed `polymarket-execution-suite-v0.26.0.zip` plus its detached sidecars are
+the current source artifact; any other `dist/pmx-*` directory is local review
+material unless explicitly indexed as current.
+
 Full Rust/SDK/PostgreSQL validation requires an external Rust 1.88 + PostgreSQL environment:
 
 ```bash

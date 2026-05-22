@@ -200,4 +200,4 @@ real-funds canary execution without a reviewed `go` decision.
 
 ## Still blocked
 
-Live submit, live cancel, and production deployment remain blocked in v0.25.0 until a later release has canary/production evidence and an explicit release decision.
+Live submit, live cancel, and production deployment remain blocked in v0.26.0 until a later release has canary/production evidence and an explicit release decision.

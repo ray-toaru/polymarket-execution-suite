@@ -50,6 +50,36 @@ def command_output(command: list[str]) -> str | None:
     return completed.stdout.strip()
 
 
+def git_branch(path: Path = ROOT) -> str | None:
+    return command_output(["git", "-C", str(path), "branch", "--show-current"])
+
+
+def submodule_records() -> list[dict[str, str]]:
+    raw = command_output(["git", "submodule", "status"]) or ""
+    records: list[dict[str, str]] = []
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        status = line[0]
+        rest = line[1:].strip() if status in {" ", "+", "-", "U"} else line
+        parts = rest.split()
+        if len(parts) < 2:
+            continue
+        commit = parts[0]
+        path = parts[1]
+        ref = " ".join(parts[2:]).strip()
+        records.append(
+            {
+                "path": path,
+                "commit": commit,
+                "checkout_status": status if status != " " else "clean",
+                "checkout_ref": ref,
+            }
+        )
+    return records
+
+
 def allowed(path: Path) -> bool:
     rel = path.relative_to(ROOT)
     rel_posix = rel.as_posix()
@@ -85,6 +115,64 @@ def write_deterministic(zf: ZipFile, path: Path) -> None:
         zf.writestr(info, fh.read())
 
 
+def write_dist_index(artifact_sha256: str, manifest_sha256: str | None) -> None:
+    current_release_files = {OUT.name, OUT.with_suffix(OUT.suffix + ".sha256").name, OUT.with_suffix(OUT.suffix + ".evidence.json").name}
+    local_material = []
+    for path in sorted(DIST.iterdir()):
+        if path.name in current_release_files or path.name in {"INDEX.json", "README.md"}:
+            continue
+        local_material.append(
+            {
+                "path": path.name,
+                "kind": "directory" if path.is_dir() else "file",
+                "status": "local_review_material_not_release_artifact",
+            }
+        )
+    index = {
+        "schema_version": 1,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "version": VERSION,
+        "current_release_artifact": {
+            "path": OUT.name,
+            "sha256": artifact_sha256,
+            "sha256_sidecar": OUT.with_suffix(OUT.suffix + ".sha256").name,
+            "evidence_sidecar": OUT.with_suffix(OUT.suffix + ".evidence.json").name,
+            "artifact_class": "controlled_real_funds_canary_source_candidate_non_live",
+            "validated_release": False,
+            "production_ready": False,
+            "live_trading_ready": False,
+        },
+        "canonical_evidence": {
+            "path": "polymarket-execution-engine/evidence/current/manifest.json",
+            "sha256": manifest_sha256,
+        },
+        "local_material": local_material,
+        "operator_warning": (
+            "Only current_release_artifact and its sidecars form the source release artifact. "
+            "Other dist entries are local review material and must not be treated as current approval."
+        ),
+    }
+    (DIST / "INDEX.json").write_text(json.dumps(index, indent=2, sort_keys=True) + "\n")
+    (DIST / "README.md").write_text(
+        "\n".join(
+            [
+                f"# Polymarket Execution Suite dist index v{VERSION}",
+                "",
+                "Current source artifact:",
+                "",
+                f"- `{OUT.name}`",
+                f"- SHA-256: `{artifact_sha256}`",
+                "- Status: controlled real-funds canary source-candidate, non-live",
+                "- Not production-ready; not live-trading-ready; not a `go` approval",
+                "",
+                "`INDEX.json` is the machine-readable index. Any other files or directories in",
+                "`dist/` are local review material unless listed as the current release artifact.",
+                "",
+            ]
+        )
+    )
+
+
 def main() -> int:
     if not VERSION:
         print("VERSION file is empty", file=sys.stderr)
@@ -98,8 +186,9 @@ def main() -> int:
                 write_deterministic(zf, path)
     sidecar = OUT.with_suffix(OUT.suffix + ".sha256")
     artifact_sha256 = sha256(OUT)
-    sidecar.write_text(f"{artifact_sha256}  {OUT.name}\n")
     evidence_manifest = ROOT / "polymarket-execution-engine" / "evidence" / "current" / "manifest.json"
+    manifest_sha256 = sha256(evidence_manifest) if evidence_manifest.exists() else None
+    sidecar.write_text(f"{artifact_sha256}  {OUT.name}\n")
     evidence_sidecar = OUT.with_suffix(OUT.suffix + ".evidence.json")
     evidence_sidecar.write_text(
         json.dumps(
@@ -114,11 +203,13 @@ def main() -> int:
                 "source": {
                     "version": VERSION,
                     "git_head": command_output(["git", "rev-parse", "HEAD"]),
-                    "submodules": command_output(["git", "submodule", "status"]),
+                    "git_branch": git_branch(),
+                    "submodules": submodule_records(),
+                    "submodule_status_raw": command_output(["git", "submodule", "status"]),
                 },
                 "canonical_evidence": {
                     "manifest_path": "polymarket-execution-engine/evidence/current/manifest.json",
-                    "manifest_sha256": sha256(evidence_manifest) if evidence_manifest.exists() else None,
+                    "manifest_sha256": manifest_sha256,
                 },
                 "release_decision_path": "RELEASE_DECISION.md",
                 "note": "This external sidecar binds the final zip hash; files inside the zip do not self-assert the final containing-archive hash.",
@@ -128,6 +219,7 @@ def main() -> int:
         )
         + "\n"
     )
+    write_dist_index(artifact_sha256, manifest_sha256)
     print(OUT)
     return 0
 

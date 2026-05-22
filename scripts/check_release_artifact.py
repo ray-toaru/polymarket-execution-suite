@@ -122,6 +122,22 @@ def main() -> int:
             failures.append("evidence sidecar artifact.sha256 does not match artifact")
         if artifact.get("sha256_sidecar") != sidecar.name:
             failures.append("evidence sidecar artifact.sha256_sidecar does not match sidecar")
+        source = evidence.get("source", {})
+        if source.get("version") != expected_version:
+            failures.append("evidence sidecar source.version does not match expected version")
+        if not source.get("git_head"):
+            failures.append("evidence sidecar source.git_head is missing")
+        submodules = source.get("submodules")
+        if not isinstance(submodules, list) or not submodules:
+            failures.append("evidence sidecar source.submodules must be a structured non-empty list")
+        else:
+            for record in submodules:
+                if not isinstance(record, dict):
+                    failures.append("evidence sidecar source.submodules entries must be objects")
+                    continue
+                for field in ["path", "commit", "checkout_status", "checkout_ref"]:
+                    if field not in record:
+                        failures.append(f"evidence sidecar submodule record missing {field}")
         canonical_evidence = evidence.get("canonical_evidence", {})
         if canonical_evidence.get("manifest_path") != "polymarket-execution-engine/evidence/current/manifest.json":
             failures.append("evidence sidecar canonical_evidence.manifest_path is not current manifest")

@@ -1,279 +1,95 @@
-# Release Decision — v0.25.0 shadow-ready SDK sign-only baseline
+# Release Decision — v0.26.0 controlled real-funds canary source-candidate
 
 ## Decision
 
-Status: `shadow-ready SDK sign-only candidate`
+Current decision: `controlled real-funds canary source-candidate`
 
-Allowed final statuses for this batch:
+This is a source-candidate and review-material release. It is not a validated
+production release, not live-trading-ready, and not an approval to submit or
+cancel live orders.
 
-- `validated source candidate`
-- `shadow-ready SDK sign-only candidate`
-- `not promotable`
+Current explicit non-claims:
 
-Current decision: `shadow-ready SDK sign-only candidate`
+- `validated_release=false`
+- `production_ready=false`
+- `live_trading_ready=false`
+- `live_submit_allowed=false`
+- `live_cancel_allowed=false`
+- `real_funds_canary_authorized=false`
+
+Do not claim production readiness. Do not claim live-trading readiness.
 
 ## Scope
 
-This decision applies to the integration repository at the pinned submodule
-revisions:
+This decision applies to v0.26.0 source at the integration repository commit
+that contains this file. The release package is the source archive
+`polymarket-execution-suite-v0.26.0.zip` plus its detached `.sha256` and
+`.zip.evidence.json` sidecars.
+
+The package advances controlled canary preparation:
+
+- reviewed candidate-market binding;
+- BUY/FOK canary size semantics where `target_size` is a reviewed share
+  quantity and `notional_usd = limit_price * target_size`;
+- release-review package generation;
+- no-go and blocked rehearsal material;
+- PostgreSQL, SDK, local static, governance, and deployment-template evidence.
+
+It does not implement a production live execution stack. Any future live canary
+requires a separate reviewed `go` release-decision JSON bound to the exact
+artifact SHA-256, evidence manifest SHA-256, approval hash, and reviewed market
+candidate SHA-256.
+
+## Current Evidence
+
+Canonical current evidence lives only at:
 
 ```text
-hermes-polymarket-control: cd6491df9a3a07028996159788e0b1366a44c0d9
-polymarket-execution-engine: 776af54961e4b584dc11f2318266c1889d146c2c
+polymarket-execution-engine/evidence/current/manifest.json
 ```
 
-The integration repository commit containing this decision pins those submodule
-revisions. The root commit is intentionally not embedded here because editing
-this file changes that commit hash.
+The manifest currently records:
 
-This source includes Hermes canary readiness reference reporting under the
-`hm-pdp-test` profile, aggregate-only real-funds canary dry-run diagnostics,
-review-package generation, and a reviewed release-decision JSON gate for any
-future armed canary. The refreshed current evidence passed PostgreSQL under
-explicit local prerequisites and passed credentialed non-trading/sign-only
-dry-run sections under explicit local env gates; it still does not authorize
-production, live submit, live cancel, or real-funds order placement.
+- local/current gates: pass;
+- PostgreSQL validation: pass when `PMX_TEST_DATABASE_URL` is supplied;
+- credentialed non-trading and sign-only dry-run sections: pass only when their
+  explicit env-gated logs are present, otherwise skipped and not promotion
+  evidence;
+- release decision: not validated, not production-ready, not live-ready.
 
-The target is promotion of the v0.25.0 shadow-ready SDK sign-only baseline. This batch does not introduce
-live trading capability.
+Detached release sidecars bind the final containing zip hash. The manifest
+inside the source zip intentionally does not self-bind the containing archive.
 
-## GitHub CI boundary
+## GitHub CI Boundary
 
-The GitHub CI boundary now follows the repository ownership model:
+Repository ownership is split:
 
-- `polymarket-execution-suite` owns integration, release hygiene, packaging, and
-  artifact validation only.
-- `hermes-polymarket-control` owns Python control-plane tests and the no-secret
-  boundary.
-- `polymarket-execution-engine` owns Rust locked checks, PostgreSQL gates,
-  current gates, SDK adapter checks, and the manual `credentialed-sdk`
-  workflow.
+- root integration repository: version consistency, contract parity, release
+  hygiene, packaging, artifact validation;
+- `hermes-polymarket-control`: Python control plane, model/client contract,
+  no-secret boundary;
+- `polymarket-execution-engine`: Rust locked checks, PostgreSQL gates, SDK
+  adapter checks, current gates, manual credentialed SDK workflow.
 
-Latest pushed GitHub Actions confirmations available before this root
-submodule-pointer update:
+Historical v0.25 CI runs and review packages are audit context only. They are
+not current v0.26 artifact proof unless a report explicitly binds the exact
+v0.26 artifact SHA-256 and evidence manifest SHA-256.
 
-```text
-polymarket-execution-suite ci: 26267900817, success (previous root pointer)
-hermes-polymarket-control ci: 26267887116, success
-polymarket-execution-engine ci: 26268276210, success
-```
+## Required Before Any `go`
 
-The `credentialed-sdk` environment exists in `polymarket-execution-engine`; the
-integration repository has no Polymarket credential environment. Current local
-canonical evidence refreshed authenticated non-trading smoke and sign-only
-dry-run with explicit env gates. Secret values are not recorded in this
-decision.
+A future armed canary attempt must have all of the following:
 
-The canonical execution-engine evidence baseline at
-`399996403fa2bd4d5af4490fcd1c31dfc7a9814b` is validated locally by
-`validation/run_current_gates.sh` with PostgreSQL and credentialed SDK sections
-enabled. The currently pinned
-execution-engine commit
-`776af54961e4b584dc11f2318266c1889d146c2c` only changes the current manifest
-guard so CI can validate a previous manifest before regenerating this run's
-logs; targeted local checks passed and GitHub Actions run `26268276210`
-passed.
+- current full gates regenerated from the exact source commit;
+- artifact `.sha256` and `.zip.evidence.json` sidecars regenerated after the
+  final root commit;
+- reviewed external references with no placeholders and no secret values;
+- reviewed release-decision JSON with `real_funds_canary_authorized=true`;
+- reviewed candidate-market JSON with a bound SHA-256;
+- explicit account, market, size, notional, and daily caps;
+- operator approval with expiry and object binding;
+- runtime state healthy, kill switch open, no geoblock, no remote-unknown
+  freeze, and idempotency reservation path verified;
+- rollback, cancel-only, incident, alert, audit, and custody runbooks reviewed.
 
-## Required evidence
-
-- Rust fmt/check/clippy/tests pass.
-- PostgreSQL migration, repository tests, and API E2E pass.
-- SDK adapter tests pass.
-- Sign-only dry-run is either passed in a credentialed safe environment or explicitly skipped with reason.
-- Credentialed non-trading smoke is either passed in a safe environment or explicitly skipped with reason.
-- Audit redaction, runtime degraded policy, and PG sign-only lifecycle concurrency risks have direct evidence.
-- Release artifact hash is bound to `polymarket-execution-engine/evidence/current/manifest.json`.
-
-## Prohibited promotion claims
-
-- Do not claim production readiness.
-- Do not claim live-trading readiness.
-- Do not claim live submit or live cancel availability.
-- Do not cite archived evidence as current evidence.
-
-## Promotion outcome
-
-Final status: `shadow-ready SDK sign-only candidate`
-
-Rationale:
-
-- Rust workspace, PostgreSQL migration/store/API E2E, SDK adapter/spike, SDK
-  regression, credentialed non-trading smoke, sign-only dry-run, local static,
-  contract, release artifact, and governance gates passed in this environment.
-- The canonical local evidence refresh at
-  `polymarket-execution-engine: 399996403fa2bd4d5af4490fcd1c31dfc7a9814b`
-  passed the current no-live gate chain, including PostgreSQL and credentialed
-  SDK sections under explicit local env gates. The currently pinned
-  manifest-guard CI-ordering update at
-  `polymarket-execution-engine: 776af54961e4b584dc11f2318266c1889d146c2c`
-  has targeted local validation and passed execution-engine GitHub CI.
-- Shadow execution, reconciliation drift, rollback/kill-switch, migration drift,
-  live canary readiness, blocked live canary, and productionization guard gates
-  passed.
-- Runtime worker loop closure, order lifecycle divergence classification, SDK
-  standard sign-only plan, live canary prep, and production hardening spec are
-  included in the pinned execution-engine source.
-- Runtime heartbeat worker scaffolding now uses a non-trading heartbeat loop
-  with an injected persistence sink instead of a discard-only placeholder.
-- Read-only remote reconcile reader, continuous runtime worker tick entry,
-  explicit SDK sign-only default path, fail-closed live canary defaults, and
-  production evidence controls are included in the pinned execution-engine
-  source.
-- Canary drill validation now binds the public release gate entrypoint
-  `validation/run_current_gates.sh` to the current implementation gate chain.
-- Current gate-chain validation is centralized for lifecycle, migration, SDK,
-  observability, canary, and production guard checks.
-- The active gate implementation is version-neutral
-  `validation/run_current_gates_impl.sh`; `validation/run_current_gates.sh`
-  remains the public entrypoint.
-- Standard sign-only mapping now has explicit non-posting MARKET-order coverage
-  in the SDK adapter regression evidence.
-- Live canary preflight now has an independent manifest section with structured
-  local-ready and negative fail-closed scenarios; it still records no live
-  submit, no live cancel, and no remote trading side effects.
-- Production operations drill evidence is included as an independent manifest
-  section for secret custody, deployment preflight, rollback, incident,
-  alerting/SLO, audit retention, risk-limit, and SDK breakage controls; it
-  still records no live submit, no live cancel, and no production-ready claim.
-- Production authorization block evidence is included as an independent
-  manifest section proving partial live/prod gates remain fail-closed without a
-  reviewed release decision.
-- Production audit export evidence is included as an independent manifest
-  section proving exported local audit records keep trace/digest/ref metadata
-  and exclude private keys, CLOB secrets, raw signed payloads, raw signatures,
-  and signed order envelopes.
-- Production dependency breakage evidence is included as an independent
-  manifest section proving the SDK remains exactly pinned, adapter/spike
-  lockfiles are present, sign-only regression evidence is bound, and SDK
-  breakage downgrades to sign-only/read-only with live submit frozen.
-- Production deployment preflight evidence is included as an independent
-  manifest section proving the release artifact SHA-256 sidecar, evidence
-  sidecar, evidence manifest hash, and migration evidence can be verified while
-  deployment remains blocked.
-- Production deployment preflight evidence now also verifies the current
-  production config diff-review manifest section and the `64` diff-review log
-  SHA-256 before deployment remains blocked.
-- Production secret custody evidence is included as an independent manifest
-  section proving sensitive environment values observed by validation are absent
-  from logs, manifest, and release artifact, with `.env` excluded from the
-  package.
-- Production monitoring/SLO evidence is included as an independent manifest
-  section proving required alert signals are represented and safety SLO or error
-  budget states cannot auto-enable live submit.
-- Production incident response evidence is included as an independent manifest
-  section proving remote-unknown, cancel-failure, SDK-failure, PostgreSQL,
-  geoblock, low-resource, and degraded-worker incidents fail closed with
-  evidence preserved and no remote side effects.
-- Production rollback/downgrade evidence is included as an independent manifest
-  section proving SDK, remote-unknown, PostgreSQL, geoblock, kill-switch, and
-  recovery states downgrade to sign-only, cancel-only, or read-only modes
-  without auto re-enabling live submit.
-- Production risk-limit evidence is included as an independent manifest section
-  proving account whitelist, market whitelist, per-order cap, per-day cap,
-  exposure cap, operator threshold, remote-unknown freeze, stale-market-data,
-  and geoblock controls remain fail-closed.
-- Production config-profile evidence is included as an independent manifest
-  section proving conservative defaults keep live submit/cancel disabled,
-  production-ready false, kill switch closed, per-account/per-market enablement
-  required, caps required, operator approval required, and canary profile
-  isolated.
-- Production release-decision guard evidence is included as an independent
-  manifest section proving the current release decision does not claim
-  production-ready, live-ready, or validated-release status.
-- Controlled live canary prep evidence is included as an independent manifest
-  section proving compile/env/config/operator/whitelist/cap/idempotency/
-  reservation/reconcile/fallback gates can be represented while live submit,
-  live cancel, posting, cancelling, and remote side effects remain blocked
-  without a reviewed release decision.
-- External secret-provider preflight evidence is included as an independent
-  manifest section proving KMS/secret-provider, rotation, and break-glass
-  references are represented as a contract while missing external references
-  keep `external_secret_custody_ready=false` and live submit/cancel blocked.
-- External operator-approval preflight evidence is included as an independent
-  manifest section proving approval id/hash/ticket/approver/expiry/scope,
-  dual-control, replay-block, and expiry-enforcement signals are required while
-  missing references keep `operator_approval_ready=false` and live submit/cancel
-  blocked.
-- External alert-routing preflight evidence is included as an independent
-  manifest section proving alert provider, route, pager policy, dashboard, alert
-  test evidence, runtime/reconcile/remote-unknown/SDK/audit alert signals, and
-  pager acknowledgement are required while missing references keep
-  `alerting_ready=false` and live submit/cancel blocked.
-- Production preflight config evidence is included as an independent manifest
-  section proving `config/production-preflight.example.json` is schema-versioned,
-  reference-only, free of forbidden sensitive keys/values, and usable by the
-  external secret-provider, operator-approval, and alert-routing preflight
-  checks without enabling live submit or live cancel.
-- Production preflight config fixture evidence is included as an independent
-  manifest section proving a positive fixture can drive external
-  secret-provider, operator-approval, and alert-routing readiness to `true`
-  while live submit/cancel remain blocked, and a negative fixture containing a
-  forbidden sensitive key is rejected by field path without logging the fixture
-  secret value.
-- Production preflight config diff-review evidence is included as an
-  independent manifest section proving baseline/candidate config changes are
-  summarized by field paths and SHA-256 hashes only, valid reference-only
-  changes pass, and a candidate containing a forbidden sensitive key is rejected
-  without logging the fixture secret value.
-- Shadow execution evidence now runs by default in the current gate, and
-  observability evidence is bound as an explicit manifest section.
-- Credentialed gates used explicit opt-in flags and existing local `.env`
-  credentials; no credential values are recorded in evidence.
-- Authenticated non-trading smoke and sign-only dry-run passed in current local
-  canonical evidence. They do not authorize live submit, live cancel, or
-  real-funds canary execution.
-- PostgreSQL gates used a local PostgreSQL 16 instance with
-  `PMX_TEST_DATABASE_URL`.
-- Current source state remains pre-live and fail-closed for live submit/cancel.
-- `PMX_ALLOW_LIVE_SUBMIT=0` and `PMX_ALLOW_LIVE_CANCEL=0` during validation;
-  blocked canary evidence records `posted=false`, `cancelled=false`, and
-  `remote_side_effects=false`.
-- Real-funds canary preflight is implemented and validated, but no real-funds
-  order was submitted in this batch. Evidence records
-  `real_funds_canary_allowed=false`, `posted=false`, and
-  `remote_side_effects=false` during normal gates.
-- Real-funds canary lifecycle closure is implemented locally with persisted run
-  records, idempotency replay/conflict handling, remote-unknown freeze
-  escalation, and simulated reconcile. It does not authorize live submit,
-  live cancel, or real-funds order placement.
-- Real-funds canary dry-run market discovery now reports aggregate-only
-  diagnostics, armed mode requires a reviewed release-decision JSON bound to the
-  same artifact/evidence hashes as the approval, and local review-package
-  generation is included in current evidence without creating armed approval.
-- Hermes can produce blocked canary readiness reference reports under
-  `hm-pdp-test`; it still cannot sign, submit, cancel, hold executor database
-  credentials, or call Polymarket CLOB.
-
-## Evidence references
-
-Current evidence:
-
-- GitHub integration CI:
-  `ray-toaru/polymarket-execution-suite/actions/runs/26267900817`
-- GitHub execution-engine CI:
-  `ray-toaru/polymarket-execution-engine/actions/runs/26268276210`
-- Historical GitHub credentialed SDK audit context:
-  `ray-toaru/polymarket-execution-engine/actions/runs/26175786984`
-- Environment: `polymarket-execution-engine/evidence/current/environment.json`
-- Manifest: `polymarket-execution-engine/evidence/current/manifest.json`
-- Manifest SHA-256:
-  `b8a9cf6a92c54363333c703ec7ee3754db1d4c1b8ae78f7136b61aafe7bc56b4`
-- Logs: `polymarket-execution-engine/evidence/current/logs/`
-- Real-funds canary preflight log:
-  `polymarket-execution-engine/evidence/current/logs/65-real-funds-canary-preflight.log`
-- Real-funds canary lifecycle log:
-  `polymarket-execution-engine/evidence/current/logs/66-real-funds-canary-lifecycle-drill.log`
-- Artifact SHA-256: recorded outside the zip in
-  `polymarket-execution-suite-v0.25.0.zip.sha256` and
-  `polymarket-execution-suite-v0.25.0.zip.evidence.json`
-- The release artifact sidecars must be regenerated after this document update
-  during the pre-publish check; the external sidecars are the artifact hash
-  source of truth because the in-archive files cannot self-bind the containing
-  zip hash.
-
-## Explicit non-claims
-
-This is not production-ready and not live-canary-approved. Production promotion
-still requires reviewed secret-manager/KMS/HSM controls, deployment and rollback
-runbooks, observability, retention, account and market risk limits, actual
-real-funds canary execution evidence, and an explicit future release decision.
+Until those conditions are met, v0.26.0 remains a non-live controlled canary
+source-candidate.

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+import argparse
 import importlib
 import json
 import re
@@ -362,7 +363,6 @@ def validate_v12_service_layer() -> None:
         'pub trait RuntimeStateProvider',
         'pub enum SubmitOutcome',
         'IdempotencyAction::InProgress',
-        'save_order_reservation',
         'verify_decision_binding',
         'DecisionByIdRequest',
         'CompilePlanByIdCommand',
@@ -374,7 +374,17 @@ def validate_v12_service_layer() -> None:
     ]:
         combined = root_toml + "\n" + SERVICE_TOML.read_text() + "\n" + service_text
         if needle not in combined:
-            fail(f"v0.14 service layer missing token: {needle}")
+            fail(f"service layer contract missing token: {needle}")
+    blocked_submit = (SERVICE_SRC / "submit/blocked.rs").read_text()
+    for needle in [
+        '"SUBMIT_BLOCKED_BEFORE_REMOTE"',
+        '"no_remote_side_effect": true',
+        '"reservation_written": false',
+    ]:
+        if needle not in blocked_submit:
+            fail(f"blocked submit path missing non-live boundary token: {needle}")
+    if "save_order_reservation" in blocked_submit:
+        fail("blocked submit path must not persist reservations")
     for needle in [
         'pub enum ServiceBackend',
         'ServiceBackend::InMemory',
@@ -388,7 +398,7 @@ def validate_v12_service_layer() -> None:
         'SubmitOutcome::Accepted',
     ]:
         if needle not in api_text:
-            fail(f"v0.14 API handler not wired through pmx-service: {needle}")
+            fail(f"API handler not wired through pmx-service: {needle}")
     if 'pub fn fake_snapshot' in api_text:
         fail("pmx-api must not keep fake_snapshot helper after pmx-service extraction")
 
@@ -407,7 +417,7 @@ def validate_v12_service_layer() -> None:
         'StatusCode::OK',
     ]:
         if needle not in pg_test_text:
-            fail(f"v0.14 PostgreSQL API E2E missing token: {needle}")
+            fail(f"PostgreSQL API E2E missing token: {needle}")
 
 
 
@@ -424,21 +434,21 @@ def validate_v15_admin_audit_and_runtime_provider() -> None:
         "admin_audit: Vec<AdminAuditEvent>",
     ]:
         if needle not in store_text:
-            fail(f"v0.15 store admin audit missing token: {needle}")
+            fail(f"store admin audit missing token: {needle}")
     for needle in [
         "impl AdminAuditStore for PostgresStore",
         "INSERT INTO admin_audit_events",
         "postgres_records_admin_audit_event",
     ]:
         if needle not in postgres_text:
-            fail(f"v0.15 postgres admin audit missing token: {needle}")
+            fail(f"postgres admin audit missing token: {needle}")
     for needle in [
         "pub struct StaticRuntimeStateProvider",
         "record_admin_audit_event",
         "static_runtime_provider_can_reach_ready_plan_but_submit_still_blocks",
     ]:
         if needle not in service_text:
-            fail(f"v0.15 service runtime/audit missing token: {needle}")
+            fail(f"service runtime/audit missing token: {needle}")
     for needle in [
         "record_admin_audit",
         "AdminAuditEvent",
@@ -446,7 +456,7 @@ def validate_v15_admin_audit_and_runtime_provider() -> None:
         "operation: &'static str",
     ]:
         if needle not in api_text:
-            fail(f"v0.15 API admin audit missing token: {needle}")
+            fail(f"API admin audit missing token: {needle}")
     for needle in [
         "http_postgres_admin_routes_record_audit_events",
         "admin_audit_events",
@@ -454,7 +464,7 @@ def validate_v15_admin_audit_and_runtime_provider() -> None:
         "CancelOrder",
     ]:
         if needle not in pg_test_text:
-            fail(f"v0.15 PostgreSQL API audit E2E missing token: {needle}")
+            fail(f"PostgreSQL API audit E2E missing token: {needle}")
     if not (EXECUTOR / "validation/run_current_gates.sh").exists():
         fail("missing current gate runner")
 
@@ -1133,6 +1143,8 @@ def validate_single_host_deployment_governance() -> None:
         "not production-ready evidence",
         "PMX_LIVE_SUBMIT_ENABLED=0",
         "PMX_ALLOW_REAL_FUNDS_CANARY=0",
+        "long-running HTTP listener",
+        "non-live API smoke",
         "pass://polymarket-execution-engine/controlled-canary",
         "reviewed `go` release decision",
     ]:
@@ -1149,6 +1161,8 @@ def validate_single_host_deployment_governance() -> None:
         "live_submit_allowed",
         "production_deployment_allowed",
         "secrets_included",
+        "api_bind_smoke",
+        "run_api_bind_smoke",
         "PMX_PRODUCTION_DEPLOYMENT_ENABLED=1",
     ]:
         if needle not in validator:
@@ -1213,7 +1227,11 @@ def validate_single_host_deployment_governance() -> None:
             fail(f"single-host deployment files contain forbidden token: {forbidden}")
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        description="Validate integration contracts across OpenAPI, Rust, Hermes, SQL, and release governance."
+    )
+    parser.parse_args(argv)
     spec = yaml.safe_load(OPENAPI.read_text())
     validate_paths_and_statuses(spec)
     validate_no_public_forbidden_tokens()
