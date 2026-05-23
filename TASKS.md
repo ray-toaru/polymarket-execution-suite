@@ -39,6 +39,17 @@ canary, or an actual real-funds fill target.
 - [x] Emit machine-readable runtime-truth dependencies for kill switch,
   live-submit gate, idempotency lease, and order/cancel reconciliation so local
   review evidence cannot be mistaken for durable runtime authority.
+- [x] Add local reviewed-go decision validation for future canary attempts:
+  `go` decisions must be single-attempt scoped, capped at one order, require
+  post/cancel, and require readback/closeout while production deployment remains
+  false.
+- [x] Add optional runtime-truth input validation. The pipeline now requires
+  durable evidence refs for kill switch, live-submit gate, idempotency lease,
+  and order/cancel reconciliation before a reviewed-go stage can become
+  operator-runnable.
+- [x] Add optional read-only closeout stage execution for an exact completed
+  package directory. The stage runs local closeout evidence generation and
+  records a hash in the pipeline report without remote side effects.
 - [ ] Implement the future reviewed-go single-attempt armed/readback/closeout
   runbook. This remains blocked until a fresh reviewed `go` decision exists.
 - [ ] Promote kill switch, live-submit gates, idempotency lease/owner recovery,

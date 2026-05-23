@@ -25,6 +25,7 @@ DEFAULT_MANIFEST = ENGINE / "evidence" / "current" / "manifest.json"
 DEFAULT_EXTERNAL_REFERENCES = ENGINE / "config" / "controlled-canary.external-references.example.json"
 BLOCKED_REHEARSAL = ENGINE / "validation" / "run_real_funds_canary_blocked_rehearsal_package.py"
 PREPARE_CANDIDATE = ROOT / "scripts" / "prepare_canary_candidate_market.py"
+PREPARE_CLOSEOUT = ROOT / "scripts" / "prepare_canary_closeout.py"
 
 
 def parse_decimal(value: Any, field: str) -> Decimal:
@@ -113,7 +114,20 @@ def validate_candidate_file(path: Path) -> dict[str, Any]:
     return candidate
 
 
-def build_stage_plan(*, reviewed_go: bool, closeout_package_dir: Path | None) -> list[dict[str, Any]]:
+def build_stage_plan(
+    *,
+    reviewed_go: bool,
+    closeout_package_dir: Path | None,
+    runtime_truth_ready: bool,
+) -> list[dict[str, Any]]:
+    armed_status = "blocked"
+    armed_side_effects = False
+    if reviewed_go and runtime_truth_ready:
+        armed_status = "requires_explicit_operator_run"
+        armed_side_effects = False
+    elif reviewed_go:
+        armed_status = "blocked_runtime_truth_missing"
+    readback_status = "required_after_armed_run" if reviewed_go and runtime_truth_ready else "blocked"
     return [
         {"stage": "candidate", "status": "required", "remote_side_effects": False},
         {"stage": "no_go_review", "status": "required", "remote_side_effects": False},
@@ -125,12 +139,13 @@ def build_stage_plan(*, reviewed_go: bool, closeout_package_dir: Path | None) ->
         },
         {
             "stage": "armed_post_cancel",
-            "status": "blocked" if not reviewed_go else "requires_explicit_operator_run",
-            "remote_side_effects": reviewed_go,
+            "status": armed_status,
+            "remote_side_effects": armed_side_effects,
+            "operator_run_would_have_remote_side_effects": reviewed_go and runtime_truth_ready,
         },
         {
             "stage": "readback",
-            "status": "blocked" if not reviewed_go else "required_after_armed_run",
+            "status": readback_status,
             "remote_side_effects": False,
         },
         {
@@ -170,6 +185,119 @@ def runtime_truth_dependencies() -> list[dict[str, Any]]:
     ]
 
 
+def required_runtime_truth_names() -> set[str]:
+    return {item["name"] for item in runtime_truth_dependencies()}
+
+
+def validate_runtime_truth_file(path: Path) -> dict[str, Any]:
+    data = load_json(path)
+    if data.get("schema_version") != 1:
+        raise SystemExit("runtime truth schema_version must be 1")
+    dependencies = data.get("dependencies")
+    if not isinstance(dependencies, list):
+        raise SystemExit("runtime truth dependencies must be a list")
+    ready: dict[str, dict[str, Any]] = {}
+    for item in dependencies:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name")
+        status = item.get("status")
+        evidence_ref = item.get("evidence_ref")
+        if (
+            isinstance(name, str)
+            and status == "durable_runtime_truth"
+            and isinstance(evidence_ref, str)
+            and evidence_ref.strip()
+            and "REPLACE_WITH" not in evidence_ref
+        ):
+            ready[name] = item
+    missing = sorted(required_runtime_truth_names() - set(ready))
+    if missing:
+        raise SystemExit("runtime truth missing durable dependencies: " + ", ".join(missing))
+    return {
+        "schema_version": 1,
+        "ready_for_armed_stage": True,
+        "path": str(path),
+        "sha256": sha256(path),
+        "dependencies": [ready[name] for name in sorted(ready)],
+    }
+
+
+def validate_reviewed_go_decision_file(path: Path) -> dict[str, Any]:
+    decision = load_json(path)
+    required = [
+        (decision.get("decision") == "go", "decision must be go"),
+        (decision.get("status") == "reviewed_go", "status must be reviewed_go"),
+        (decision.get("scope") == "REAL_FUNDS_CANARY", "scope must be REAL_FUNDS_CANARY"),
+        (
+            decision.get("execution_style") == "GTC_LIMIT_POST_ONLY_CANCEL",
+            "execution_style must be GTC_LIMIT_POST_ONLY_CANCEL",
+        ),
+        (decision.get("live_submit_authorized") is True, "live_submit_authorized must be true"),
+        (decision.get("live_cancel_authorized") is True, "live_cancel_authorized must be true"),
+        (
+            decision.get("real_funds_canary_authorized") is True,
+            "real_funds_canary_authorized must be true",
+        ),
+        (
+            decision.get("remote_side_effects_authorized") is True,
+            "remote_side_effects_authorized must be true",
+        ),
+        (
+            decision.get("production_deployment_authorized") is False,
+            "production_deployment_authorized must remain false",
+        ),
+        (decision.get("single_attempt") is True, "single_attempt must be true"),
+        (decision.get("max_order_count") == 1, "max_order_count must be 1"),
+        (
+            decision.get("post_cancel_required") is True,
+            "post_cancel_required must be true",
+        ),
+        (
+            decision.get("readback_closeout_required") is True,
+            "readback_closeout_required must be true",
+        ),
+    ]
+    failures = [reason for ok, reason in required if not ok]
+    if failures:
+        raise SystemExit("reviewed-go decision invalid: " + "; ".join(failures))
+    return {
+        "path": str(path),
+        "sha256": sha256(path),
+        "decision_id": decision.get("decision_id"),
+        "single_attempt": True,
+        "max_order_count": 1,
+    }
+
+
+def run_closeout_stage(package_dir: Path, release_zip: Path) -> dict[str, Any]:
+    command = [
+        sys.executable,
+        str(PREPARE_CLOSEOUT),
+        "--package-dir",
+        str(package_dir),
+        "--release-zip",
+        str(release_zip),
+    ]
+    completed = run(command, cwd=ROOT)
+    stage = {
+        "stage": "closeout",
+        "status": "pass" if completed.returncode == 0 else "fail",
+        "exit_code": completed.returncode,
+        "package_dir": str(package_dir),
+        "remote_side_effects": False,
+        "stdout": completed.stdout.strip(),
+        "stderr": completed.stderr.strip(),
+    }
+    if completed.returncode != 0:
+        raise SystemExit(completed.stderr.strip() or completed.stdout.strip() or "closeout stage failed")
+    closeout_json = package_dir / "closeout.json"
+    if closeout_json.exists():
+        stage["closeout_json"] = str(closeout_json)
+        stage["closeout_sha256"] = sha256(closeout_json)
+    return stage
+
+
 def sha256(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as fh:
@@ -203,6 +331,11 @@ def parse_args() -> argparse.Namespace:
         "--reviewed-go-decision-file",
         type=Path,
         help="Optional future reviewed-go decision input. The current pipeline records its presence but still does not run armed live phases.",
+    )
+    parser.add_argument(
+        "--runtime-truth-file",
+        type=Path,
+        help="Optional durable runtime-truth evidence for future armed stage gating.",
     )
     parser.add_argument(
         "--closeout-package-dir",
@@ -291,7 +424,22 @@ def main() -> int:
     closeout_package_dir = (
         args.closeout_package_dir if args.closeout_package_dir is None or args.closeout_package_dir.is_absolute() else ROOT / args.closeout_package_dir
     )
-    reviewed_go_present = args.reviewed_go_decision_file is not None
+    reviewed_go_decision = None
+    if args.reviewed_go_decision_file:
+        reviewed_go_decision_path = (
+            args.reviewed_go_decision_file
+            if args.reviewed_go_decision_file.is_absolute()
+            else ROOT / args.reviewed_go_decision_file
+        )
+        reviewed_go_decision = validate_reviewed_go_decision_file(reviewed_go_decision_path)
+    runtime_truth = None
+    if args.runtime_truth_file:
+        runtime_truth_path = (
+            args.runtime_truth_file if args.runtime_truth_file.is_absolute() else ROOT / args.runtime_truth_file
+        )
+        runtime_truth = validate_runtime_truth_file(runtime_truth_path)
+    reviewed_go_present = reviewed_go_decision is not None
+    runtime_truth_ready = bool(runtime_truth and runtime_truth.get("ready_for_armed_stage"))
 
     release_zip = args.release_zip if args.release_zip.is_absolute() else ROOT / args.release_zip
     manifest = args.manifest if args.manifest.is_absolute() else ROOT / args.manifest
@@ -352,6 +500,20 @@ def main() -> int:
     failures = []
     if completed.returncode != 0:
         failures.append("no-go blocked rehearsal failed")
+    if closeout_package_dir:
+        try:
+            stages.append(run_closeout_stage(closeout_package_dir, release_zip))
+        except SystemExit as exc:
+            stages.append(
+                {
+                    "stage": "closeout",
+                    "status": "fail",
+                    "package_dir": str(closeout_package_dir),
+                    "remote_side_effects": False,
+                    "error": str(exc),
+                }
+            )
+            failures.append("closeout stage failed")
 
     report = {
         "schema_version": 1,
@@ -372,8 +534,11 @@ def main() -> int:
         "stage_plan": build_stage_plan(
             reviewed_go=reviewed_go_present,
             closeout_package_dir=closeout_package_dir,
+            runtime_truth_ready=runtime_truth_ready,
         ),
         "runtime_truth_dependencies": runtime_truth_dependencies(),
+        "runtime_truth": runtime_truth,
+        "reviewed_go_decision": reviewed_go_decision,
         "stages": stages,
         "failures": failures,
     }

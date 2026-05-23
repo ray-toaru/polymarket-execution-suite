@@ -92,6 +92,16 @@ candidate, no-go review, blocked rehearsal, reviewed-go, armed post/cancel,
 readback, and closeout, plus runtime-truth dependencies that must be promoted
 from local evidence before any future live run.
 
+Optional `--reviewed-go-decision-file`, `--runtime-truth-file`, and
+`--closeout-package-dir` inputs are local validation hooks. A reviewed-go file
+must be single-attempt scoped (`max_order_count=1`, post/cancel and
+readback/closeout required). A runtime-truth file must prove durable
+`kill_switch`, `live_submit_gate`, `idempotency_lease`, and
+`order_cancel_reconciliation` dependencies before the report marks the armed
+stage as operator-runnable. A closeout package runs the read-only closeout
+script and records the resulting local evidence hash; it does not query remote
+APIs or place/cancel orders.
+
 ```bash
 python scripts/run_controlled_canary_pipeline.py \
   --output-dir dist/pmx-canary-pipeline-no-go-local \

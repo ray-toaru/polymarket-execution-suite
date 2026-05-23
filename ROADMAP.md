@@ -38,8 +38,10 @@ auditable, fail-closed canary pipeline:
    blocked before remote side effects.
 2. Runtime truth integration for kill switch, live-submit gates, idempotency
    lease/owner recovery, and order/cancel reconciliation. The root pipeline now
-   reports these as required dependencies; they are not yet durable runtime
-   authority.
+   reports these as required dependencies and can validate an external
+   runtime-truth evidence file before marking a future reviewed-go armed stage
+   as operator-runnable; they are not yet durable runtime authority inside the
+   execution engine.
 3. Dynamic exchange-rule evidence for minimum size, order type, tick, and
    post-only behavior; no permanent `size=5` release invariant.
 4. Tracked closeout summaries plus detached local JSON evidence that remain
