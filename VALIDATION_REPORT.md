@@ -33,6 +33,13 @@ The source archive does not self-bind its containing zip hash. The detached
 evidence sidecar binds the artifact SHA-256 and the canonical evidence manifest
 SHA-256.
 
+`dist/INDEX.json` is part of the local release boundary. It is not embedded in
+the source archive; it indexes the generated artifact and local review
+directories in the developer `dist/` workspace. The index is valid only when
+`scripts/check_dist_index.py dist 0.26.0` passes and
+`scripts/check_release_artifact.py` confirms the same artifact and sidecar
+hashes.
+
 ## Local Evidence Status
 
 Canonical manifest:
@@ -93,6 +100,7 @@ Use local checks before CI:
 ```bash
 .venv/bin/python scripts/check_version_consistency.py
 .venv/bin/python scripts/validate_contracts.py
+.venv/bin/python scripts/check_dist_index.py dist 0.26.0
 HERMES_PROFILE=hm-pdp-test PYTHONPATH=hermes-polymarket-control/src .venv/bin/python -m pytest -q hermes-polymarket-control/tests
 HERMES_PROFILE=hm-pdp-test .venv/bin/python -m compileall -q hermes-polymarket-control/src scripts polymarket-execution-engine/validation
 cd polymarket-execution-engine && ./validation/run_current_gates.sh
@@ -107,6 +115,14 @@ Review packages under `dist/pmx-*` are local review material unless the
 machine-readable `dist/INDEX.json` names them as the current release artifact.
 Multiple local review directories may exist; they are not interchangeable
 approval sources.
+
+The current `dist/INDEX.json` guard requires:
+
+- the current release artifact SHA-256 to match both detached sidecars;
+- no-go review material to set `approval_reuse_allowed=false` and
+  `remote_side_effects_authorized=false`;
+- consumed or closed reviewed-go material to remain non-reusable and
+  non-authorizing for remote side effects.
 
 The user-selected canary market review package must bind:
 

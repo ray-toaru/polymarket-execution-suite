@@ -90,6 +90,20 @@ Current detached artifact binding:
 Detached release sidecars bind the final containing zip hash. The manifest
 inside the source zip intentionally does not self-bind the containing archive.
 
+`dist/INDEX.json` is validated by `scripts/check_dist_index.py` and by
+`scripts/check_release_artifact.py`. The index must name exactly one current
+source artifact, keep `validated_release=false`, `production_ready=false`, and
+`live_trading_ready=false`, and classify no-go, consumed, or closed local
+review material as non-reusable for approval.
+
+Final local package audit for this decision requires:
+
+- no `.env`, cache, target, archive, or local `dist/` members inside the source
+  zip;
+- executable archive permissions for every shebang script;
+- `.sha256`, `.zip.evidence.json`, `dist/INDEX.json`, and archived manifest
+  SHA-256 values agreeing with the generated artifact.
+
 ## GitHub CI Boundary
 
 Repository ownership is split:

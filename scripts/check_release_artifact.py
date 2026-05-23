@@ -8,6 +8,8 @@ import sys
 import zipfile
 from pathlib import Path
 
+from check_dist_index import validate as validate_dist_index
+
 FORBIDDEN_PARTS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", "target", "dist"}
 FORBIDDEN_SUFFIXES = {".pyc", ".pyo", ".db", ".sqlite", ".sqlite3"}
 FORBIDDEN_FILENAMES = {".env"}
@@ -94,8 +96,9 @@ def main() -> int:
         return 2
     zip_path = Path(sys.argv[1])
     expected_version = sys.argv[2].strip()
-    expected_root = f"polymarket_execution_suite_v{expected_version.replace('.', '_')}"
     failures: list[str] = []
+    failures.extend(validate_dist_index(zip_path.parent, expected_version))
+    expected_root = f"polymarket_execution_suite_v{expected_version.replace('.', '_')}"
     expected_hash = sha256(zip_path)
     sidecar = zip_path.with_suffix(zip_path.suffix + ".sha256")
     evidence_sidecar = zip_path.with_suffix(zip_path.suffix + ".evidence.json")
