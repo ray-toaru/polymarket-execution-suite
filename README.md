@@ -105,6 +105,9 @@ script and records the resulting local evidence hash plus
 APIs or place/cancel orders. v0.27 closeout refuses to claim clean closure if
 the ordered stage history is missing, exposes raw signed material, references a
 different remote order id, or contains an unresolved `operator_required` stage.
+If an `operator_required` stage occurred, the package must also include
+`operator-recovery.json` bound to the stage-history hash, the same remote order
+id, no-retry/no-second-order assertions, and the readback evidence files.
 
 The pipeline also emits an `operator_runbook` block. It is blocked by default;
 even with a future fresh reviewed-go decision and durable runtime-truth input,

@@ -421,6 +421,188 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
                 ROOT / "dist" / "polymarket-execution-suite-v0.26.0.zip",
             )
 
+    def test_closeout_package_stage_accepts_bound_operator_recovery_evidence(self):
+        package = ROOT / "dist" / "unit-closeout-operator-recovered-history"
+        if package.exists():
+            shutil.rmtree(package)
+        package.mkdir(parents=True)
+        self.addCleanup(lambda: shutil.rmtree(package, ignore_errors=True))
+        candidate = self.candidate()
+        (package / "candidate-market.json").write_text(json.dumps(candidate))
+        (package / "post-canary-report.json").write_text(
+            json.dumps(
+                {
+                    "market_candidate": {
+                        "target_size": "5",
+                        "notional_usd": "0.1",
+                    },
+                    "remote_order_readback": {"order_id": "order-1"},
+                    "no_second_order_placed_by_closure": True,
+                    "raw_signed_order_exposed": False,
+                }
+            )
+        )
+        stage_history = package / "post-canary-report.json.stages.jsonl"
+        stage_history.write_text(
+            "\n".join(
+                [
+                    json.dumps(
+                        {
+                            "status": "post_accepted",
+                            "stage": "post_accepted",
+                            "remote_order_id": "order-1",
+                            "posted": True,
+                            "cancelled": False,
+                            "remote_side_effects": True,
+                            "operator_required": False,
+                            "raw_signed_order_exposed": False,
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "status": "operator_required",
+                            "stage": "cancel_unknown",
+                            "remote_order_id": "order-1",
+                            "posted": True,
+                            "cancelled": False,
+                            "remote_side_effects": True,
+                            "operator_required": True,
+                            "raw_signed_order_exposed": False,
+                        }
+                    ),
+                ]
+            )
+            + "\n"
+        )
+        stage_history_sha = self.pipeline.sha256(stage_history)
+        (package / "operator-recovery.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "recovery_decision": "operator_reviewed_closed_no_retry",
+                    "operator_review_ref": "ticket://recovery-review",
+                    "stage_history_sha256": stage_history_sha,
+                    "remote_order_id": "order-1",
+                    "unresolved_operator_required": False,
+                    "no_retry_authorized": True,
+                    "no_second_order_placed": True,
+                    "raw_signed_order_exposed": False,
+                    "readback_evidence": [
+                        "order-status-query.json",
+                        "trade-fill-query.json",
+                        "account-activity-readback.json",
+                    ],
+                }
+            )
+        )
+        (package / "order-status-query.json").write_text(
+            json.dumps({"remote_status": "CANCELED", "size_matched": "0"})
+        )
+        (package / "trade-fill-query.json").write_text(
+            json.dumps({"matching_trades_count": 0, "matching_size_total": "0"})
+        )
+        (package / "account-activity-readback.json").write_text(
+            json.dumps(
+                {
+                    "matching_activity_count": 0,
+                    "matching_trade_count": 0,
+                    "matching_open_position_count": 0,
+                    "matching_closed_position_count": 0,
+                    "matching_value_record_count": 0,
+                    "values": [],
+                }
+            )
+        )
+        stage = self.pipeline.run_closeout_stage(
+            package,
+            ROOT / "dist" / "polymarket-execution-suite-v0.26.0.zip",
+        )
+        self.assertEqual(stage["status"], "pass")
+        closeout = json.loads((package / "closeout.json").read_text())
+        self.assertEqual(closeout["operator_recovery_summary"]["status"], "recovered")
+        self.assertEqual(closeout["operator_recovery_summary"]["stage_history_sha256"], stage_history_sha)
+        self.assertTrue(closeout["evidence_checks"]["stage_history_operator_required_recovered"])
+
+    def test_closeout_package_stage_rejects_recovery_with_wrong_stage_history_hash(self):
+        package = ROOT / "dist" / "unit-closeout-bad-recovery-hash"
+        if package.exists():
+            shutil.rmtree(package)
+        package.mkdir(parents=True)
+        self.addCleanup(lambda: shutil.rmtree(package, ignore_errors=True))
+        candidate = self.candidate()
+        (package / "candidate-market.json").write_text(json.dumps(candidate))
+        (package / "post-canary-report.json").write_text(
+            json.dumps(
+                {
+                    "market_candidate": {
+                        "target_size": "5",
+                        "notional_usd": "0.1",
+                    },
+                    "remote_order_readback": {"order_id": "order-1"},
+                    "no_second_order_placed_by_closure": True,
+                    "raw_signed_order_exposed": False,
+                }
+            )
+        )
+        (package / "post-canary-report.json.stages.jsonl").write_text(
+            json.dumps(
+                {
+                    "status": "operator_required",
+                    "stage": "cancel_unknown",
+                    "remote_order_id": "order-1",
+                    "posted": True,
+                    "cancelled": False,
+                    "remote_side_effects": True,
+                    "operator_required": True,
+                    "raw_signed_order_exposed": False,
+                }
+            )
+            + "\n"
+        )
+        (package / "operator-recovery.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "recovery_decision": "operator_reviewed_closed_no_retry",
+                    "operator_review_ref": "ticket://recovery-review",
+                    "stage_history_sha256": "0" * 64,
+                    "remote_order_id": "order-1",
+                    "unresolved_operator_required": False,
+                    "no_retry_authorized": True,
+                    "no_second_order_placed": True,
+                    "raw_signed_order_exposed": False,
+                    "readback_evidence": [
+                        "order-status-query.json",
+                        "trade-fill-query.json",
+                        "account-activity-readback.json",
+                    ],
+                }
+            )
+        )
+        (package / "order-status-query.json").write_text(
+            json.dumps({"remote_status": "CANCELED", "size_matched": "0"})
+        )
+        (package / "trade-fill-query.json").write_text(
+            json.dumps({"matching_trades_count": 0, "matching_size_total": "0"})
+        )
+        (package / "account-activity-readback.json").write_text(
+            json.dumps(
+                {
+                    "matching_activity_count": 0,
+                    "matching_trade_count": 0,
+                    "matching_open_position_count": 0,
+                    "matching_closed_position_count": 0,
+                    "matching_value_record_count": 0,
+                    "values": [],
+                }
+            )
+        )
+        with self.assertRaisesRegex(SystemExit, "operator recovery"):
+            self.pipeline.run_closeout_stage(
+                package,
+                ROOT / "dist" / "polymarket-execution-suite-v0.26.0.zip",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

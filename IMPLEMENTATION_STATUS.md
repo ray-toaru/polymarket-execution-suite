@@ -248,6 +248,10 @@
   records its SHA-256 and stage summary, and fails closed on missing history,
   mismatched remote order id, raw signed material exposure, or unresolved
   `operator_required` stages.
+- If an `operator_required` stage exists, closeout now requires a bound
+  `operator-recovery.json` with an operator review reference, exact stage
+  history SHA-256, same remote order id, no-retry/no-second-order assertions,
+  and order/trade/account readback evidence references before it can close.
 - Local real-funds canary review package generation now binds artifact/evidence
   hashes and produces review-only material that is not an armed approval.
 - Single-host limited deployment templates now cover `pmx-api`, a dry-run

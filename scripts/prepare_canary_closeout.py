@@ -159,6 +159,65 @@ def summarize_stage_history(
     }
 
 
+def validate_operator_recovery(
+    package_dir: Path,
+    stage_history_summary: dict[str, Any],
+    expected_order_id: Any,
+) -> dict[str, Any]:
+    operator_required = stage_history_summary["operator_required_stages"]
+    path = package_dir / "operator-recovery.json"
+    if not operator_required:
+        if path.exists():
+            raise SystemExit(f"operator recovery evidence is present but no operator_required stage exists: {path}")
+        return {
+            "status": "not_required",
+            "path": None,
+            "sha256": None,
+            "operator_review_ref": None,
+            "stage_history_sha256": stage_history_summary["sha256"],
+        }
+    if not path.exists():
+        raise SystemExit(f"operator_required stage requires operator recovery evidence: {path}")
+    recovery = load_json(path)
+    required_readback = {
+        "order-status-query.json",
+        "trade-fill-query.json",
+        "account-activity-readback.json",
+    }
+    readback_evidence = recovery.get("readback_evidence", [])
+    if not isinstance(readback_evidence, list):
+        raise SystemExit("operator recovery evidence invalid: readback_evidence must be a list")
+    checks = {
+        "schema_version": recovery.get("schema_version") == 1,
+        "recovery_decision": recovery.get("recovery_decision") == "operator_reviewed_closed_no_retry",
+        "operator_review_ref": isinstance(recovery.get("operator_review_ref"), str)
+        and bool(recovery["operator_review_ref"].strip()),
+        "stage_history_sha256": recovery.get("stage_history_sha256")
+        == stage_history_summary["sha256"],
+        "remote_order_id": str(recovery.get("remote_order_id", ""))
+        == str(expected_order_id),
+        "unresolved_operator_required": recovery.get("unresolved_operator_required") is False,
+        "no_retry_authorized": recovery.get("no_retry_authorized") is True,
+        "no_second_order_placed": recovery.get("no_second_order_placed") is True,
+        "raw_signed_order_exposed": recovery.get("raw_signed_order_exposed") is False,
+        "readback_evidence": required_readback.issubset({str(item) for item in readback_evidence}),
+    }
+    failed = [name for name, ok in checks.items() if not ok]
+    if failed:
+        raise SystemExit("operator recovery evidence checks failed: " + ", ".join(failed))
+    return {
+        "status": "recovered",
+        "path": str(path.relative_to(ROOT)),
+        "sha256": sha256(path),
+        "operator_review_ref": recovery["operator_review_ref"],
+        "stage_history_sha256": recovery["stage_history_sha256"],
+        "remote_order_id": recovery["remote_order_id"],
+        "recovery_decision": recovery["recovery_decision"],
+        "operator_required_stage_count": len(operator_required),
+        "readback_evidence": readback_evidence,
+    }
+
+
 def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
     report = required_json(package_dir, "post-canary-report.json")
     candidate = required_json(package_dir, "candidate-market.json")
@@ -178,6 +237,11 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
     stage_history_summary = summarize_stage_history(
         stage_history_path,
         stage_history,
+        remote_order_id,
+    )
+    operator_recovery_summary = validate_operator_recovery(
+        package_dir,
+        stage_history_summary,
         remote_order_id,
     )
 
@@ -211,7 +275,10 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
             for item in [report, order_status, trade_query, account_activity]
         ),
         "stage_history_has_post_accepted": stage_history_summary["has_post_accepted"],
-        "stage_history_no_operator_required": stage_history_summary["operator_required_stages"] == [],
+        "stage_history_operator_required_recovered": (
+            stage_history_summary["operator_required_stages"] == []
+            or operator_recovery_summary["status"] == "recovered"
+        ),
         "stage_history_no_raw_signed_order_exposed": not stage_history_summary[
             "raw_signed_order_exposed"
         ],
@@ -262,6 +329,7 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
         "release_binding": release_binding,
         "remote_order_id": remote_order_id,
         "stage_history_summary": stage_history_summary,
+        "operator_recovery_summary": operator_recovery_summary,
         "canary_semantics": {
             "scope": "REAL_FUNDS_CANARY",
             "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
@@ -317,6 +385,7 @@ def markdown(closeout: dict[str, Any]) -> str:
         f"- Root git head: `{release.get('sidecar_git_head')}`",
         f"- Remote order id: `{closeout['remote_order_id']}`",
         f"- Stage history SHA-256: `{closeout['stage_history_summary']['sha256']}`",
+        f"- Operator recovery: `{closeout['operator_recovery_summary']['status']}`",
         "",
         "## Semantics",
         "",
@@ -335,6 +404,7 @@ def markdown(closeout: dict[str, Any]) -> str:
         f"- Matching open positions: `{readback['matching_open_position_count']}`",
         f"- Matching closed positions: `{readback['matching_closed_position_count']}`",
         f"- Stage history entries: `{closeout['stage_history_summary']['stage_count']}`",
+        f"- Operator-required stages: `{len(closeout['stage_history_summary']['operator_required_stages'])}`",
         "",
         "## Checks",
         "",

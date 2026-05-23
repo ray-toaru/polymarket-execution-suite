@@ -58,7 +58,11 @@ review package/order id and must not select by local directory modification
 time. The script also binds the ordered
 `post-canary-report.json.stages.jsonl` hash and fails closed if stage history is
 missing, references a different remote order, exposes raw signed material, or
-contains unresolved `operator_required` recovery state.
+contains unresolved `operator_required` recovery state. If an
+`operator_required` stage occurred, closeout requires `operator-recovery.json`
+with `recovery_decision=operator_reviewed_closed_no_retry`, the same remote
+order id, the exact stage-history SHA-256, no-retry/no-second-order assertions,
+and references to the order/trade/account readback evidence.
 
 ## Non-Claims
 
