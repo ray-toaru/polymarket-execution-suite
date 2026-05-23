@@ -6,7 +6,7 @@
 |---|---|---:|---|---|
 | Integration suite | `polymarket-execution-suite` | `0.27.0` | root tag `v0.27.0` after release | Pins component commits, release evidence, contract parity, canary packages, and artifact sidecars. |
 | Execution engine | `polymarket-execution-engine` | `0.27.0` | recorded in `.zip.evidence.json` | Rust executor: normalization, policy gates, runtime truth, lifecycle persistence, idempotency, audit, sign-only, and future live boundary. |
-| Hermes adapter | `hermes-polymarket-executor-adapter` | `0.26.1` | recorded in `.zip.evidence.json` | Python Hermes-compatible executor adapter: typed executor client, public schema models, safe reports, and service/admin token split. |
+| Hermes adapter | `hermes-polymarket-executor-adapter` | `0.27.0` | recorded in `.zip.evidence.json` | Python Hermes-compatible executor adapter: typed executor client, public schema models, safe reports, native Hermes plugin tools, and service/admin token split. |
 
 ## Ownership boundaries
 
@@ -52,10 +52,9 @@ It is not a runtime service and should not be imported by either component.
 ## Versioning policy
 
 The three repositories may evolve independently after v0.26.1. The v0.27.0
-suite line intentionally pins execution-engine `0.27.0` with Hermes adapter
-`0.26.1` because the current v0.27 work changes executor-side release,
-canary-closeout, and runtime safety evidence without requiring a Hermes-facing
-client/schema version bump.
+suite line pins execution-engine `0.27.0` with Hermes adapter `0.27.0` because
+this line includes both executor-side canary-closeout hardening and a
+Hermes-facing native plugin surface.
 
 - The execution engine follows its own semver based on executor API, state
   machine, database schema, SDK/gateway behavior, and live-boundary changes.
