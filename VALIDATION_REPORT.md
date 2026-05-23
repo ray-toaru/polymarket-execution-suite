@@ -50,15 +50,18 @@ Latest local refresh:
   `.zip.evidence.json` sidecar submodule records;
 - release artifact SHA-256: recorded in the detached `.zip.sha256` sidecar;
 - evidence manifest SHA-256: recorded in the detached `.zip.evidence.json`
-  sidecar and the current review package;
+  sidecar;
 - completed canary closeout package: the local
   `dist/pmx-canary-reviewed-go-v0.26-20260523T022339Z-gtc-post-only-size5`
   directory;
 - next canary review package: must start from a fresh no-go review package and
   cannot reuse the consumed reviewed-go package;
 - result: local/Rust/SDK/static/governance/package gates passed; PostgreSQL
-  migration/store/API gates passed; credentialed non-trading smoke passed; and
-  sign-only dry-run passed under explicit env gates.
+  migration/store/API gates passed; the PostgreSQL-backed store-truth CLI
+  preflight passed as
+  `72-real-funds-canary-store-truth-cli-preflight.log`; credentialed
+  non-trading smoke and sign-only dry-run were skipped in this local refresh
+  because their explicit env gates were not set.
 
 Current evidence policy:
 
@@ -70,6 +73,10 @@ Current evidence policy:
 - sign-only dry-run is `pass` only when `17-sign-only-dry-run.log` exists and
   satisfies the manifest test-count rule; otherwise it is skipped, not
   promotion evidence;
+- PostgreSQL-backed store-truth CLI preflight is `pass` only when
+  `72-real-funds-canary-store-truth-cli-preflight.log` records
+  `status=pass`, `preflight_ready=true`, no post/cancel side effects, no raw
+  signed order exposure, and `runtime_truth_source=postgres`;
 - local static, Rust, SDK, package, governance, and deployment-template gates
   are evidence only for the source-candidate boundary.
 - controlled canary closeout evidence is valid only for the single order id
