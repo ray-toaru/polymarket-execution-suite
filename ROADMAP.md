@@ -40,10 +40,11 @@ auditable, fail-closed canary pipeline:
    lease/owner recovery, and order/cancel reconciliation. The root pipeline now
    reports these as required dependencies and can validate an external
    runtime-truth evidence file before marking a future reviewed-go armed stage
-   as operator-runnable. The execution-engine real-funds preflight now has
-   explicit runtime-truth booleans and fails closed if any are false; the next
-   step is loading those booleans from durable store/provider state rather than
-   environment toggles.
+   as operator-runnable. The execution-engine real-funds canary CLI now accepts
+   `--runtime-truth-file`, binds the four durable dependency evidence refs, and
+   fails closed when the file is missing or incomplete. The next step is loading
+   the same truth directly from durable store/provider state rather than a
+   reviewed file.
 3. Dynamic exchange-rule evidence for minimum size, order type, tick, and
    post-only behavior; no permanent `size=5` release invariant.
 4. Tracked closeout summaries plus detached local JSON evidence that remain
