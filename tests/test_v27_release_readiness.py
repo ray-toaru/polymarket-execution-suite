@@ -30,33 +30,33 @@ class V027ReleaseReadinessTests(unittest.TestCase):
         path.write_text(text)
 
     def write_ready_tree(self) -> None:
-        self.write("VERSION", "0.27.2")
+        self.write("VERSION", "0.27.3")
         self.write(
             "COMPONENT_COMPATIBILITY.md",
             """# Component compatibility and ownership
 
 | Component | Current repository name | Current version | Pinned commit | Role |
 |---|---|---:|---|---|
-| Integration suite | `polymarket-execution-suite` | `0.27.2` | root tag `v0.27.2` | Pins component commits. |
-| Execution engine | `polymarket-execution-engine` | `0.27.2` | submodule commit | Rust executor. |
+| Integration suite | `polymarket-execution-suite` | `0.27.3` | root tag `v0.27.3` | Pins component commits. |
+| Execution engine | `polymarket-execution-engine` | `0.27.3` | submodule commit | Rust executor. |
 | Hermes adapter | `hermes-polymarket-executor-adapter` | `0.26.2` | submodule commit | Python adapter. |
 """,
         )
         self.write(
             "RELEASE_DECISION.md",
-            "# Release Decision - v0.27.2 controlled real-funds canary source-candidate\n"
+            "# Release Decision - v0.27.3 controlled real-funds canary source-candidate\n"
             "validated_release=false\nproduction_ready=false\nlive_trading_ready=false\n",
         )
         self.write(
             "VALIDATION_REPORT.md",
-            "# Validation Report - v0.27.2\nFull current gates refreshed for v0.27.2.\n",
+            "# Validation Report - v0.27.3\nFull current gates refreshed for v0.27.3.\n",
         )
         self.write(
             "polymarket-execution-engine/release/manifest.json",
             json.dumps(
                 {
-                    "version": "0.27.2",
-                    "status": "v0.27.2 controlled real-funds canary source-candidate",
+                    "version": "0.27.3",
+                    "status": "v0.27.3 controlled real-funds canary source-candidate",
                 }
             ),
         )
@@ -64,7 +64,7 @@ class V027ReleaseReadinessTests(unittest.TestCase):
             "polymarket-execution-engine/evidence/current/manifest.json",
             json.dumps(
                 {
-                    "version": "0.27.2",
+                    "version": "0.27.3",
                     "artifact": {"sha256": "a" * 64},
                     "external_artifact_sidecar": {"sha256": "a" * 64},
                     "release_decision": {
@@ -77,19 +77,19 @@ class V027ReleaseReadinessTests(unittest.TestCase):
         )
         for suffix, body in [
             ("", "zip"),
-            (".sha256", "a" * 64 + "  polymarket-execution-suite-v0.27.2.zip\n"),
-            (".evidence.json", json.dumps({"source": {"version": "0.27.2"}, "artifact": {"sha256": "a" * 64}})),
+            (".sha256", "a" * 64 + "  polymarket-execution-suite-v0.27.3.zip\n"),
+            (".evidence.json", json.dumps({"source": {"version": "0.27.3"}, "artifact": {"sha256": "a" * 64}})),
         ]:
-            self.write(f"dist/polymarket-execution-suite-v0.27.2.zip{suffix}", body)
+            self.write(f"dist/polymarket-execution-suite-v0.27.3.zip{suffix}", body)
 
     def test_incomplete_tree_is_not_release_ready_until_artifact_is_bound(self):
         self.write_ready_tree()
-        (self.root / "dist/polymarket-execution-suite-v0.27.2.zip").unlink()
-        (self.root / "dist/polymarket-execution-suite-v0.27.2.zip.sha256").unlink()
+        (self.root / "dist/polymarket-execution-suite-v0.27.3.zip").unlink()
+        (self.root / "dist/polymarket-execution-suite-v0.27.3.zip.sha256").unlink()
         (self.root / "polymarket-execution-engine/evidence/current/manifest.json").write_text(
             json.dumps(
                 {
-                    "version": "0.27.2",
+                    "version": "0.27.3",
                     "artifact": {"sha256": None},
                     "external_artifact_sidecar": {"sha256": None},
                     "release_decision": {
@@ -101,7 +101,7 @@ class V027ReleaseReadinessTests(unittest.TestCase):
             )
         )
         report = self.module.evaluate(self.root)
-        self.assertEqual(report["target_version"], "0.27.2")
+        self.assertEqual(report["target_version"], "0.27.3")
         self.assertEqual(report["status"], "not_ready")
         blockers = "\n".join(report["blockers"])
         self.assertIn("release artifact zip missing", blockers)
@@ -115,7 +115,7 @@ class V027ReleaseReadinessTests(unittest.TestCase):
 
     def test_missing_artifact_sidecar_blocks_release_readiness(self):
         self.write_ready_tree()
-        (self.root / "dist/polymarket-execution-suite-v0.27.2.zip.evidence.json").unlink()
+        (self.root / "dist/polymarket-execution-suite-v0.27.3.zip.evidence.json").unlink()
         report = self.module.evaluate(self.root)
         self.assertEqual(report["status"], "not_ready")
         self.assertIn("release artifact evidence sidecar missing", "\n".join(report["blockers"]))

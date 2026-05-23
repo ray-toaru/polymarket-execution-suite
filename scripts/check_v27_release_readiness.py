@@ -14,7 +14,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGET_VERSION = "0.27.2"
+TARGET_VERSION = "0.27.3"
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 

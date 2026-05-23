@@ -1318,7 +1318,7 @@ def validate_v27_release_readiness_guard() -> None:
             fail(f"v0.27 release readiness guard file missing: {path.relative_to(ROOT)}")
     guard_text = guard.read_text()
     for needle in [
-        "TARGET_VERSION = \"0.27.2\"",
+        "TARGET_VERSION = \"0.27.3\"",
         "--require-ready",
         "release artifact evidence sidecar missing",
         "current evidence manifest must bind final external_artifact_sidecar.sha256",

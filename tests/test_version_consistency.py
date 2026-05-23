@@ -32,8 +32,8 @@ class VersionConsistencyTests(unittest.TestCase):
     def write_minimal_tree(
         self,
         *,
-        suite_version: str = "0.27.2",
-        engine_version: str = "0.27.2",
+        suite_version: str = "0.27.3",
+        engine_version: str = "0.27.3",
         adapter_version: str = "0.26.2",
     ) -> None:
         self.write("VERSION", suite_version)

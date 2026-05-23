@@ -1,12 +1,12 @@
 # Component compatibility and ownership
 
-## Current v0.27.2 composition
+## Current v0.27.3 composition
 
 | Component | Current repository name | Current version | Pinned commit | Role |
 |---|---|---:|---|---|
-| Integration suite | `polymarket-execution-suite` | `0.27.2` | root tag `v0.27.2` after release | Pins component commits, release evidence, contract parity, canary packages, and artifact sidecars. |
-| Execution engine | `polymarket-execution-engine` | `0.27.2` | recorded in `.zip.evidence.json` | Rust executor: normalization, policy gates, runtime truth, lifecycle persistence, idempotency, audit, sign-only, and future live boundary. |
-| Hermes adapter | `hermes-polymarket-executor-adapter` | `0.27.2` | recorded in `.zip.evidence.json` | Python Hermes-compatible executor adapter: typed executor client, public schema models, safe reports, native Hermes plugin tools, and service/admin token split. |
+| Integration suite | `polymarket-execution-suite` | `0.27.3` | root tag `v0.27.3` after release | Pins component commits, release evidence, contract parity, canary packages, and artifact sidecars. |
+| Execution engine | `polymarket-execution-engine` | `0.27.3` | recorded in `.zip.evidence.json` | Rust executor: normalization, policy gates, runtime truth, lifecycle persistence, idempotency, audit, sign-only, and future live boundary. |
+| Hermes adapter | `hermes-polymarket-executor-adapter` | `0.27.3` | recorded in `.zip.evidence.json` | Python Hermes-compatible executor adapter: typed executor client, public schema models, safe reports, native Hermes plugin tools, and service/admin token split. |
 
 ## Ownership boundaries
 
@@ -51,8 +51,8 @@ It is not a runtime service and should not be imported by either component.
 
 ## Versioning policy
 
-The three repositories may evolve independently after v0.26.1. The v0.27.2
-suite line pins execution-engine `0.27.2` with Hermes adapter `0.27.2` because
+The three repositories may evolve independently after v0.26.1. The v0.27.3
+suite line pins execution-engine `0.27.3` with Hermes adapter `0.27.3` because
 this line includes both executor-side canary-closeout hardening and a
 Hermes-facing native plugin surface.
 
