@@ -47,6 +47,9 @@ canary, or an actual real-funds fill target.
   durable evidence refs for kill switch, live-submit gate, idempotency lease,
   and order/cancel reconciliation before a reviewed-go stage can become
   operator-runnable.
+- [x] Add execution-engine real-funds precondition gates for runtime truth:
+  armed/preflight requests now fail closed unless kill switch, live-submit gate,
+  idempotency lease, and order/cancel reconciliation truth bindings are present.
 - [x] Add optional read-only closeout stage execution for an exact completed
   package directory. The stage runs local closeout evidence generation and
   records a hash in the pipeline report without remote side effects.
@@ -54,7 +57,7 @@ canary, or an actual real-funds fill target.
   runbook. This remains blocked until a fresh reviewed `go` decision exists.
 - [ ] Promote kill switch, live-submit gates, idempotency lease/owner recovery,
   and order/cancel reconciliation from reported dependencies into durable
-  runtime truth.
+  runtime truth loaded from store/provider rows instead of env booleans.
 - [ ] Keep each future release decision single-attempt scoped: one reviewed
   package, one order, immediate cancel, readback, closeout, then consumed.
 - [ ] Preserve the default no-go state for any second canary or production/live
