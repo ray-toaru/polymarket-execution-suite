@@ -46,7 +46,8 @@ auditable, fail-closed canary pipeline:
    store/service layer now has `CanaryRuntimeTruthStore`, which derives the
    same four gates from runtime state plus `CanaryRuntimeTruth` worker rows. The
    CLI can now consume that projection from PostgreSQL with explicit account and
-   condition scope; the next step is a real DB-backed preflight evidence run.
+   condition scope, and the local DB-backed CLI preflight proves this path
+   without post/cancel side effects.
 3. Dynamic exchange-rule evidence for minimum size, order type, tick, and
    post-only behavior; no permanent `size=5` release invariant.
 4. Tracked closeout summaries plus detached local JSON evidence that remain

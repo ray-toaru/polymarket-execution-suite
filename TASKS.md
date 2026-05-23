@@ -67,9 +67,12 @@ canary, or an actual real-funds fill target.
   `--runtime-truth-database-url-env`, and explicit
   `--runtime-truth-condition-id`. The reviewed runtime-truth file remains a
   bridge path, not the only path.
-- [ ] Run a real PostgreSQL-backed CLI preflight against seeded
-  `CanaryRuntimeTruth` rows and capture current evidence once
-  `PMX_TEST_DATABASE_URL` or deployment DB URL is available in the shell.
+- [x] Run a real PostgreSQL-backed CLI preflight against seeded
+  `CanaryRuntimeTruth` rows. `validation/run_real_funds_canary_store_truth_cli_preflight.py`
+  builds the armed CLI before seeding fresh worker heartbeats, invokes
+  `--runtime-truth-store postgres` in `--preflight-only` mode, and verifies no
+  post/cancel, remote side effect, raw signed order exposure, or database URL
+  leak.
 - [ ] Keep each future release decision single-attempt scoped: one reviewed
   package, one order, immediate cancel, readback, closeout, then consumed.
 - [ ] Preserve the default no-go state for any second canary or production/live
