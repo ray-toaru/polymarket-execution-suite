@@ -1,15 +1,17 @@
-# Roadmap — v0.26 controlled canary
+# Roadmap — v0.27 development from v0.26.1 canary baseline
 
 ## Current baseline
 
-`v0.25.0` remains the released GitHub prerelease baseline:
-`https://github.com/ray-toaru/polymarket-execution-suite/releases/tag/v0.25.0`.
-
-Current source is v0.26.1 controlled canary work. One explicitly authorized
+`v0.26.1` is the current controlled canary source-candidate baseline. One explicitly authorized
 BUY/GTC post-only canary was posted, cancelled, and closed with zero observed
 fill/position impact. It is still not production-ready, not live-canary-approved
 for a second attempt, and does not authorize live submit, live cancel, or
 real-funds canary execution without a fresh reviewed `go` decision.
+
+Active development now continues on `v0.27-development`. The source version
+must remain `0.26.1` until the root suite, execution engine, adapter,
+compatibility matrix, release manifest, evidence, and validation reports are
+coherently bumped and revalidated. Branch name alone is not release evidence.
 
 ## Immediate next validation
 
@@ -24,10 +26,11 @@ real-funds canary execution without a fresh reviewed `go` decision.
    v0.26 controlled canary; the source JSON evidence remains local `dist/`
    review material.
 
-## Next-phase target on the v0.26 branch
+## v0.27 development target
 
-The next release should not broaden live trading. Its goal is a repeatable,
-auditable, fail-closed canary pipeline:
+The next release should not broaden general live trading. Its goal is a
+repeatable, auditable, fail-closed canary pipeline plus clearer component
+independence:
 
 1. Single command or runbook stage for fresh market discovery, reviewed
    candidate generation, release-decision binding, preflight, armed submit,
@@ -55,19 +58,24 @@ auditable, fail-closed canary pipeline:
 5. A release decision that can approve exactly one controlled canary attempt or
    remain no-go; production/live trading stays blocked until separate evidence
    exists.
+6. Independent component versioning: the execution engine, Hermes adapter, and
+   integration suite may diverge when their public contracts and compatibility
+   matrix prove the combination. Coordinated lockstep versions remain allowed
+   but are not the default governance model.
 
 ## Next source-hardening items
 
-1. Treat prior canary-prep evidence as satisfied by the `v0.25.0` baseline.
-2. Make `v0.26` a controlled canary source-candidate phase, not an implicit live
-   canary attempt.
+1. Treat prior canary-prep evidence as satisfied by the `v0.26.1` controlled
+   canary baseline.
+2. Make `v0.27` a productionization and repeatable-canary hardening phase, not
+   an implicit broad live-trading release.
 3. Use `docs/future/CANARY_DECISION_PREP_AUDIT.md` as active next-phase governance material,
    not as part of the v0.25.0 release decision. The
    existing reviewed canary package is no-go rehearsal material, but it is not
    bound to the latest supplemental artifact and evidence manifest hashes.
-4. Use the regenerated local `dist/pmx-canary-review-v0.26-current/` package as
-   no-go review material only; it is ignored by Git and must not be treated as
-   armed approval.
+4. Treat local `dist/pmx-canary-*` packages as transient review material unless
+   their detached sidecars, decision JSON, approval JSON, and closeout index are
+   explicitly bound to the current release artifact and manifest hashes.
 5. Before any future canary attempt, produce a reviewed release-decision JSON,
    operator approval reference, external secret-custody reference, alert-routing
    reference, and rollback/runbook review bound to the released artifact and
@@ -241,6 +249,6 @@ auditable, fail-closed canary pipeline:
 ## Still blocked
 
 General live submit, general live cancel, repeated real-funds canary attempts,
-and production deployment remain blocked in v0.26.1 until a later release has
-fresh canary/production evidence and an explicit release decision for that
-scope.
+and production deployment remain blocked after v0.26.1 until v0.27 or a later
+release has fresh canary/production evidence and an explicit release decision
+for that scope.

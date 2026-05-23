@@ -1,4 +1,4 @@
-# Design decision record — v0.26.0
+# Design decision record
 
 ## DDR-001: Two independent projects
 
@@ -29,12 +29,15 @@ Accepted. Current release evidence must live under `polymarket-execution-engine/
 
 ## DDR-007: Controlled real-funds canary requires bound human-reviewed market input
 
-Accepted for v0.26.0. The execution engine may consume an externally prepared candidate market file only when its SHA-256 is bound into the approval and reviewed release decision, and the candidate explicitly declares BUY/GTC post-only plus an external human review reference.
+Accepted for the controlled-canary line. The execution engine may consume an
+externally prepared candidate market file only when its SHA-256 is bound into
+the approval and reviewed release decision, and the candidate explicitly
+declares BUY/GTC post-only plus an external human review reference.
 
 ## DDR-008: Components may version independently
 
-Accepted. v0.26.0 is a coordinated suite release, so the root suite, adapter,
-and execution engine currently share version `0.26.0`. Future development does
+Accepted. v0.26.x was kept as a coordinated suite line, so the root suite,
+adapter, and execution engine shared the same version. Future development does
 not require permanent lockstep versions. The execution engine versions executor
 API, state machine, schema, SDK/gateway, and live-boundary changes; the Hermes
 adapter versions client/tool compatibility with executor API contracts; the

@@ -29,7 +29,7 @@ Use these current documents first:
 
 - `AGENTS.md` — repository-level agent instructions, safety boundaries, and validation rules.
 
-- `PROJECT_ARCHITECTURE.md` — v0.26 architecture baseline from the v0.3 design split.
+- `PROJECT_ARCHITECTURE.md` — current architecture baseline from the v0.3 design split.
 - `COMPONENT_COMPATIBILITY.md` — component ownership, compatibility matrix, and independent versioning policy.
 - `DEPENDENCY_POLICY.md` — pinned runtime/toolchain/dependency policy.
 - `DESIGN_DECISION_RECORD.md` — accepted architectural decisions.

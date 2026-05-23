@@ -1,9 +1,9 @@
-# Project architecture — v0.26.0
+# Project architecture — current baseline
 
 ## Baseline
 
-v0.26.0 keeps the v0.3 architectural split as the design baseline. The integration repository pins
-the two implementation planes as submodules:
+The current architecture keeps the v0.3 split as the design baseline. The
+integration repository pins the two implementation planes as submodules:
 
 ```text
 hermes-polymarket-executor-adapter  -> Python Hermes-compatible executor adapter
@@ -38,9 +38,9 @@ Forbidden across the public boundary:
 ## Component versioning
 
 The integration suite, execution engine, and Hermes adapter may evolve
-independently after v0.26.0. The suite release pins exact component commits and
-records the compatibility matrix; it does not require the component repositories
-to keep identical version numbers forever. See `COMPONENT_COMPATIBILITY.md`.
+independently. The suite release pins exact component commits and records the
+compatibility matrix; it does not require the component repositories to keep
+identical version numbers forever. See `COMPONENT_COMPATIBILITY.md`.
 
 ## Rust execution crates
 
@@ -58,4 +58,9 @@ pmx-release    release/version scaffold
 
 ## Conservative pre-live policy
 
-v0.26.0 is controlled real-funds canary source-candidate work. Runtime worker `DEGRADED`, `STALE`, or `UNKNOWN` status must not be treated as live-trading safe. Live submit/cancel remain blocked unless current gates, artifact/evidence binding, one-time approval consumption, human-reviewed BUY/GTC post-only market selection, runtime/reconcile checks, balance/allowance checks, and a reviewed `go` decision all pass.
+v0.26.1 is the controlled real-funds canary source-candidate baseline.
+Runtime worker `DEGRADED`, `STALE`, or `UNKNOWN` status must not be treated as
+live-trading safe. Live submit/cancel remain blocked unless current gates,
+artifact/evidence binding, one-time approval consumption, human-reviewed
+BUY/GTC post-only market selection, runtime/reconcile checks,
+balance/allowance checks, and a reviewed `go` decision all pass.
