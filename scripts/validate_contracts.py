@@ -1313,7 +1313,7 @@ def validate_v27_release_readiness_guard() -> None:
         "TARGET_VERSION = \"0.27.0\"",
         "--require-ready",
         "release artifact evidence sidecar missing",
-        "current evidence manifest must bind final artifact.sha256",
+        "current evidence manifest must bind final external_artifact_sidecar.sha256",
         "validated_release",
         "production_ready",
         "live_trading_ready",
@@ -1322,7 +1322,7 @@ def validate_v27_release_readiness_guard() -> None:
             fail(f"v0.27 release readiness guard missing token: {needle}")
     test_text = test.read_text()
     for needle in [
-        "test_current_tree_is_not_release_ready_while_version_remains_baseline",
+        "test_incomplete_tree_is_not_release_ready_until_artifact_is_bound",
         "test_ready_tree_passes_when_all_release_material_matches_target",
         "test_missing_artifact_sidecar_blocks_release_readiness",
     ]:

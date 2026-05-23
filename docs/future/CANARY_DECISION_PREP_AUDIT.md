@@ -1,8 +1,8 @@
-# Canary decision-prep audit — v0.26
+# Canary decision-prep audit — v0.27
 
 ## Current conclusion
 
-The current v0.26 phase is controlled canary source preparation only. The
+The current v0.27 phase is controlled canary source preparation only. The
 project is not production-ready, live-trading-ready, or approved for a
 real-funds canary fill.
 

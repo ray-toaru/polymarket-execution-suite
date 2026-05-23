@@ -1,5 +1,7 @@
 # Design decision record
 
+Status: current through v0.27 source-candidate development.
+
 ## DDR-001: Two independent projects
 
 Accepted. `hermes-polymarket-executor-adapter` is the Python

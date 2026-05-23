@@ -1,8 +1,9 @@
-# Current progress — v0.26.1
+# Current progress — v0.27.0
 
-This pass advances the repository from the v0.25.0 shadow-ready baseline to a
-v0.26.1 controlled real-funds canary source-candidate with one completed and
-closed canary attempt.
+This pass advances the repository from the v0.26.1 controlled real-funds
+canary source-candidate into v0.27.0 development. The v0.26 controlled canary
+remains historical evidence; v0.27 focuses on release-governance hardening,
+independent component versioning, and safer canary closeout/recovery evidence.
 
 ## Done in this cleanup pass
 

@@ -1,4 +1,4 @@
-# Release Decision — v0.26.1 controlled real-funds canary source-candidate
+# Release Decision — v0.27.0 controlled real-funds canary source-candidate
 
 ## Decision
 
@@ -24,13 +24,13 @@ source-candidate decision and does not authorize a second attempt.
 
 ## Scope
 
-This decision applies to v0.26.1 source at the integration repository commit
+This decision applies to v0.27.0 source at the integration repository commit
 that contains this file. The release package is the source archive
-`polymarket-execution-suite-v0.26.1.zip` plus its detached `.sha256` and
+`polymarket-execution-suite-v0.27.0.zip` plus its detached `.sha256` and
 `.zip.evidence.json` sidecars.
 
-The package advances controlled canary preparation and records one completed
-controlled canary closeout:
+The package advances controlled canary preparation, v0.27 release-governance
+hardening, and records one completed controlled canary closeout:
 
 - reviewed candidate-market binding;
 - BUY/GTC post-only canary size semantics where `target_size` is a reviewed share
@@ -39,9 +39,12 @@ controlled canary closeout:
   dependencies, with the default service/API path still fail-closed;
 - cancel-only fallback semantics at the service layer for remote-posted orders,
   with remote-unknown cancel outcomes requiring operator review;
-- release-review package generation;
+- release-review package generation and explicit independent component version
+  governance;
 - no-go and blocked rehearsal material;
-- tracked closeout summary for one consumed BUY/GTC post-only canary attempt;
+- tracked closeout summary for one consumed BUY/GTC post-only canary attempt,
+  with stage-history and operator-recovery evidence required for non-clean
+  remote-side-effect outcomes;
 - PostgreSQL, SDK, credentialed smoke, sign-only dry-run, local static,
   governance, and deployment-template evidence.
 
@@ -135,5 +138,5 @@ A future armed canary attempt must have all of the following:
   freeze, and idempotency reservation path verified;
 - rollback, cancel-only, incident, alert, audit, and custody runbooks reviewed.
 
-Until those conditions are met, v0.26.1 remains a non-live controlled canary
+Until those conditions are met, v0.27.0 remains a non-live controlled canary
 source-candidate.

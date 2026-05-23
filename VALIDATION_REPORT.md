@@ -1,9 +1,11 @@
-# Validation Report — v0.26.1 controlled real-funds canary source-candidate
+# Validation Report — v0.27.0 controlled real-funds canary source-candidate
 
 ## Current Conclusion
 
-v0.26.1 is locally validated as a controlled real-funds canary
-source-candidate. It is not production-ready and not live-trading-ready.
+v0.27.0 is being prepared as a controlled real-funds canary source-candidate.
+It is not production-ready and not live-trading-ready until the v0.27 full
+current gates, package, detached sidecars, and release readiness audit are
+refreshed together.
 
 On 2026-05-23 UTC, one explicitly authorized BUY/GTC post-only controlled canary
 was posted and immediately cancelled against the reviewed market candidate. The
@@ -24,9 +26,9 @@ The current package is valid only when the following detached sidecars are
 present next to the source archive:
 
 ```text
-dist/polymarket-execution-suite-v0.26.1.zip
-dist/polymarket-execution-suite-v0.26.1.zip.sha256
-dist/polymarket-execution-suite-v0.26.1.zip.evidence.json
+dist/polymarket-execution-suite-v0.27.0.zip
+dist/polymarket-execution-suite-v0.27.0.zip.sha256
+dist/polymarket-execution-suite-v0.27.0.zip.evidence.json
 ```
 
 The source archive does not self-bind its containing zip hash. The detached
@@ -36,7 +38,7 @@ SHA-256.
 `dist/INDEX.json` is part of the local release boundary. It is not embedded in
 the source archive; it indexes the generated artifact and local review
 directories in the developer `dist/` workspace. The index is valid only when
-`scripts/check_dist_index.py dist 0.26.1` passes and
+`scripts/check_dist_index.py dist 0.27.0` passes and
 `scripts/check_release_artifact.py` confirms the same artifact and sidecar
 hashes.
 
@@ -93,6 +95,11 @@ Current evidence policy:
   recorded in `CONTROLLED_CANARY_CLOSEOUT.md`; it is not reusable authorization
   for a later canary.
 
+Full current gates for v0.27 are required before tagging or promotion. Until
+`polymarket-execution-engine/validation/run_current_gates.sh` has refreshed the
+canonical evidence manifest for v0.27.0 and the v0.27 artifact sidecars exist,
+this report is a development-state report rather than final release evidence.
+
 ## Local Validation Commands
 
 Use local checks before CI:
@@ -101,7 +108,7 @@ Use local checks before CI:
 .venv/bin/python scripts/check_version_consistency.py
 .venv/bin/python scripts/validate_contracts.py
 .venv/bin/python scripts/check_v27_release_readiness.py
-.venv/bin/python scripts/check_dist_index.py dist 0.26.1
+.venv/bin/python scripts/check_dist_index.py dist 0.27.0
 HERMES_PROFILE=hm-pdp-test PYTHONPATH=hermes-polymarket-executor-adapter/src .venv/bin/python -m pytest -q hermes-polymarket-executor-adapter/tests
 HERMES_PROFILE=hm-pdp-test .venv/bin/python -m compileall -q hermes-polymarket-executor-adapter/src scripts polymarket-execution-engine/validation
 cd polymarket-execution-engine && ./validation/run_current_gates.sh
@@ -110,11 +117,10 @@ cd polymarket-execution-engine && ./validation/run_current_gates.sh
 Routine edits should use the relevant local subset first. Remote CI is a release
 confirmation layer, not the default way to validate every small local change.
 
-`check_v27_release_readiness.py` currently reports `not_ready` while the source
-version and release artifacts intentionally remain on the v0.26.1 development
-baseline. It becomes a failing gate only with `--require-ready`, which should be
-used when the v0.27 version bump, manifests, release decision, validation
-report, deterministic artifact, sidecars, and full gates are all refreshed.
+`check_v27_release_readiness.py` remains audit-only by default. It becomes a
+failing gate only with `--require-ready`, which should be used when the v0.27
+version bump, manifests, release decision, validation report, deterministic
+artifact, sidecars, and full gates are all refreshed.
 
 ## Canary Review Boundary
 

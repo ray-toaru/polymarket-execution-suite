@@ -1,4 +1,4 @@
-# Review audit — v0.26.0 controlled real-funds canary source-candidate
+# Review audit — v0.27 controlled real-funds canary source-candidate
 
 ## Confirmed source-level improvements
 

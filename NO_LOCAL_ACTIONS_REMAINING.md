@@ -1,4 +1,4 @@
-# No local actions remaining? — v0.26.1
+# No local actions remaining? — v0.27.0
 
 This file is retained as a compatibility entry point for older checks. It does **not** mean the project is production-ready.
 

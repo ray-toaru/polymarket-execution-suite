@@ -1,4 +1,4 @@
-# Dependency and environment policy — v0.26.0
+# Dependency and environment policy — v0.27
 
 ## Current baseline
 

@@ -84,9 +84,10 @@ def evaluate(root: Path = ROOT, target_version: str = TARGET_VERSION) -> dict[st
     evidence_manifest = load_json(root / "polymarket-execution-engine/evidence/current/manifest.json")
     if evidence_manifest.get("version") != target_version:
         blockers.append("current evidence manifest version must match v0.27 target")
-    artifact_sha = evidence_manifest.get("artifact", {}).get("sha256")
-    if not isinstance(artifact_sha, str) or not HEX64.match(artifact_sha):
-        blockers.append("current evidence manifest must bind final artifact.sha256")
+    external_artifact = evidence_manifest.get("external_artifact_sidecar", {})
+    external_artifact_sha = external_artifact.get("sha256") if isinstance(external_artifact, dict) else None
+    if not isinstance(external_artifact_sha, str) or not HEX64.match(external_artifact_sha):
+        blockers.append("current evidence manifest must bind final external_artifact_sidecar.sha256")
     decision = evidence_manifest.get("release_decision", {})
     for key in ["validated_release", "production_ready", "live_trading_ready"]:
         if decision.get(key) is not False:

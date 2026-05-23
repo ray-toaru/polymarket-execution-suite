@@ -2,7 +2,7 @@
 
 ## Review scope
 
-This review covers the current `v0.26` controlled-canary decision-prep state.
+This review covers the current `v0.27` controlled-canary decision-prep state.
 It does not approve live submit, live cancel, production deployment, or a
 real-funds canary fill. v0.26.0 remains `no_go` until the current gates and a
 reviewed `go` release decision are regenerated for the final artifact.

@@ -66,6 +66,7 @@ class V027ReleaseReadinessTests(unittest.TestCase):
                 {
                     "version": "0.27.0",
                     "artifact": {"sha256": "a" * 64},
+                    "external_artifact_sidecar": {"sha256": "a" * 64},
                     "release_decision": {
                         "validated_release": False,
                         "production_ready": False,
@@ -81,11 +82,30 @@ class V027ReleaseReadinessTests(unittest.TestCase):
         ]:
             self.write(f"dist/polymarket-execution-suite-v0.27.0.zip{suffix}", body)
 
-    def test_current_tree_is_not_release_ready_while_version_remains_baseline(self):
-        report = self.module.evaluate(ROOT)
+    def test_incomplete_tree_is_not_release_ready_until_artifact_is_bound(self):
+        self.write_ready_tree()
+        (self.root / "dist/polymarket-execution-suite-v0.27.0.zip").unlink()
+        (self.root / "dist/polymarket-execution-suite-v0.27.0.zip.sha256").unlink()
+        (self.root / "polymarket-execution-engine/evidence/current/manifest.json").write_text(
+            json.dumps(
+                {
+                    "version": "0.27.0",
+                    "artifact": {"sha256": None},
+                    "external_artifact_sidecar": {"sha256": None},
+                    "release_decision": {
+                        "validated_release": False,
+                        "production_ready": False,
+                        "live_trading_ready": False,
+                    },
+                }
+            )
+        )
+        report = self.module.evaluate(self.root)
         self.assertEqual(report["target_version"], "0.27.0")
         self.assertEqual(report["status"], "not_ready")
-        self.assertIn("VERSION must be 0.27.0", "\n".join(report["blockers"]))
+        blockers = "\n".join(report["blockers"])
+        self.assertIn("release artifact zip missing", blockers)
+        self.assertIn("current evidence manifest must bind final external_artifact_sidecar.sha256", blockers)
 
     def test_ready_tree_passes_when_all_release_material_matches_target(self):
         self.write_ready_tree()

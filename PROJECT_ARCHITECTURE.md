@@ -1,5 +1,7 @@
 # Project architecture — current baseline
 
+Status: v0.27 source-candidate architecture baseline.
+
 ## Baseline
 
 The current architecture keeps the v0.3 split as the design baseline. The
