@@ -1097,12 +1097,26 @@ def validate_controlled_canary_release_decision_governance() -> None:
     store_truth_cli_preflight_text = (EXECUTOR / "validation/run_real_funds_canary_store_truth_cli_preflight.py").read_text()
     for needle in [
         "--runtime-truth-output",
+        "--artifact-sha256",
+        "--workspace-manifest-sha256",
+        "--archived-manifest-sha256",
         "runtime_truth_document",
         "references_only_no_secret_values",
         "pg://canary-runtime-truth",
     ]:
         if needle not in store_truth_cli_preflight_text:
             fail(f"store truth CLI preflight missing runtime-truth output token: {needle}")
+    controlled_pipeline_text = (ROOT / "scripts/run_controlled_canary_pipeline.py").read_text()
+    for needle in [
+        "validate_controlled_canary_runtime_truth.py",
+        "runtime truth validator failed",
+        "runtime truth artifact binding mismatch",
+        "expected_artifact_sha256",
+        "expected_workspace_manifest_sha256",
+        "expected_archived_manifest_sha256",
+    ]:
+        if needle not in controlled_pipeline_text:
+            fail(f"controlled canary pipeline missing runtime-truth binding token: {needle}")
     readiness_text = readiness_doc.read_text()
     rehearsal = EXECUTOR / "validation/run_real_funds_canary_blocked_rehearsal_package.py"
     if not rehearsal.exists():

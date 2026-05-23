@@ -26,6 +26,7 @@ DEFAULT_EXTERNAL_REFERENCES = ENGINE / "config" / "controlled-canary.external-re
 BLOCKED_REHEARSAL = ENGINE / "validation" / "run_real_funds_canary_blocked_rehearsal_package.py"
 PREPARE_CANDIDATE = ROOT / "scripts" / "prepare_canary_candidate_market.py"
 PREPARE_CLOSEOUT = ROOT / "scripts" / "prepare_canary_closeout.py"
+VALIDATE_RUNTIME_TRUTH = ENGINE / "validation" / "validate_controlled_canary_runtime_truth.py"
 
 
 def parse_decimal(value: Any, field: str) -> Decimal:
@@ -253,8 +254,36 @@ def required_runtime_truth_names() -> set[str]:
     return {item["name"] for item in runtime_truth_dependencies()}
 
 
-def validate_runtime_truth_file(path: Path) -> dict[str, Any]:
+def validate_runtime_truth_file(
+    path: Path,
+    *,
+    expected_artifact_sha256: str | None = None,
+    expected_workspace_manifest_sha256: str | None = None,
+    expected_archived_manifest_sha256: str | None = None,
+) -> dict[str, Any]:
+    completed = subprocess.run(
+        [sys.executable, str(VALIDATE_RUNTIME_TRUTH), "--file", str(path)],
+        cwd=ENGINE,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or completed.stdout.strip()
+        raise SystemExit(f"runtime truth validator failed: {detail}")
     data = load_json(path)
+    expected_fields = {
+        "artifact_sha256": expected_artifact_sha256,
+        "workspace_manifest_sha256": expected_workspace_manifest_sha256,
+        "archived_manifest_sha256": expected_archived_manifest_sha256,
+    }
+    mismatched = [
+        f"{field} expected {expected}, got {data.get(field)!r}"
+        for field, expected in expected_fields.items()
+        if expected is not None and data.get(field) != expected
+    ]
+    if mismatched:
+        raise SystemExit("runtime truth artifact binding mismatch: " + "; ".join(mismatched))
     if data.get("schema_version") != 1:
         raise SystemExit("runtime truth schema_version must be 1")
     dependencies = data.get("dependencies")
@@ -283,6 +312,9 @@ def validate_runtime_truth_file(path: Path) -> dict[str, Any]:
         "ready_for_armed_stage": True,
         "path": str(path),
         "sha256": sha256(path),
+        "artifact_sha256": data.get("artifact_sha256"),
+        "workspace_manifest_sha256": data.get("workspace_manifest_sha256"),
+        "archived_manifest_sha256": data.get("archived_manifest_sha256"),
         "dependencies": [ready[name] for name in sorted(ready)],
     }
 
@@ -516,10 +548,6 @@ def main() -> int:
         runtime_truth_path = (
             args.runtime_truth_file if args.runtime_truth_file.is_absolute() else ROOT / args.runtime_truth_file
         )
-        runtime_truth = validate_runtime_truth_file(runtime_truth_path)
-    reviewed_go_present = reviewed_go_decision is not None
-    runtime_truth_ready = bool(runtime_truth and runtime_truth.get("ready_for_armed_stage"))
-
     release_zip = args.release_zip if args.release_zip.is_absolute() else ROOT / args.release_zip
     manifest = args.manifest if args.manifest.is_absolute() else ROOT / args.manifest
     if not release_zip.exists():
@@ -535,6 +563,18 @@ def main() -> int:
     archived_manifest_sha = canonical.get("archived_manifest_sha256") or canonical.get("manifest_sha256")
     if not archived_manifest_sha:
         raise SystemExit("release evidence sidecar missing archived manifest SHA-256")
+    if args.runtime_truth_file:
+        runtime_truth_path = (
+            args.runtime_truth_file if args.runtime_truth_file.is_absolute() else ROOT / args.runtime_truth_file
+        )
+        runtime_truth = validate_runtime_truth_file(
+            runtime_truth_path,
+            expected_artifact_sha256=artifact_sha,
+            expected_workspace_manifest_sha256=workspace_manifest_sha,
+            expected_archived_manifest_sha256=archived_manifest_sha,
+        )
+    reviewed_go_present = reviewed_go_decision is not None
+    runtime_truth_ready = bool(runtime_truth and runtime_truth.get("ready_for_armed_stage"))
 
     candidate, stages = prepare_candidate(args, output_dir)
 

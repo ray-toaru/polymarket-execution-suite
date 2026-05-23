@@ -77,6 +77,35 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         return path
 
+    def runtime_truth(self, **overrides):
+        data = {
+            "schema_version": 1,
+            "status": "reviewed_runtime_truth_candidate",
+            "source_release": f"v{(ROOT / 'polymarket-execution-engine' / 'Cargo.toml').read_text().split('version = \"')[1].split('\"')[0]}",
+            "scope": "REAL_FUNDS_CANARY",
+            "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
+            "artifact_sha256": "a" * 64,
+            "workspace_manifest_sha256": "b" * 64,
+            "archived_manifest_sha256": "c" * 64,
+            "dependencies": [
+                {"name": name, "status": "durable_runtime_truth", "evidence_ref": f"pg://{name}"}
+                for name in [
+                    "kill_switch",
+                    "live_submit_gate",
+                    "idempotency_lease",
+                    "order_cancel_reconciliation",
+                ]
+            ],
+            "references_only_no_secret_values": True,
+            "live_submit_allowed": False,
+            "live_cancel_allowed": False,
+            "real_funds_canary_authorized": False,
+            "remote_side_effects": False,
+            "production_ready_claimed": False,
+        }
+        data.update(overrides)
+        return data
+
     def test_supplied_candidate_requires_dynamic_exchange_rule_snapshot(self):
         candidate = self.candidate()
         candidate.pop("exchange_rule_snapshot")
@@ -176,24 +205,32 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         path = Path(tmp.name) / "runtime-truth.json"
-        path.write_text(
-            json.dumps(
-                {
-                    "schema_version": 1,
-                    "dependencies": [
-                        {"name": name, "status": "durable_runtime_truth", "evidence_ref": f"pg://{name}"}
-                        for name in [
-                            "kill_switch",
-                            "live_submit_gate",
-                            "idempotency_lease",
-                            "order_cancel_reconciliation",
-                        ]
-                    ],
-                }
-            )
-        )
+        path.write_text(json.dumps(self.runtime_truth()))
         report = self.pipeline.validate_runtime_truth_file(path)
         self.assertTrue(report["ready_for_armed_stage"])
+        self.assertEqual(report["artifact_sha256"], "a" * 64)
+
+    def test_runtime_truth_file_must_bind_current_release_hashes(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = Path(tmp.name) / "runtime-truth.json"
+        path.write_text(json.dumps(self.runtime_truth()))
+        with self.assertRaisesRegex(SystemExit, "artifact binding mismatch"):
+            self.pipeline.validate_runtime_truth_file(
+                path,
+                expected_artifact_sha256="0" * 64,
+                expected_workspace_manifest_sha256="b" * 64,
+                expected_archived_manifest_sha256="c" * 64,
+            )
+
+    def test_runtime_truth_file_uses_engine_validator(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = Path(tmp.name) / "runtime-truth.json"
+        doc = self.runtime_truth(live_submit_allowed=True)
+        path.write_text(json.dumps(doc))
+        with self.assertRaisesRegex(SystemExit, "runtime truth validator failed"):
+            self.pipeline.validate_runtime_truth_file(path)
 
     def test_reviewed_go_decision_requires_single_attempt_scope(self):
         tmp = tempfile.TemporaryDirectory()
