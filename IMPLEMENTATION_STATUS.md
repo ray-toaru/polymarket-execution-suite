@@ -212,6 +212,12 @@
   immediately cancels it after accepted posting, and contains the only permitted
   adapter `post_order` call site; normal gates validate this without posting or
   cancelling.
+- The first authorized v0.26 controlled real-funds canary completed as
+  `BUY/GTC/post_only=true`, `size=5`, `limit_price=0.02`; order readback
+  returned `CANCELED` and `size_matched=0`, trade readback returned zero
+  matching fills, and account readback returned zero matching activity,
+  positions, and value impact. The tracked summary is
+  `CONTROLLED_CANARY_CLOSEOUT.md`.
 - PostgreSQL migration `0004_real_funds_canary` adds idempotent, hash-bound,
   redaction-preserving local canary run storage without raw signed order
   exposure.
@@ -254,6 +260,9 @@
 - Production deployment.
 - Actual real-funds canary fill until a reviewed release decision and local
   approval file explicitly authorize it.
+- Any second real-funds canary attempt until fresh market discovery, a new
+  reviewed release decision, current gates, and a new closeout plan are bound to
+  that exact attempt.
 - Python-side access to signing or CLOB secrets.
 - Public exposure of raw signed payloads or signed order envelopes.
 

@@ -1,8 +1,37 @@
 # Tasks — v0.26 controlled canary
 
-This root task list tracks v0.26.0 controlled canary source work. It is not
-live-execution evidence and does not authorize live submit, live cancel,
-production deployment, or an actual real-funds fill.
+This root task list tracks v0.26.0 controlled canary source work. One
+controlled real-funds canary attempt has been completed and closed; this list
+does not authorize live submit, live cancel, production deployment, a second
+canary, or an actual real-funds fill target.
+
+## Completed controlled canary closeout
+
+- [x] Execute exactly one reviewed BUY/GTC post-only canary with `size=5` and
+  `limit_price=0.02`.
+- [x] Persist the armed post/cancel receipt in the local review package.
+- [x] Query remote order status and confirm `remote_status=CANCELED` with
+  `size_matched=0`.
+- [x] Query trades for the order/token and confirm zero matching fills.
+- [x] Query public account activity/positions/value for the account/market/token
+  and confirm zero matching activity, trades, open positions, closed positions,
+  and value impact.
+- [x] Generate `closeout.json` and `CLOSEOUT.md` from local evidence.
+- [x] Add tracked summary `CONTROLLED_CANARY_CLOSEOUT.md`.
+
+## v0.27 canary-pipeline work
+
+- [ ] Convert the current manual review/preflight/armed/readback/closeout flow
+  into a single fail-closed command or documented staged runbook.
+- [ ] Bind dynamic exchange-rule discovery into the candidate and armed
+  preflight path so minimum size/order-type changes require fresh review.
+- [ ] Integrate kill switch, live-submit gates, idempotency lease/owner
+  recovery, and order/cancel reconciliation into runtime truth instead of local
+  review evidence only.
+- [ ] Keep each future release decision single-attempt scoped: one reviewed
+  package, one order, immediate cancel, readback, closeout, then consumed.
+- [ ] Preserve the default no-go state for any second canary or production/live
+  trading claim until fresh gates and a new decision exist.
 
 ## Next-phase controlled canary decision-prep
 
@@ -81,6 +110,7 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [ ] Live cancel
 - [ ] Production deployment
 - [ ] Actual real-funds canary fill
+- [ ] Second real-funds canary attempt
 
 ## Real-funds canary program readiness
 

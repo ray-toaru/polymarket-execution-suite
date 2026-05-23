@@ -33,6 +33,7 @@ Use these current documents first:
 - `DEPENDENCY_POLICY.md` — pinned runtime/toolchain/dependency policy.
 - `DESIGN_DECISION_RECORD.md` — accepted architectural decisions.
 - `IMPLEMENTATION_STATUS.md` — implemented, blocked, and intentionally disabled areas.
+- `CONTROLLED_CANARY_CLOSEOUT.md` — tracked summary for the completed one-time v0.26 controlled canary.
 - `VALIDATION_REPORT.md` — what is locally verified versus externally required.
 - `REVIEW_AUDIT.md` — known risks and audit judgment.
 - `DOC_STATUS.md` — document/evidence governance map.

@@ -64,7 +64,7 @@ PYTHONPATH=hermes-polymarket-control/src python -m pytest -q hermes-polymarket-c
 python -m compileall -q hermes-polymarket-control/src scripts polymarket-execution-engine/validation
 python polymarket-execution-engine/validation/check_docs_evidence_governance.py
 python scripts/clean_local_artifacts.py
-python polymarket-execution-engine/scripts/check_release_hygiene.py .
+python polymarket-execution-engine/scripts/check_release_hygiene.py . --dev-worktree
 ```
 
 Full external validation, when Rust/PostgreSQL/SDK prerequisites exist:

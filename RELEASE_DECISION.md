@@ -17,7 +17,10 @@ Current explicit non-claims:
 - `live_cancel_allowed=false`
 - `real_funds_canary_authorized=false`
 
-Do not claim production readiness. Do not claim live-trading readiness.
+Do not claim production readiness. Do not claim live-trading readiness. The
+first controlled canary was authorized through a separate reviewed-go package,
+then consumed and closed; this release decision remains the durable non-live
+source-candidate decision and does not authorize a second attempt.
 
 ## Scope
 
@@ -26,7 +29,8 @@ that contains this file. The release package is the source archive
 `polymarket-execution-suite-v0.26.0.zip` plus its detached `.sha256` and
 `.zip.evidence.json` sidecars.
 
-The package advances controlled canary preparation:
+The package advances controlled canary preparation and records one completed
+controlled canary closeout:
 
 - reviewed candidate-market binding;
 - BUY/GTC post-only canary size semantics where `target_size` is a reviewed share
@@ -37,6 +41,7 @@ The package advances controlled canary preparation:
   with remote-unknown cancel outcomes requiring operator review;
 - release-review package generation;
 - no-go and blocked rehearsal material;
+- tracked closeout summary for one consumed BUY/GTC post-only canary attempt;
 - PostgreSQL, SDK, credentialed smoke, sign-only dry-run, local static,
   governance, and deployment-template evidence.
 
@@ -75,6 +80,8 @@ Current detached artifact binding:
 - current user-selected review package: the latest
   `dist/pmx-canary-review-v0.26-*-gtc-post-only-current-no-go` directory;
 - review package decision: `no_go`, `real_funds_canary_authorized=false`.
+- consumed reviewed-go package: one local v0.26 package produced a posted,
+  cancelled, zero-fill closeout summarized in `CONTROLLED_CANARY_CLOSEOUT.md`.
 
 Detached release sidecars bind the final containing zip hash. The manifest
 inside the source zip intentionally does not self-bind the containing archive.

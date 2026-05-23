@@ -17,7 +17,6 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_PACKAGE = ROOT / "dist" / "pmx-canary-review-v0.26-20260522T164451Z-gtc-post-only-acctb-go"
 DEFAULT_RELEASE_ZIP = ROOT / "dist" / "polymarket-execution-suite-v0.26.0.zip"
 
 
@@ -25,7 +24,12 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Prepare machine-readable and human closeout reports for a controlled canary package."
     )
-    parser.add_argument("--package-dir", type=Path, default=DEFAULT_PACKAGE)
+    parser.add_argument(
+        "--package-dir",
+        type=Path,
+        required=True,
+        help="Exact canary review package directory to close out. Required to avoid selecting the wrong local order evidence.",
+    )
     parser.add_argument("--release-zip", type=Path, default=DEFAULT_RELEASE_ZIP)
     parser.add_argument("--output-json", type=Path)
     parser.add_argument("--output-md", type=Path)

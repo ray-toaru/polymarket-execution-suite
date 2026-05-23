@@ -5,7 +5,7 @@
 v0.26.0 is locally validated as a controlled real-funds canary
 source-candidate. It is not production-ready and not live-trading-ready.
 
-On 2026-05-22, one explicitly authorized BUY/GTC post-only controlled canary
+On 2026-05-23 UTC, one explicitly authorized BUY/GTC post-only controlled canary
 was posted and immediately cancelled against the reviewed market candidate. The
 saved readback evidence records `remote_status=CANCELED`, `size_matched=0`, and
 zero matching trades for the submitted order id. A broader public Data API
@@ -13,6 +13,12 @@ readback for the same account/market/token also records zero activity, zero
 trades, zero open positions, zero closed positions, and value `0`. This
 validates the one-time canary exercise only; it is not evidence for general
 production/live readiness.
+
+Tracked closeout summary:
+
+```text
+CONTROLLED_CANARY_CLOSEOUT.md
+```
 
 The current package is valid only when the following detached sidecars are
 present next to the source archive:
@@ -38,13 +44,18 @@ polymarket-execution-engine/evidence/current/manifest.json
 Latest local refresh:
 
 - date: 2026-05-23 UTC;
-- gate source root commit before this report refresh: `86f8801`;
-- gate source execution-engine commit before this report refresh: `f6cc896`;
+- gate source root commit: recorded in the detached `.zip.evidence.json`
+  sidecar generated after the final root commit;
+- gate source execution-engine commit: recorded in the detached
+  `.zip.evidence.json` sidecar submodule records;
 - release artifact SHA-256: recorded in the detached `.zip.sha256` sidecar;
 - evidence manifest SHA-256: recorded in the detached `.zip.evidence.json`
   sidecar and the current review package;
-- current canary review package: the latest
-  `dist/pmx-canary-review-v0.26-*-gtc-post-only-current-no-go` directory;
+- completed canary closeout package: the local
+  `dist/pmx-canary-reviewed-go-v0.26-20260523T022339Z-gtc-post-only-size5`
+  directory;
+- next canary review package: must start from a fresh no-go review package and
+  cannot reuse the consumed reviewed-go package;
 - result: local/Rust/SDK/static/governance/package gates passed; PostgreSQL
   migration/store/API gates passed; credentialed non-trading smoke passed; and
   sign-only dry-run passed under explicit env gates.
@@ -61,6 +72,9 @@ Current evidence policy:
   promotion evidence;
 - local static, Rust, SDK, package, governance, and deployment-template gates
   are evidence only for the source-candidate boundary.
+- controlled canary closeout evidence is valid only for the single order id
+  recorded in `CONTROLLED_CANARY_CLOSEOUT.md`; it is not reusable authorization
+  for a later canary.
 
 ## Local Validation Commands
 
@@ -96,7 +110,9 @@ The controlled canary dry-run may report `dry_run_ready`, but that status still
 means no live submit, no live cancel, no posted order, and no remote side
 effects.
 
-The current user-selected review package remains `no_go` and not armed:
+The first user-selected reviewed-go package has been consumed and closed. Any
+future user-selected review package must start as `no_go` and not armed until a
+fresh reviewed decision changes only that package:
 
 - market: `will-iran-legalize-gay-marriage`;
 - side/outcome: BUY Yes;
@@ -104,9 +120,9 @@ The current user-selected review package remains `no_go` and not armed:
 - target size: `5` outcome shares;
 - limit price: `0.02`;
 - maximum order notional: `1.00` USD;
-- `real_funds_canary_authorized=false`;
-- `live_submit_authorized=false`;
-- `live_cancel_authorized=false`.
+- `real_funds_canary_authorized=false` by default;
+- `live_submit_authorized=false` by default;
+- `live_cancel_authorized=false` by default.
 
 ## Non-Claims
 

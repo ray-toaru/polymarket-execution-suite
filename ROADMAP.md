@@ -5,9 +5,11 @@
 `v0.25.0` remains the released GitHub prerelease baseline:
 `https://github.com/ray-toaru/polymarket-execution-suite/releases/tag/v0.25.0`.
 
-Current source is v0.26.0 controlled canary work. It is not production-ready,
-not live-canary-approved, and does not authorize live submit, live cancel, or
-real-funds canary execution without a reviewed `go` decision.
+Current source is v0.26.0 controlled canary work. One explicitly authorized
+BUY/GTC post-only canary was posted, cancelled, and closed with zero observed
+fill/position impact. It is still not production-ready, not live-canary-approved
+for a second attempt, and does not authorize live submit, live cancel, or
+real-funds canary execution without a fresh reviewed `go` decision.
 
 ## Immediate next validation
 
@@ -18,6 +20,27 @@ real-funds canary execution without a reviewed `go` decision.
    changes.
 4. Keep `polymarket-execution-engine/evidence/current/manifest.json` as the
    only current evidence manifest.
+5. Keep `CONTROLLED_CANARY_CLOSEOUT.md` as the tracked summary for the completed
+   v0.26 controlled canary; the source JSON evidence remains local `dist/`
+   review material.
+
+## v0.27 target
+
+The next release should not broaden live trading. Its goal is a repeatable,
+auditable, fail-closed canary pipeline:
+
+1. Single command or runbook stage for fresh market discovery, reviewed
+   candidate generation, release-decision binding, preflight, armed submit,
+   immediate cancel, readback, and closeout.
+2. Runtime truth integration for kill switch, live-submit gates, idempotency
+   lease/owner recovery, and order/cancel reconciliation.
+3. Dynamic exchange-rule evidence for minimum size, order type, tick, and
+   post-only behavior; no permanent `size=5` release invariant.
+4. Tracked closeout summaries plus detached local JSON evidence that remain
+   redacted and reproducible without exposing signing material.
+5. A release decision that can approve exactly one controlled canary attempt or
+   remain no-go; production/live trading stays blocked until separate evidence
+   exists.
 
 ## Next source-hardening items
 
@@ -197,7 +220,13 @@ real-funds canary execution without a reviewed `go` decision.
     modules.
 63. Service runtime-state provider split: fail-closed, static, and
     store-backed providers now live in focused modules.
+64. First real-funds controlled canary closeout: one BUY/GTC post-only order was
+    posted, cancelled, and read back with `size_matched=0`, zero matching
+    trades, and zero matching account/position/value impact.
 
 ## Still blocked
 
-Live submit, live cancel, and production deployment remain blocked in v0.26.0 until a later release has canary/production evidence and an explicit release decision.
+General live submit, general live cancel, repeated real-funds canary attempts,
+and production deployment remain blocked in v0.26.0 until a later release has
+fresh canary/production evidence and an explicit release decision for that
+scope.

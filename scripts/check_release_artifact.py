@@ -143,6 +143,10 @@ def main() -> int:
             failures.append("evidence sidecar canonical_evidence.manifest_path is not current manifest")
         if not canonical_evidence.get("manifest_sha256"):
             failures.append("evidence sidecar canonical_evidence.manifest_sha256 is missing")
+        if canonical_evidence.get("archived_manifest_sha256") != canonical_evidence.get("manifest_sha256"):
+            failures.append("evidence sidecar canonical_evidence.archived_manifest_sha256 must match manifest_sha256")
+        if not canonical_evidence.get("workspace_manifest_sha256"):
+            failures.append("evidence sidecar canonical_evidence.workspace_manifest_sha256 is missing")
     with zipfile.ZipFile(zip_path) as zf:
         names = zf.namelist()
         roots = {name.split('/', 1)[0] for name in names if name and '/' in name}
@@ -236,6 +240,8 @@ def main() -> int:
                 archive_manifest_sha = hashlib.sha256(manifest_bytes).hexdigest()
                 if sidecar_manifest_sha != archive_manifest_sha:
                     failures.append("evidence sidecar manifest_sha256 does not match archived manifest")
+                if evidence.get("canonical_evidence", {}).get("archived_manifest_sha256") != archive_manifest_sha:
+                    failures.append("evidence sidecar archived_manifest_sha256 does not match archived manifest")
         release_manifest = f"{expected_root}/polymarket-execution-engine/release/manifest.json"
         if release_manifest not in names:
             failures.append("release manifest missing")

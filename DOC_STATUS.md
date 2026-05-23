@@ -8,6 +8,7 @@
 - `DEPENDENCY_POLICY.md`
 - `DESIGN_DECISION_RECORD.md`
 - `IMPLEMENTATION_STATUS.md`
+- `CONTROLLED_CANARY_CLOSEOUT.md`
 - `CURRENT_PROGRESS.md`
 - `ROADMAP.md`
 - `TASKS.md`
@@ -18,9 +19,11 @@
 - `DEVELOPMENT_HANDOFF.md`
 - `NO_LOCAL_ACTIONS_REMAINING.md`
 
-Canary decision-prep documents are active v0.26 governance material. They must
-continue to state `no_go` unless a future reviewed release decision explicitly
-changes the live/production boundary.
+Canary decision-prep documents are active v0.26 governance material. The first
+authorized controlled canary is closed and summarized in
+`CONTROLLED_CANARY_CLOSEOUT.md`. Future canary decision-prep material must
+continue to state `no_go` unless a fresh reviewed release decision explicitly
+changes the live/production boundary for that single attempt.
 
 ## Historical documents
 

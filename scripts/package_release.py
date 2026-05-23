@@ -215,6 +215,7 @@ def main() -> int:
     sidecar = OUT.with_suffix(OUT.suffix + ".sha256")
     artifact_sha256 = sha256(OUT)
     evidence_manifest = ROOT / "polymarket-execution-engine" / "evidence" / "current" / "manifest.json"
+    workspace_manifest_sha256 = sha256(evidence_manifest) if evidence_manifest.exists() else None
     manifest_sha256 = (
         hashlib.sha256(archive_bytes(evidence_manifest)).hexdigest()
         if evidence_manifest.exists()
@@ -242,6 +243,8 @@ def main() -> int:
                 "canonical_evidence": {
                     "manifest_path": "polymarket-execution-engine/evidence/current/manifest.json",
                     "manifest_sha256": manifest_sha256,
+                    "archived_manifest_sha256": manifest_sha256,
+                    "workspace_manifest_sha256": workspace_manifest_sha256,
                 },
                 "release_decision_path": "RELEASE_DECISION.md",
                 "note": "This external sidecar binds the final zip hash; files inside the zip do not self-assert the final containing-archive hash.",
