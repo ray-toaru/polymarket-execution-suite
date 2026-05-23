@@ -34,6 +34,10 @@
 - Rollback/kill-switch drill covers runtime degraded, SDK failure, PostgreSQL
   unavailable, geoblock blocked, low resource, and remote-unknown freeze
   fallback behavior.
+- Explicit live-gateway service tests now re-check runtime truth after remote
+  post acknowledgment; if runtime degrades at that point, the order remains
+  recorded as posted but the submit receipt is `PARTIAL_REMOTE_UNKNOWN` and
+  operator review is required.
 - Shadow and rollback drill safety guards validate non-posting/non-signing
   behavior, hashed identifiers, sensitive-env redaction, required rollback
   scenarios, and fallback modes without requiring network access.
