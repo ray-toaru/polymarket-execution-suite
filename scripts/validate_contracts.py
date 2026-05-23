@@ -937,17 +937,21 @@ def validate_controlled_canary_release_decision_governance() -> None:
     external_example = EXECUTOR / "config/controlled-canary.external-references.example.json"
     external_invalid = EXECUTOR / "config/controlled-canary.external-references.invalid-sensitive.fixture.json"
     external_validator = EXECUTOR / "validation/validate_controlled_canary_external_references.py"
+    runtime_truth_template = EXECUTOR / "config/controlled-canary.runtime-truth.template.json"
     for path in [template, example, invalid, invalid_mismatched, validator]:
         if not path.exists():
             fail(f"controlled canary release-decision governance file missing: {path.relative_to(ROOT)}")
     for path in [external_template, external_example, external_invalid, external_validator]:
         if not path.exists():
             fail(f"controlled canary external-reference governance file missing: {path.relative_to(ROOT)}")
+    if not runtime_truth_template.exists():
+        fail(f"controlled canary runtime-truth governance file missing: {runtime_truth_template.relative_to(ROOT)}")
     template_data = json.loads(template.read_text())
     example_data = json.loads(example.read_text())
     invalid_data = json.loads(invalid.read_text())
     invalid_mismatched_data = json.loads(invalid_mismatched.read_text())
     external_example_data = json.loads(external_example.read_text())
+    runtime_truth_template_data = json.loads(runtime_truth_template.read_text())
     if template_data.get("decision") != "no_go":
         fail("controlled canary release-decision template must default to no_go")
     for flag in [
@@ -1032,6 +1036,40 @@ def validate_controlled_canary_release_decision_governance() -> None:
         fail("controlled canary external-reference example must bind the same artifact hash as the release-decision example")
     if external_example_data.get("evidence_manifest_sha256") != example_data.get("evidence_manifest_sha256"):
         fail("controlled canary external-reference example must bind the same evidence manifest hash as the release-decision example")
+    if runtime_truth_template_data.get("schema_version") != 1:
+        fail("controlled canary runtime-truth template must use schema_version=1")
+    if runtime_truth_template_data.get("references_only_no_secret_values") is not True:
+        fail("controlled canary runtime-truth template must be references-only")
+    for flag in [
+        "live_submit_allowed",
+        "live_cancel_allowed",
+        "real_funds_canary_authorized",
+        "remote_side_effects",
+        "production_ready_claimed",
+    ]:
+        if runtime_truth_template_data.get(flag) is not False:
+            fail(f"controlled canary runtime-truth template must keep {flag}=false")
+    runtime_truth_dependencies = runtime_truth_template_data.get("dependencies")
+    if not isinstance(runtime_truth_dependencies, list):
+        fail("controlled canary runtime-truth template dependencies must be a list")
+        runtime_truth_dependencies = []
+    dependency_names = {
+        item.get("name")
+        for item in runtime_truth_dependencies
+        if isinstance(item, dict)
+    }
+    for name in ["kill_switch", "live_submit_gate", "idempotency_lease", "order_cancel_reconciliation"]:
+        if name not in dependency_names:
+            fail(f"controlled canary runtime-truth template missing dependency: {name}")
+    for item in runtime_truth_dependencies:
+        if not isinstance(item, dict):
+            fail("controlled canary runtime-truth template dependencies must be objects")
+            continue
+        if item.get("status") != "durable_runtime_truth":
+            fail(f"controlled canary runtime-truth template dependency {item.get('name')} must require durable_runtime_truth")
+        evidence_ref = item.get("evidence_ref")
+        if not isinstance(evidence_ref, str) or "REPLACE_WITH" not in evidence_ref:
+            fail(f"controlled canary runtime-truth template dependency {item.get('name')} must use placeholder evidence_ref")
     readiness_text = readiness_doc.read_text()
     rehearsal = EXECUTOR / "validation/run_real_funds_canary_blocked_rehearsal_package.py"
     if not rehearsal.exists():
@@ -1054,7 +1092,7 @@ def validate_controlled_canary_release_decision_governance() -> None:
     ]:
         if needle not in rehearsal_text:
             fail(f"blocked real-funds canary rehearsal script missing token: {needle}")
-    for needle in ["default no-go", "external-references.json", "release-decision.json", "real_funds_canary_authorized=false", "--external-references-file", "REPLACE_WITH_*", "run_real_funds_canary_blocked_rehearsal_package.py"]:
+    for needle in ["default no-go", "external-references.json", "release-decision.json", "controlled-canary.runtime-truth.template.json", "real_funds_canary_authorized=false", "--external-references-file", "REPLACE_WITH_*", "run_real_funds_canary_blocked_rehearsal_package.py"]:
         if needle not in readiness_text:
             fail(f"real-funds canary operations readiness doc missing token: {needle}")
     for needle in ["prepare_canary_candidate_market.py", "candidate-market.audit.json", "read-only public API candidate"]:

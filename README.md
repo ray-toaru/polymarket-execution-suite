@@ -106,7 +106,10 @@ must be single-attempt scoped (`max_order_count=1`, post/cancel and
 readback/closeout required). A runtime-truth file must prove durable
 `kill_switch`, `live_submit_gate`, `idempotency_lease`, and
 `order_cancel_reconciliation` dependencies before the report marks the armed
-stage as operator-runnable. A closeout package runs the read-only closeout
+stage as operator-runnable. Use
+`polymarket-execution-engine/config/controlled-canary.runtime-truth.template.json`
+as the input shape; it is references-only and does not authorize live submit by
+itself. A closeout package runs the read-only closeout
 script and records the resulting local evidence hash plus
 `post-canary-report.json.stages.jsonl` summary/hash; it does not query remote
 APIs or place/cancel orders. v0.27 closeout refuses to claim clean closure if
