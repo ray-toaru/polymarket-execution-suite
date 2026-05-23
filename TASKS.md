@@ -73,9 +73,9 @@ canary, or an actual real-funds fill target.
   `--runtime-truth-store postgres` in `--preflight-only` mode, and verifies no
   post/cancel, remote side effect, raw signed order exposure, or database URL
   leak.
-- [ ] Keep each future release decision single-attempt scoped: one reviewed
+- [x] Keep each future release decision single-attempt scoped: one reviewed
   package, one order, immediate cancel, readback, closeout, then consumed.
-- [ ] Preserve the default no-go state for any second canary or production/live
+- [x] Preserve the default no-go state for any second canary or production/live
   trading claim until fresh gates and a new decision exist.
 
 ## Next-phase controlled canary decision-prep

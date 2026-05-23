@@ -168,6 +168,62 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "single_attempt"):
             self.pipeline.validate_reviewed_go_decision_file(path)
 
+    def test_reviewed_go_decision_rejects_consumed_package_directory(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        package = Path(tmp.name)
+        path = package / "release-decision.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "decision": "go",
+                    "status": "reviewed_go",
+                    "scope": "REAL_FUNDS_CANARY",
+                    "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
+                    "live_submit_authorized": True,
+                    "live_cancel_authorized": True,
+                    "real_funds_canary_authorized": True,
+                    "remote_side_effects_authorized": True,
+                    "production_deployment_authorized": False,
+                    "single_attempt": True,
+                    "max_order_count": 1,
+                    "post_cancel_required": True,
+                    "readback_closeout_required": True,
+                }
+            )
+        )
+        (package / "approval-consumed-20260523T000000Z.json").write_text("{}")
+        with self.assertRaisesRegex(SystemExit, "already consumed"):
+            self.pipeline.validate_reviewed_go_decision_file(path)
+
+    def test_reviewed_go_decision_rejects_closed_package_directory(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        package = Path(tmp.name)
+        path = package / "release-decision.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "decision": "go",
+                    "status": "reviewed_go",
+                    "scope": "REAL_FUNDS_CANARY",
+                    "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
+                    "live_submit_authorized": True,
+                    "live_cancel_authorized": True,
+                    "real_funds_canary_authorized": True,
+                    "remote_side_effects_authorized": True,
+                    "production_deployment_authorized": False,
+                    "single_attempt": True,
+                    "max_order_count": 1,
+                    "post_cancel_required": True,
+                    "readback_closeout_required": True,
+                }
+            )
+        )
+        (package / "closeout.json").write_text("{}")
+        with self.assertRaisesRegex(SystemExit, "already closed"):
+            self.pipeline.validate_reviewed_go_decision_file(path)
+
     def test_closeout_package_stage_runs_read_only_closeout(self):
         package = ROOT / "dist" / "unit-closeout-fixture"
         if package.exists():

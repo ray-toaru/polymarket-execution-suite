@@ -224,6 +224,15 @@ def validate_runtime_truth_file(path: Path) -> dict[str, Any]:
 
 
 def validate_reviewed_go_decision_file(path: Path) -> dict[str, Any]:
+    consumed_markers = sorted(path.parent.glob("approval-consumed*.json"))
+    if consumed_markers:
+        raise SystemExit(
+            "reviewed-go decision package already consumed: "
+            + ", ".join(marker.name for marker in consumed_markers)
+        )
+    if (path.parent / "closeout.json").exists() or (path.parent / "CLOSEOUT.md").exists():
+        raise SystemExit("reviewed-go decision package already closed; fresh decision required")
+
     decision = load_json(path)
     required = [
         (decision.get("decision") == "go", "decision must be go"),
