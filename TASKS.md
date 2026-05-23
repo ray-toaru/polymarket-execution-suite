@@ -62,8 +62,14 @@ canary, or an actual real-funds fill target.
   records a hash in the pipeline report without remote side effects.
 - [ ] Implement the future reviewed-go single-attempt armed/readback/closeout
   runbook. This remains blocked until a fresh reviewed `go` decision exists.
-- [ ] Wire the real-funds canary CLI/runbook to consume store/provider runtime
-  truth directly instead of the reviewed runtime-truth file bridge.
+- [x] Wire the real-funds canary CLI to consume store/provider runtime truth
+  directly via `--runtime-truth-store postgres`,
+  `--runtime-truth-database-url-env`, and explicit
+  `--runtime-truth-condition-id`. The reviewed runtime-truth file remains a
+  bridge path, not the only path.
+- [ ] Run a real PostgreSQL-backed CLI preflight against seeded
+  `CanaryRuntimeTruth` rows and capture current evidence once
+  `PMX_TEST_DATABASE_URL` or deployment DB URL is available in the shell.
 - [ ] Keep each future release decision single-attempt scoped: one reviewed
   package, one order, immediate cancel, readback, closeout, then consumed.
 - [ ] Preserve the default no-go state for any second canary or production/live

@@ -45,8 +45,8 @@ auditable, fail-closed canary pipeline:
    fails closed when the file is missing or incomplete. The execution-engine
    store/service layer now has `CanaryRuntimeTruthStore`, which derives the
    same four gates from runtime state plus `CanaryRuntimeTruth` worker rows. The
-   next step is wiring the CLI/runbook to consume that provider projection
-   directly instead of the reviewed file bridge.
+   CLI can now consume that projection from PostgreSQL with explicit account and
+   condition scope; the next step is a real DB-backed preflight evidence run.
 3. Dynamic exchange-rule evidence for minimum size, order type, tick, and
    post-only behavior; no permanent `size=5` release invariant.
 4. Tracked closeout summaries plus detached local JSON evidence that remain
