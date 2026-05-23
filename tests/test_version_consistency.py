@@ -32,8 +32,8 @@ class VersionConsistencyTests(unittest.TestCase):
     def write_minimal_tree(
         self,
         *,
-        suite_version: str = "0.27.1",
-        engine_version: str = "0.27.1",
+        suite_version: str = "0.27.2",
+        engine_version: str = "0.27.2",
         adapter_version: str = "0.26.2",
     ) -> None:
         self.write("VERSION", suite_version)
@@ -47,7 +47,7 @@ class VersionConsistencyTests(unittest.TestCase):
 | Execution engine | `polymarket-execution-engine` | `{engine_version}` | submodule commit | Rust executor. |
 | Hermes adapter | `hermes-polymarket-executor-adapter` | `{adapter_version}` | submodule commit | Python adapter. |
 
-The three repositories may evolve independently after v0.26.1.
+The three repositories may evolve independently after the current shared release.
 """,
         )
         self.write("hermes-polymarket-executor-adapter/pyproject.toml", f'version = "{adapter_version}"\n')

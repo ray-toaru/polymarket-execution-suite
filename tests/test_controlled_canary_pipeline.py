@@ -331,7 +331,7 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         )
         stage = self.pipeline.run_closeout_stage(
             package,
-            ROOT / "dist" / "polymarket-execution-suite-v0.27.1.zip",
+            ROOT / "dist" / "polymarket-execution-suite-v0.27.2.zip",
         )
         self.assertEqual(stage["status"], "pass")
         self.assertFalse(stage["remote_side_effects"])
@@ -384,7 +384,7 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "stage history"):
             self.pipeline.run_closeout_stage(
                 package,
-                ROOT / "dist" / "polymarket-execution-suite-v0.27.1.zip",
+                ROOT / "dist" / "polymarket-execution-suite-v0.27.2.zip",
             )
 
     def test_closeout_default_release_zip_follows_workspace_version(self):
@@ -451,7 +451,7 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "stage_history_has_cancel_confirmed"):
             self.closeout.build_closeout(
                 package,
-                ROOT / "dist" / "polymarket-execution-suite-v0.27.1.zip",
+                ROOT / "dist" / "polymarket-execution-suite-v0.27.2.zip",
             )
 
     def test_closeout_package_stage_rejects_operator_required_history(self):
@@ -511,7 +511,7 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "operator_required"):
             self.pipeline.run_closeout_stage(
                 package,
-                ROOT / "dist" / "polymarket-execution-suite-v0.27.1.zip",
+                ROOT / "dist" / "polymarket-execution-suite-v0.27.2.zip",
             )
 
     def test_closeout_package_stage_accepts_bound_operator_recovery_evidence(self):
@@ -608,7 +608,7 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         )
         stage = self.pipeline.run_closeout_stage(
             package,
-            ROOT / "dist" / "polymarket-execution-suite-v0.27.1.zip",
+            ROOT / "dist" / "polymarket-execution-suite-v0.27.2.zip",
         )
         self.assertEqual(stage["status"], "pass")
         closeout = json.loads((package / "closeout.json").read_text())
@@ -693,7 +693,7 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "operator recovery"):
             self.pipeline.run_closeout_stage(
                 package,
-                ROOT / "dist" / "polymarket-execution-suite-v0.27.1.zip",
+                ROOT / "dist" / "polymarket-execution-suite-v0.27.2.zip",
             )
 
     def test_closeout_package_stage_accepts_post_unknown_incident_recovery(self):
@@ -782,7 +782,7 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         )
         stage = self.pipeline.run_closeout_stage(
             package,
-            ROOT / "dist" / "polymarket-execution-suite-v0.27.1.zip",
+            ROOT / "dist" / "polymarket-execution-suite-v0.27.2.zip",
         )
         self.assertEqual(stage["status"], "pass")
         closeout = json.loads((package / "closeout.json").read_text())
@@ -875,7 +875,7 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "incident recovery"):
             self.pipeline.run_closeout_stage(
                 package,
-                ROOT / "dist" / "polymarket-execution-suite-v0.27.1.zip",
+                ROOT / "dist" / "polymarket-execution-suite-v0.27.2.zip",
             )
 
 

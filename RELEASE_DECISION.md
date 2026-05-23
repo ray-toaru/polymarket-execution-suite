@@ -1,4 +1,4 @@
-# Release Decision — v0.27.1 controlled real-funds canary source-candidate
+# Release Decision — v0.27.2 controlled real-funds canary source-candidate
 
 ## Decision
 
@@ -24,9 +24,9 @@ source-candidate decision and does not authorize a second attempt.
 
 ## Scope
 
-This decision applies to v0.27.1 source at the integration repository commit
+This decision applies to v0.27.2 source at the integration repository commit
 that contains this file. The release package is the source archive
-`polymarket-execution-suite-v0.27.1.zip` plus its detached `.sha256` and
+`polymarket-execution-suite-v0.27.2.zip` plus its detached `.sha256` and
 `.zip.evidence.json` sidecars.
 
 The package advances controlled canary preparation, v0.27 release-governance
@@ -138,5 +138,5 @@ A future armed canary attempt must have all of the following:
   freeze, and idempotency reservation path verified;
 - rollback, cancel-only, incident, alert, audit, and custody runbooks reviewed.
 
-Until those conditions are met, v0.27.1 remains a non-live controlled canary
+Until those conditions are met, v0.27.2 remains a non-live controlled canary
 source-candidate.

@@ -1,6 +1,6 @@
 # Tasks — v0.27 controlled canary source-candidate
 
-This root task list tracks v0.27.1 controlled canary source-candidate work.
+This root task list tracks v0.27.2 controlled canary source-candidate work.
 One v0.26 controlled real-funds canary attempt has been completed and closed;
 this list does not authorize live submit, live cancel, production deployment, a
 second canary, or an actual real-funds fill target.

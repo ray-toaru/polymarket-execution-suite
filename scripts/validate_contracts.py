@@ -963,9 +963,9 @@ def validate_controlled_canary_release_decision_governance() -> None:
         if example_data.get(flag) is not False:
             fail(f"controlled canary release-decision example must keep {flag}=false")
     if example_data.get("artifact_sha256") != "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb":
-        fail("controlled canary release-decision example must bind illustrative v0.26.1 artifact SHA-256")
+        fail("controlled canary release-decision example must bind illustrative current-release artifact SHA-256")
     if example_data.get("market_candidate_sha256") != "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd":
-        fail("controlled canary release-decision example must bind illustrative v0.26.1 market candidate SHA-256")
+        fail("controlled canary release-decision example must bind illustrative current-release market candidate SHA-256")
     if invalid_data.get("decision") != "go" or invalid_data.get("live_submit_authorized") is not True:
         fail("controlled canary invalid partial fixture must exercise rejected go/live-submit path")
     if invalid_mismatched_data.get("artifact_sha256") == example_data.get("artifact_sha256"):
@@ -1318,7 +1318,7 @@ def validate_v27_release_readiness_guard() -> None:
             fail(f"v0.27 release readiness guard file missing: {path.relative_to(ROOT)}")
     guard_text = guard.read_text()
     for needle in [
-        "TARGET_VERSION = \"0.27.1\"",
+        "TARGET_VERSION = \"0.27.2\"",
         "--require-ready",
         "release artifact evidence sidecar missing",
         "current evidence manifest must bind final external_artifact_sidecar.sha256",
