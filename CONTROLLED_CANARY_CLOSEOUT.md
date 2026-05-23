@@ -40,16 +40,25 @@ Important files:
 - `CLOSEOUT.md`
 
 `dist/` is ignored review material, so this root document is only a tracked
-summary. Recreate the machine-readable closeout from local evidence with:
+summary. This historical v0.26 closeout package predates the v0.27
+append-only stage-history requirement. Do not regenerate it with the current
+`scripts/prepare_canary_closeout.py` unless the package also contains
+`post-canary-report.json.stages.jsonl`.
+
+For v0.27 and later packages, recreate the machine-readable closeout from
+local evidence with:
 
 ```bash
 python scripts/prepare_canary_closeout.py \
-  --package-dir dist/pmx-canary-reviewed-go-v0.26-20260523T022339Z-gtc-post-only-size5
+  --package-dir <exact-reviewed-go-package-dir>
 ```
 
 The package directory is required deliberately; closeout must bind an exact
 review package/order id and must not select by local directory modification
-time.
+time. The script also binds the ordered
+`post-canary-report.json.stages.jsonl` hash and fails closed if stage history is
+missing, references a different remote order, exposes raw signed material, or
+contains unresolved `operator_required` recovery state.
 
 ## Non-Claims
 

@@ -244,6 +244,10 @@
 - Real-funds canary armed stage reporting now keeps the latest handoff report
   in `--report-file` and appends every post/cancel stage to
   `<report-file>.stages.jsonl` for ordered recovery review.
+- Controlled canary closeout now consumes that append-only stage history,
+  records its SHA-256 and stage summary, and fails closed on missing history,
+  mismatched remote order id, raw signed material exposure, or unresolved
+  `operator_required` stages.
 - Local real-funds canary review package generation now binds artifact/evidence
   hashes and produces review-only material that is not an armed approval.
 - Single-host limited deployment templates now cover `pmx-api`, a dry-run

@@ -100,8 +100,11 @@ readback/closeout required). A runtime-truth file must prove durable
 `kill_switch`, `live_submit_gate`, `idempotency_lease`, and
 `order_cancel_reconciliation` dependencies before the report marks the armed
 stage as operator-runnable. A closeout package runs the read-only closeout
-script and records the resulting local evidence hash; it does not query remote
-APIs or place/cancel orders.
+script and records the resulting local evidence hash plus
+`post-canary-report.json.stages.jsonl` summary/hash; it does not query remote
+APIs or place/cancel orders. v0.27 closeout refuses to claim clean closure if
+the ordered stage history is missing, exposes raw signed material, references a
+different remote order id, or contains an unresolved `operator_required` stage.
 
 The pipeline also emits an `operator_runbook` block. It is blocked by default;
 even with a future fresh reviewed-go decision and durable runtime-truth input,

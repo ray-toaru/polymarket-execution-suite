@@ -270,6 +270,21 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
                 }
             )
         )
+        (package / "post-canary-report.json.stages.jsonl").write_text(
+            json.dumps(
+                {
+                    "status": "post_accepted",
+                    "stage": "post_accepted",
+                    "remote_order_id": "order-1",
+                    "posted": True,
+                    "cancelled": False,
+                    "remote_side_effects": True,
+                    "operator_required": False,
+                    "raw_signed_order_exposed": False,
+                }
+            )
+            + "\n"
+        )
         (package / "order-status-query.json").write_text(
             json.dumps({"remote_status": "CANCELED", "size_matched": "0"})
         )
@@ -295,6 +310,116 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         self.assertEqual(stage["status"], "pass")
         self.assertFalse(stage["remote_side_effects"])
         self.assertTrue((package / "closeout.json").exists())
+        closeout = json.loads((package / "closeout.json").read_text())
+        self.assertEqual(stage["stage_history_sha256"], closeout["stage_history_summary"]["sha256"])
+        self.assertEqual(stage["stage_history_stage_count"], 1)
+        self.assertEqual(closeout["stage_history_summary"]["stage_count"], 1)
+        self.assertEqual(closeout["stage_history_summary"]["remote_order_ids"], ["order-1"])
+
+    def test_closeout_package_stage_requires_stage_history(self):
+        package = ROOT / "dist" / "unit-closeout-no-stage-history"
+        if package.exists():
+            shutil.rmtree(package)
+        package.mkdir(parents=True)
+        self.addCleanup(lambda: shutil.rmtree(package, ignore_errors=True))
+        candidate = self.candidate()
+        (package / "candidate-market.json").write_text(json.dumps(candidate))
+        (package / "post-canary-report.json").write_text(
+            json.dumps(
+                {
+                    "market_candidate": {
+                        "target_size": "5",
+                        "notional_usd": "0.1",
+                    },
+                    "remote_order_readback": {"order_id": "order-1"},
+                    "no_second_order_placed_by_closure": True,
+                    "raw_signed_order_exposed": False,
+                }
+            )
+        )
+        (package / "order-status-query.json").write_text(
+            json.dumps({"remote_status": "CANCELED", "size_matched": "0"})
+        )
+        (package / "trade-fill-query.json").write_text(
+            json.dumps({"matching_trades_count": 0, "matching_size_total": "0"})
+        )
+        (package / "account-activity-readback.json").write_text(
+            json.dumps(
+                {
+                    "matching_activity_count": 0,
+                    "matching_trade_count": 0,
+                    "matching_open_position_count": 0,
+                    "matching_closed_position_count": 0,
+                    "matching_value_record_count": 0,
+                    "values": [],
+                }
+            )
+        )
+        with self.assertRaisesRegex(SystemExit, "stage history"):
+            self.pipeline.run_closeout_stage(
+                package,
+                ROOT / "dist" / "polymarket-execution-suite-v0.26.0.zip",
+            )
+
+    def test_closeout_package_stage_rejects_operator_required_history(self):
+        package = ROOT / "dist" / "unit-closeout-operator-required-history"
+        if package.exists():
+            shutil.rmtree(package)
+        package.mkdir(parents=True)
+        self.addCleanup(lambda: shutil.rmtree(package, ignore_errors=True))
+        candidate = self.candidate()
+        (package / "candidate-market.json").write_text(json.dumps(candidate))
+        (package / "post-canary-report.json").write_text(
+            json.dumps(
+                {
+                    "market_candidate": {
+                        "target_size": "5",
+                        "notional_usd": "0.1",
+                    },
+                    "remote_order_readback": {"order_id": "order-1"},
+                    "no_second_order_placed_by_closure": True,
+                    "raw_signed_order_exposed": False,
+                }
+            )
+        )
+        (package / "post-canary-report.json.stages.jsonl").write_text(
+            json.dumps(
+                {
+                    "status": "operator_required",
+                    "stage": "cancel_unknown",
+                    "remote_order_id": "order-1",
+                    "posted": True,
+                    "cancelled": False,
+                    "remote_side_effects": True,
+                    "operator_required": True,
+                    "raw_signed_order_exposed": False,
+                }
+            )
+            + "\n"
+        )
+        (package / "order-status-query.json").write_text(
+            json.dumps({"remote_status": "CANCELED", "size_matched": "0"})
+        )
+        (package / "trade-fill-query.json").write_text(
+            json.dumps({"matching_trades_count": 0, "matching_size_total": "0"})
+        )
+        (package / "account-activity-readback.json").write_text(
+            json.dumps(
+                {
+                    "matching_activity_count": 0,
+                    "matching_trade_count": 0,
+                    "matching_open_position_count": 0,
+                    "matching_closed_position_count": 0,
+                    "matching_value_record_count": 0,
+                    "values": [],
+                }
+            )
+        )
+        with self.assertRaisesRegex(SystemExit, "operator_required"):
+            self.pipeline.run_closeout_stage(
+                package,
+                ROOT / "dist" / "polymarket-execution-suite-v0.26.0.zip",
+            )
 
 
 if __name__ == "__main__":

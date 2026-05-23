@@ -368,6 +368,12 @@ def run_closeout_stage(package_dir: Path, release_zip: Path) -> dict[str, Any]:
     if closeout_json.exists():
         stage["closeout_json"] = str(closeout_json)
         stage["closeout_sha256"] = sha256(closeout_json)
+        closeout = json.loads(closeout_json.read_text())
+        stage_history = closeout.get("stage_history_summary", {})
+        if isinstance(stage_history, dict):
+            stage["stage_history_sha256"] = stage_history.get("sha256")
+            stage["stage_history_stage_count"] = stage_history.get("stage_count")
+            stage["stage_history_remote_order_ids"] = stage_history.get("remote_order_ids")
     return stage
 
 

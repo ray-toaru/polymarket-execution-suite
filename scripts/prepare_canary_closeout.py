@@ -61,6 +61,26 @@ def optional_json(path: Path) -> dict[str, Any] | None:
     return load_json(path)
 
 
+def load_stage_history(package_dir: Path) -> tuple[Path, list[dict[str, Any]]]:
+    path = package_dir / "post-canary-report.json.stages.jsonl"
+    if not path.exists():
+        raise SystemExit(f"required closeout stage history missing: {path}")
+    stages: list[dict[str, Any]] = []
+    for lineno, raw in enumerate(path.read_text().splitlines(), start=1):
+        if not raw.strip():
+            continue
+        try:
+            item = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise SystemExit(f"invalid stage history JSON on line {lineno}: {exc}") from exc
+        if not isinstance(item, dict):
+            raise SystemExit(f"invalid stage history entry on line {lineno}: expected object")
+        stages.append(item)
+    if not stages:
+        raise SystemExit(f"required closeout stage history is empty: {path}")
+    return path, stages
+
+
 def decimal_text(value: Any) -> str:
     try:
         parsed = Decimal(str(value))
@@ -92,12 +112,60 @@ def lget(data: dict[str, Any], *path: str, default: Any = None) -> Any:
     return current
 
 
+def summarize_stage_history(
+    stage_history_path: Path,
+    stages: list[dict[str, Any]],
+    expected_order_id: Any,
+) -> dict[str, Any]:
+    names = [str(stage.get("stage", "")) for stage in stages]
+    statuses = [str(stage.get("status", "")) for stage in stages]
+    remote_order_ids = sorted(
+        {
+            str(stage["remote_order_id"])
+            for stage in stages
+            if isinstance(stage.get("remote_order_id"), str) and stage["remote_order_id"]
+        }
+    )
+    operator_required = [
+        {
+            "stage": stage.get("stage"),
+            "status": stage.get("status"),
+            "remote_order_id": stage.get("remote_order_id"),
+            "error_summary": stage.get("error_summary"),
+        }
+        for stage in stages
+        if stage.get("operator_required") is True or stage.get("status") == "operator_required"
+    ]
+    raw_signed_order_exposed = any(stage.get("raw_signed_order_exposed") is True for stage in stages)
+    has_post_accepted = any(
+        stage.get("stage") == "post_accepted"
+        and stage.get("posted") is True
+        and bool(stage.get("remote_order_id"))
+        for stage in stages
+    )
+    expected_order_text = str(expected_order_id) if expected_order_id else ""
+    order_matches = bool(expected_order_text) and remote_order_ids == [expected_order_text]
+    return {
+        "path": str(stage_history_path.relative_to(ROOT)),
+        "sha256": sha256(stage_history_path),
+        "stage_count": len(stages),
+        "stages": names,
+        "statuses": statuses,
+        "remote_order_ids": remote_order_ids,
+        "operator_required_stages": operator_required,
+        "has_post_accepted": has_post_accepted,
+        "raw_signed_order_exposed": raw_signed_order_exposed,
+        "remote_order_matches_report": order_matches,
+    }
+
+
 def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
     report = required_json(package_dir, "post-canary-report.json")
     candidate = required_json(package_dir, "candidate-market.json")
     order_status = required_json(package_dir, "order-status-query.json")
     trade_query = required_json(package_dir, "trade-fill-query.json")
     account_activity = required_json(package_dir, "account-activity-readback.json")
+    stage_history_path, stage_history = load_stage_history(package_dir)
     sidecar = optional_json(release_zip.with_suffix(release_zip.suffix + ".evidence.json"))
 
     limit_price_value = decimal_value(candidate["limit_price"])
@@ -106,6 +174,12 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
     limit_price = decimal_text(limit_price_value)
     target_size = decimal_text(target_size_value)
     notional = decimal_text(notional_value)
+    remote_order_id = lget(report, "remote_order_readback", "order_id")
+    stage_history_summary = summarize_stage_history(
+        stage_history_path,
+        stage_history,
+        remote_order_id,
+    )
 
     checks = {
         "candidate_side_buy": candidate.get("side") == "BUY",
@@ -136,6 +210,14 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
             bool(lget(item, "raw_signed_order_exposed", default=False))
             for item in [report, order_status, trade_query, account_activity]
         ),
+        "stage_history_has_post_accepted": stage_history_summary["has_post_accepted"],
+        "stage_history_no_operator_required": stage_history_summary["operator_required_stages"] == [],
+        "stage_history_no_raw_signed_order_exposed": not stage_history_summary[
+            "raw_signed_order_exposed"
+        ],
+        "stage_history_remote_order_matches_report": stage_history_summary[
+            "remote_order_matches_report"
+        ],
         "no_second_order_placed_by_closeout": report.get("no_second_order_placed_by_closure") is True,
     }
     failed = [name for name, ok in checks.items() if not ok]
@@ -178,7 +260,8 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
         "package": str(package_dir.relative_to(ROOT)),
         "decision": "controlled_real_funds_canary_closed",
         "release_binding": release_binding,
-        "remote_order_id": lget(report, "remote_order_readback", "order_id"),
+        "remote_order_id": remote_order_id,
+        "stage_history_summary": stage_history_summary,
         "canary_semantics": {
             "scope": "REAL_FUNDS_CANARY",
             "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
@@ -233,6 +316,7 @@ def markdown(closeout: dict[str, Any]) -> str:
         f"- Release zip SHA-256: `{release.get('release_zip_sha256')}`",
         f"- Root git head: `{release.get('sidecar_git_head')}`",
         f"- Remote order id: `{closeout['remote_order_id']}`",
+        f"- Stage history SHA-256: `{closeout['stage_history_summary']['sha256']}`",
         "",
         "## Semantics",
         "",
@@ -250,6 +334,7 @@ def markdown(closeout: dict[str, Any]) -> str:
         f"- Matching account activity: `{readback['matching_activity_count']}`",
         f"- Matching open positions: `{readback['matching_open_position_count']}`",
         f"- Matching closed positions: `{readback['matching_closed_position_count']}`",
+        f"- Stage history entries: `{closeout['stage_history_summary']['stage_count']}`",
         "",
         "## Checks",
         "",
