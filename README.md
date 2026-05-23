@@ -108,6 +108,11 @@ different remote order id, or contains an unresolved `operator_required` stage.
 If an `operator_required` stage occurred, the package must also include
 `operator-recovery.json` bound to the stage-history hash, the same remote order
 id, no-retry/no-second-order assertions, and the readback evidence files.
+For `post_unknown` without a remote order id, ordinary order closeout is not
+valid; the package must instead include `operator-incident-recovery.json` with
+`operator_reviewed_no_remote_order_found_no_retry`, a bound investigation
+window, and account-level open-order/trade/activity readback proving no matching
+remote order or fill was found.
 
 The pipeline also emits an `operator_runbook` block. It is blocked by default;
 even with a future fresh reviewed-go decision and durable runtime-truth input,

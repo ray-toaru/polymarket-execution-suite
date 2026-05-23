@@ -603,6 +603,188 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
                 ROOT / "dist" / "polymarket-execution-suite-v0.26.0.zip",
             )
 
+    def test_closeout_package_stage_accepts_post_unknown_incident_recovery(self):
+        package = ROOT / "dist" / "unit-closeout-post-unknown-incident"
+        if package.exists():
+            shutil.rmtree(package)
+        package.mkdir(parents=True)
+        self.addCleanup(lambda: shutil.rmtree(package, ignore_errors=True))
+        candidate = self.candidate()
+        (package / "candidate-market.json").write_text(json.dumps(candidate))
+        (package / "post-canary-report.json").write_text(
+            json.dumps(
+                {
+                    "market_candidate": {
+                        "target_size": "5",
+                        "notional_usd": "0.1",
+                    },
+                    "market_candidate_sha256": self.pipeline.sha256(package / "candidate-market.json"),
+                    "remote_order_readback": {"order_id": None},
+                    "no_second_order_placed_by_closure": True,
+                    "raw_signed_order_exposed": False,
+                }
+            )
+        )
+        stage_history = package / "post-canary-report.json.stages.jsonl"
+        stage_history.write_text(
+            json.dumps(
+                {
+                    "status": "operator_required",
+                    "stage": "post_unknown",
+                    "remote_order_id": None,
+                    "posted": False,
+                    "cancelled": False,
+                    "remote_side_effects": True,
+                    "operator_required": True,
+                    "raw_signed_order_exposed": False,
+                    "error_summary": "post_order timed out",
+                }
+            )
+            + "\n"
+        )
+        stage_history_sha = self.pipeline.sha256(stage_history)
+        (package / "operator-incident-recovery.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "recovery_decision": "operator_reviewed_no_remote_order_found_no_retry",
+                    "operator_review_ref": "ticket://post-unknown-incident",
+                    "stage_history_sha256": stage_history_sha,
+                    "candidate_market_sha256": self.pipeline.sha256(package / "candidate-market.json"),
+                    "remote_order_id": None,
+                    "investigation_window": {
+                        "started_at": "2026-05-23T00:00:00+00:00",
+                        "ended_at": "2026-05-23T00:15:00+00:00",
+                    },
+                    "unresolved_operator_required": False,
+                    "no_retry_authorized": True,
+                    "no_second_order_placed": True,
+                    "raw_signed_order_exposed": False,
+                    "account_level_evidence": [
+                        "account-open-orders-readback.json",
+                        "account-trade-history-readback.json",
+                        "account-activity-readback.json",
+                    ],
+                }
+            )
+        )
+        (package / "account-open-orders-readback.json").write_text(
+            json.dumps({"matching_open_orders_count": 0, "raw_signed_order_exposed": False})
+        )
+        (package / "account-trade-history-readback.json").write_text(
+            json.dumps({"matching_trades_count": 0, "matching_size_total": "0", "raw_signed_order_exposed": False})
+        )
+        (package / "account-activity-readback.json").write_text(
+            json.dumps(
+                {
+                    "matching_activity_count": 0,
+                    "matching_trade_count": 0,
+                    "matching_open_position_count": 0,
+                    "matching_closed_position_count": 0,
+                    "matching_value_record_count": 0,
+                    "values": [],
+                    "raw_signed_order_exposed": False,
+                }
+            )
+        )
+        stage = self.pipeline.run_closeout_stage(
+            package,
+            ROOT / "dist" / "polymarket-execution-suite-v0.26.0.zip",
+        )
+        self.assertEqual(stage["status"], "pass")
+        closeout = json.loads((package / "closeout.json").read_text())
+        self.assertEqual(closeout["decision"], "controlled_real_funds_canary_incident_closed_no_remote_order_found")
+        self.assertEqual(closeout["operator_recovery_summary"]["status"], "incident_recovered_no_remote_order_found")
+        self.assertTrue(closeout["evidence_checks"]["incident_recovery_no_matching_open_orders"])
+
+    def test_closeout_package_stage_rejects_post_unknown_incident_recovery_with_matching_trade(self):
+        package = ROOT / "dist" / "unit-closeout-post-unknown-matching-trade"
+        if package.exists():
+            shutil.rmtree(package)
+        package.mkdir(parents=True)
+        self.addCleanup(lambda: shutil.rmtree(package, ignore_errors=True))
+        candidate = self.candidate()
+        (package / "candidate-market.json").write_text(json.dumps(candidate))
+        (package / "post-canary-report.json").write_text(
+            json.dumps(
+                {
+                    "market_candidate": {
+                        "target_size": "5",
+                        "notional_usd": "0.1",
+                    },
+                    "market_candidate_sha256": self.pipeline.sha256(package / "candidate-market.json"),
+                    "remote_order_readback": {"order_id": None},
+                    "no_second_order_placed_by_closure": True,
+                    "raw_signed_order_exposed": False,
+                }
+            )
+        )
+        stage_history = package / "post-canary-report.json.stages.jsonl"
+        stage_history.write_text(
+            json.dumps(
+                {
+                    "status": "operator_required",
+                    "stage": "post_unknown",
+                    "remote_order_id": None,
+                    "posted": False,
+                    "cancelled": False,
+                    "remote_side_effects": True,
+                    "operator_required": True,
+                    "raw_signed_order_exposed": False,
+                }
+            )
+            + "\n"
+        )
+        (package / "operator-incident-recovery.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "recovery_decision": "operator_reviewed_no_remote_order_found_no_retry",
+                    "operator_review_ref": "ticket://post-unknown-incident",
+                    "stage_history_sha256": self.pipeline.sha256(stage_history),
+                    "candidate_market_sha256": self.pipeline.sha256(package / "candidate-market.json"),
+                    "remote_order_id": None,
+                    "investigation_window": {
+                        "started_at": "2026-05-23T00:00:00+00:00",
+                        "ended_at": "2026-05-23T00:15:00+00:00",
+                    },
+                    "unresolved_operator_required": False,
+                    "no_retry_authorized": True,
+                    "no_second_order_placed": True,
+                    "raw_signed_order_exposed": False,
+                    "account_level_evidence": [
+                        "account-open-orders-readback.json",
+                        "account-trade-history-readback.json",
+                        "account-activity-readback.json",
+                    ],
+                }
+            )
+        )
+        (package / "account-open-orders-readback.json").write_text(
+            json.dumps({"matching_open_orders_count": 0, "raw_signed_order_exposed": False})
+        )
+        (package / "account-trade-history-readback.json").write_text(
+            json.dumps({"matching_trades_count": 1, "matching_size_total": "5", "raw_signed_order_exposed": False})
+        )
+        (package / "account-activity-readback.json").write_text(
+            json.dumps(
+                {
+                    "matching_activity_count": 0,
+                    "matching_trade_count": 0,
+                    "matching_open_position_count": 0,
+                    "matching_closed_position_count": 0,
+                    "matching_value_record_count": 0,
+                    "values": [],
+                    "raw_signed_order_exposed": False,
+                }
+            )
+        )
+        with self.assertRaisesRegex(SystemExit, "incident recovery"):
+            self.pipeline.run_closeout_stage(
+                package,
+                ROOT / "dist" / "polymarket-execution-suite-v0.26.0.zip",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

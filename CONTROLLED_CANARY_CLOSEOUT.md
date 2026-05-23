@@ -62,7 +62,12 @@ contains unresolved `operator_required` recovery state. If an
 `operator_required` stage occurred, closeout requires `operator-recovery.json`
 with `recovery_decision=operator_reviewed_closed_no_retry`, the same remote
 order id, the exact stage-history SHA-256, no-retry/no-second-order assertions,
-and references to the order/trade/account readback evidence.
+and references to the order/trade/account readback evidence. A `post_unknown`
+stage without a remote order id cannot use ordinary order closeout; v0.27+
+requires `operator-incident-recovery.json` with
+`operator_reviewed_no_remote_order_found_no_retry`, a bound investigation
+window, and account-level open-order/trade/activity readback proving no
+matching remote order or fill was found.
 
 ## Non-Claims
 

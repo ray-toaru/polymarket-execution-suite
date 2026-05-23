@@ -252,6 +252,11 @@
   `operator-recovery.json` with an operator review reference, exact stage
   history SHA-256, same remote order id, no-retry/no-second-order assertions,
   and order/trade/account readback evidence references before it can close.
+- `post_unknown` without a remote order id now uses a separate
+  `operator-incident-recovery.json` path. It can only close as
+  `controlled_real_funds_canary_incident_closed_no_remote_order_found` after a
+  bound investigation window plus account-level open-order, trade, and activity
+  readback prove no matching remote order or fill was found.
 - Local real-funds canary review package generation now binds artifact/evidence
   hashes and produces review-only material that is not an armed approval.
 - Single-host limited deployment templates now cover `pmx-api`, a dry-run

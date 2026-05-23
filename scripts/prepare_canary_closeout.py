@@ -61,6 +61,13 @@ def optional_json(path: Path) -> dict[str, Any] | None:
     return load_json(path)
 
 
+def optional_package_json(package_dir: Path, name: str) -> dict[str, Any] | None:
+    path = package_dir / name
+    if not path.exists():
+        return None
+    return load_json(path)
+
+
 def load_stage_history(package_dir: Path) -> tuple[Path, list[dict[str, Any]]]:
     path = package_dir / "post-canary-report.json.stages.jsonl"
     if not path.exists():
@@ -163,12 +170,16 @@ def validate_operator_recovery(
     package_dir: Path,
     stage_history_summary: dict[str, Any],
     expected_order_id: Any,
+    candidate_sha256: str,
 ) -> dict[str, Any]:
     operator_required = stage_history_summary["operator_required_stages"]
     path = package_dir / "operator-recovery.json"
+    incident_path = package_dir / "operator-incident-recovery.json"
     if not operator_required:
         if path.exists():
             raise SystemExit(f"operator recovery evidence is present but no operator_required stage exists: {path}")
+        if incident_path.exists():
+            raise SystemExit(f"incident recovery evidence is present but no operator_required stage exists: {incident_path}")
         return {
             "status": "not_required",
             "path": None,
@@ -176,8 +187,22 @@ def validate_operator_recovery(
             "operator_review_ref": None,
             "stage_history_sha256": stage_history_summary["sha256"],
         }
+    has_post_unknown_without_order = any(
+        item.get("stage") == "post_unknown" and not item.get("remote_order_id")
+        for item in operator_required
+    )
+    if has_post_unknown_without_order:
+        if path.exists():
+            raise SystemExit("operator recovery evidence cannot close post_unknown without remote_order_id; use operator-incident-recovery.json")
+        return validate_incident_recovery(
+            package_dir,
+            stage_history_summary,
+            candidate_sha256,
+        )
     if not path.exists():
         raise SystemExit(f"operator_required stage requires operator recovery evidence: {path}")
+    if incident_path.exists():
+        raise SystemExit("incident recovery evidence is only valid for post_unknown without remote_order_id")
     recovery = load_json(path)
     required_readback = {
         "order-status-query.json",
@@ -218,14 +243,98 @@ def validate_operator_recovery(
     }
 
 
+def validate_incident_recovery(
+    package_dir: Path,
+    stage_history_summary: dict[str, Any],
+    candidate_sha256: str,
+) -> dict[str, Any]:
+    path = package_dir / "operator-incident-recovery.json"
+    if not path.exists():
+        raise SystemExit(f"post_unknown without remote_order_id requires incident recovery evidence: {path}")
+    recovery = load_json(path)
+    open_orders = required_json(package_dir, "account-open-orders-readback.json")
+    trade_history = required_json(package_dir, "account-trade-history-readback.json")
+    account_activity = required_json(package_dir, "account-activity-readback.json")
+    account_level_evidence = recovery.get("account_level_evidence", [])
+    if not isinstance(account_level_evidence, list):
+        raise SystemExit("incident recovery evidence invalid: account_level_evidence must be a list")
+    required_evidence = {
+        "account-open-orders-readback.json",
+        "account-trade-history-readback.json",
+        "account-activity-readback.json",
+    }
+    window = recovery.get("investigation_window", {})
+    checks = {
+        "schema_version": recovery.get("schema_version") == 1,
+        "recovery_decision": recovery.get("recovery_decision")
+        == "operator_reviewed_no_remote_order_found_no_retry",
+        "operator_review_ref": isinstance(recovery.get("operator_review_ref"), str)
+        and bool(recovery["operator_review_ref"].strip()),
+        "stage_history_sha256": recovery.get("stage_history_sha256")
+        == stage_history_summary["sha256"],
+        "candidate_market_sha256": recovery.get("candidate_market_sha256") == candidate_sha256,
+        "remote_order_id": recovery.get("remote_order_id") is None,
+        "investigation_window_started_at": isinstance(window, dict)
+        and isinstance(window.get("started_at"), str)
+        and bool(window["started_at"].strip()),
+        "investigation_window_ended_at": isinstance(window, dict)
+        and isinstance(window.get("ended_at"), str)
+        and bool(window["ended_at"].strip()),
+        "unresolved_operator_required": recovery.get("unresolved_operator_required") is False,
+        "no_retry_authorized": recovery.get("no_retry_authorized") is True,
+        "no_second_order_placed": recovery.get("no_second_order_placed") is True,
+        "raw_signed_order_exposed": recovery.get("raw_signed_order_exposed") is False,
+        "account_level_evidence": required_evidence.issubset(
+            {str(item) for item in account_level_evidence}
+        ),
+        "incident_recovery_no_matching_open_orders": lget(
+            open_orders, "matching_open_orders_count", default=0
+        )
+        == 0,
+        "incident_recovery_no_matching_trades": lget(
+            trade_history, "matching_trades_count", default=0
+        )
+        == 0,
+        "incident_recovery_zero_matching_trade_size": decimal_text(
+            lget(trade_history, "matching_size_total", default="0")
+        )
+        == "0",
+        "incident_recovery_no_matching_activity": lget(
+            account_activity, "matching_activity_count", default=0
+        )
+        == 0,
+        "incident_recovery_no_raw_signed_order_exposed": not any(
+            bool(lget(item, "raw_signed_order_exposed", default=False))
+            for item in [open_orders, trade_history, account_activity]
+        ),
+    }
+    failed = [name for name, ok in checks.items() if not ok]
+    if failed:
+        raise SystemExit("incident recovery evidence checks failed: " + ", ".join(failed))
+    return {
+        "status": "incident_recovered_no_remote_order_found",
+        "path": str(path.relative_to(ROOT)),
+        "sha256": sha256(path),
+        "operator_review_ref": recovery["operator_review_ref"],
+        "stage_history_sha256": recovery["stage_history_sha256"],
+        "candidate_market_sha256": recovery["candidate_market_sha256"],
+        "recovery_decision": recovery["recovery_decision"],
+        "operator_required_stage_count": len(stage_history_summary["operator_required_stages"]),
+        "investigation_window": window,
+        "account_level_evidence": account_level_evidence,
+        "incident_checks": checks,
+    }
+
+
 def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
     report = required_json(package_dir, "post-canary-report.json")
     candidate = required_json(package_dir, "candidate-market.json")
-    order_status = required_json(package_dir, "order-status-query.json")
-    trade_query = required_json(package_dir, "trade-fill-query.json")
+    order_status = optional_package_json(package_dir, "order-status-query.json")
+    trade_query = optional_package_json(package_dir, "trade-fill-query.json")
     account_activity = required_json(package_dir, "account-activity-readback.json")
     stage_history_path, stage_history = load_stage_history(package_dir)
     sidecar = optional_json(release_zip.with_suffix(release_zip.suffix + ".evidence.json"))
+    candidate_sha256 = sha256(package_dir / "candidate-market.json")
 
     limit_price_value = decimal_value(candidate["limit_price"])
     target_size_value = decimal_value(candidate["target_size"])
@@ -243,7 +352,9 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
         package_dir,
         stage_history_summary,
         remote_order_id,
+        candidate_sha256,
     )
+    incident_closeout = operator_recovery_summary["status"] == "incident_recovered_no_remote_order_found"
 
     checks = {
         "candidate_side_buy": candidate.get("side") == "BUY",
@@ -257,10 +368,14 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
             lget(report, "market_candidate", "notional_usd")
         )
         == notional_value,
-        "order_remote_status_canceled": lget(order_status, "remote_status") == "CANCELED",
-        "order_size_matched_zero": decimal_text(lget(order_status, "size_matched", default="0")) == "0",
-        "trade_query_zero_matching_trades": lget(trade_query, "matching_trades_count") == 0,
-        "trade_query_zero_matching_size": decimal_text(lget(trade_query, "matching_size_total", default="0")) == "0",
+        "order_remote_status_canceled": incident_closeout
+        or lget(order_status or {}, "remote_status") == "CANCELED",
+        "order_size_matched_zero": incident_closeout
+        or decimal_text(lget(order_status or {}, "size_matched", default="0")) == "0",
+        "trade_query_zero_matching_trades": incident_closeout
+        or lget(trade_query or {}, "matching_trades_count") == 0,
+        "trade_query_zero_matching_size": incident_closeout
+        or decimal_text(lget(trade_query or {}, "matching_size_total", default="0")) == "0",
         "account_activity_zero_matching_activity": lget(account_activity, "matching_activity_count") == 0,
         "account_activity_zero_matching_trades": lget(account_activity, "matching_trade_count") == 0,
         "account_activity_zero_open_positions": lget(account_activity, "matching_open_position_count") == 0,
@@ -274,17 +389,47 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
             bool(lget(item, "raw_signed_order_exposed", default=False))
             for item in [report, order_status, trade_query, account_activity]
         ),
-        "stage_history_has_post_accepted": stage_history_summary["has_post_accepted"],
+        "stage_history_has_post_accepted": incident_closeout
+        or stage_history_summary["has_post_accepted"],
+        "stage_history_post_unknown_incident_recovered": (
+            not incident_closeout
+            or (
+                "post_unknown" in stage_history_summary["stages"]
+                and not stage_history_summary["remote_order_ids"]
+            )
+        ),
         "stage_history_operator_required_recovered": (
             stage_history_summary["operator_required_stages"] == []
-            or operator_recovery_summary["status"] == "recovered"
+            or operator_recovery_summary["status"] in {
+                "recovered",
+                "incident_recovered_no_remote_order_found",
+            }
         ),
         "stage_history_no_raw_signed_order_exposed": not stage_history_summary[
             "raw_signed_order_exposed"
         ],
         "stage_history_remote_order_matches_report": stage_history_summary[
             "remote_order_matches_report"
-        ],
+        ]
+        or incident_closeout,
+        "incident_recovery_no_matching_open_orders": (
+            not incident_closeout
+            or operator_recovery_summary["incident_checks"][
+                "incident_recovery_no_matching_open_orders"
+            ]
+        ),
+        "incident_recovery_no_matching_trades": (
+            not incident_closeout
+            or operator_recovery_summary["incident_checks"][
+                "incident_recovery_no_matching_trades"
+            ]
+        ),
+        "incident_recovery_no_matching_activity": (
+            not incident_closeout
+            or operator_recovery_summary["incident_checks"][
+                "incident_recovery_no_matching_activity"
+            ]
+        ),
         "no_second_order_placed_by_closeout": report.get("no_second_order_placed_by_closure") is True,
     }
     failed = [name for name, ok in checks.items() if not ok]
@@ -325,7 +470,9 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
         "schema_version": 1,
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
         "package": str(package_dir.relative_to(ROOT)),
-        "decision": "controlled_real_funds_canary_closed",
+        "decision": "controlled_real_funds_canary_incident_closed_no_remote_order_found"
+        if incident_closeout
+        else "controlled_real_funds_canary_closed",
         "release_binding": release_binding,
         "remote_order_id": remote_order_id,
         "stage_history_summary": stage_history_summary,
@@ -344,10 +491,14 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
             "min_funds_goal": "minimize expected funds at risk while satisfying current exchange size rule",
         },
         "readback_summary": {
-            "remote_status": lget(order_status, "remote_status"),
-            "size_matched": lget(order_status, "size_matched"),
-            "matching_trades_count": lget(trade_query, "matching_trades_count"),
-            "matching_size_total": lget(trade_query, "matching_size_total"),
+            "remote_status": None if incident_closeout else lget(order_status or {}, "remote_status"),
+            "size_matched": None if incident_closeout else lget(order_status or {}, "size_matched"),
+            "matching_trades_count": lget(
+                trade_query or {}, "matching_trades_count", default=0
+            ),
+            "matching_size_total": lget(
+                trade_query or {}, "matching_size_total", default="0"
+            ),
             "matching_activity_count": lget(account_activity, "matching_activity_count"),
             "matching_trade_count": lget(account_activity, "matching_trade_count"),
             "matching_open_position_count": lget(account_activity, "matching_open_position_count"),
