@@ -71,9 +71,9 @@ The manifest currently records:
   `72-real-funds-canary-store-truth-cli-preflight.log`, with
   `--runtime-truth-store postgres`, no post/cancel, no remote side effects, and
   no raw signed order exposure;
-- credentialed non-trading and sign-only dry-run sections: skipped in the
-  latest local refresh because `PMX_RUN_AUTHENTICATED_NON_TRADING_SMOKE` and
-  `PMX_RUN_SIGN_ONLY_DRY_RUN` were not set;
+- credentialed non-trading and sign-only dry-run sections: pass, backed by
+  `16-authenticated-smoke.log` and `17-sign-only-dry-run.log` under explicit
+  env gates;
 - release decision: not validated, not production-ready, not live-ready.
 
 Current detached artifact binding:

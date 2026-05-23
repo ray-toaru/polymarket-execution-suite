@@ -60,8 +60,7 @@ Latest local refresh:
   migration/store/API gates passed; the PostgreSQL-backed store-truth CLI
   preflight passed as
   `72-real-funds-canary-store-truth-cli-preflight.log`; credentialed
-  non-trading smoke and sign-only dry-run were skipped in this local refresh
-  because their explicit env gates were not set.
+  non-trading smoke and sign-only dry-run passed under explicit env gates.
 
 Current evidence policy:
 
