@@ -80,8 +80,11 @@ jobs:
       - name: Validate root and API contracts
         run: python scripts/validate_contracts.py
 
+      - name: Run integration Python tests
+        run: python -m unittest discover -s tests -p "test_*.py"
+
       - name: Compile integration Python sources
-        run: python -m compileall -q scripts
+        run: python -m compileall -q scripts tests
 
       - name: Clean local artifacts
         run: python scripts/clean_local_artifacts.py

@@ -49,9 +49,9 @@ Integration-level local/static validation entry points:
 python -m pip install -r requirements-ci.txt
 python scripts/check_version_consistency.py
 python scripts/validate_contracts.py
-python -m unittest tests.test_controlled_canary_pipeline
+python -m unittest discover -s tests -p "test_*.py"
 HERMES_PROFILE=hm-pdp-test PYTHONPATH=hermes-polymarket-executor-adapter/src python -m pytest -q hermes-polymarket-executor-adapter/tests
-HERMES_PROFILE=hm-pdp-test python -m compileall -q hermes-polymarket-executor-adapter/src scripts polymarket-execution-engine/validation
+HERMES_PROFILE=hm-pdp-test python -m compileall -q hermes-polymarket-executor-adapter/src scripts tests polymarket-execution-engine/validation
 python polymarket-execution-engine/validation/check_docs_evidence_governance.py
 python polymarket-execution-engine/scripts/check_release_hygiene.py . --dev-worktree
 ```
