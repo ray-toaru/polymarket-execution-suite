@@ -5,7 +5,7 @@
 `v0.25.0` remains the released GitHub prerelease baseline:
 `https://github.com/ray-toaru/polymarket-execution-suite/releases/tag/v0.25.0`.
 
-Current source is v0.26.0 controlled canary work. One explicitly authorized
+Current source is v0.26.1 controlled canary work. One explicitly authorized
 BUY/GTC post-only canary was posted, cancelled, and closed with zero observed
 fill/position impact. It is still not production-ready, not live-canary-approved
 for a second attempt, and does not authorize live submit, live cancel, or
@@ -241,6 +241,6 @@ auditable, fail-closed canary pipeline:
 ## Still blocked
 
 General live submit, general live cancel, repeated real-funds canary attempts,
-and production deployment remain blocked in v0.26.0 until a later release has
+and production deployment remain blocked in v0.26.1 until a later release has
 fresh canary/production evidence and an explicit release decision for that
 scope.

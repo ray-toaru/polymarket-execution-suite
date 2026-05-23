@@ -1,7 +1,7 @@
-# Current progress — v0.26.0
+# Current progress — v0.26.1
 
 This pass advances the repository from the v0.25.0 shadow-ready baseline to a
-v0.26.0 controlled real-funds canary source-candidate with one completed and
+v0.26.1 controlled real-funds canary source-candidate with one completed and
 closed canary attempt.
 
 ## Done in this cleanup pass

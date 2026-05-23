@@ -1,4 +1,4 @@
-# Implementation status — v0.26.0 controlled real-funds canary source-candidate
+# Implementation status — v0.26.1 controlled real-funds canary source-candidate
 
 ## Implemented source-level items
 

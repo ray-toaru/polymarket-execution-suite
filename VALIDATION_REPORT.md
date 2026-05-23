@@ -1,8 +1,8 @@
-# Validation Report — v0.26.0 controlled real-funds canary source-candidate
+# Validation Report — v0.26.1 controlled real-funds canary source-candidate
 
 ## Current Conclusion
 
-v0.26.0 is locally validated as a controlled real-funds canary
+v0.26.1 is locally validated as a controlled real-funds canary
 source-candidate. It is not production-ready and not live-trading-ready.
 
 On 2026-05-23 UTC, one explicitly authorized BUY/GTC post-only controlled canary
@@ -24,9 +24,9 @@ The current package is valid only when the following detached sidecars are
 present next to the source archive:
 
 ```text
-dist/polymarket-execution-suite-v0.26.0.zip
-dist/polymarket-execution-suite-v0.26.0.zip.sha256
-dist/polymarket-execution-suite-v0.26.0.zip.evidence.json
+dist/polymarket-execution-suite-v0.26.1.zip
+dist/polymarket-execution-suite-v0.26.1.zip.sha256
+dist/polymarket-execution-suite-v0.26.1.zip.evidence.json
 ```
 
 The source archive does not self-bind its containing zip hash. The detached
@@ -36,7 +36,7 @@ SHA-256.
 `dist/INDEX.json` is part of the local release boundary. It is not embedded in
 the source archive; it indexes the generated artifact and local review
 directories in the developer `dist/` workspace. The index is valid only when
-`scripts/check_dist_index.py dist 0.26.0` passes and
+`scripts/check_dist_index.py dist 0.26.1` passes and
 `scripts/check_release_artifact.py` confirms the same artifact and sidecar
 hashes.
 
@@ -100,7 +100,7 @@ Use local checks before CI:
 ```bash
 .venv/bin/python scripts/check_version_consistency.py
 .venv/bin/python scripts/validate_contracts.py
-.venv/bin/python scripts/check_dist_index.py dist 0.26.0
+.venv/bin/python scripts/check_dist_index.py dist 0.26.1
 HERMES_PROFILE=hm-pdp-test PYTHONPATH=hermes-polymarket-executor-adapter/src .venv/bin/python -m pytest -q hermes-polymarket-executor-adapter/tests
 HERMES_PROFILE=hm-pdp-test .venv/bin/python -m compileall -q hermes-polymarket-executor-adapter/src scripts polymarket-execution-engine/validation
 cd polymarket-execution-engine && ./validation/run_current_gates.sh

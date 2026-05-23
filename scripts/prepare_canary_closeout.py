@@ -17,7 +17,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_RELEASE_ZIP = ROOT / "dist" / "polymarket-execution-suite-v0.26.0.zip"
+DEFAULT_RELEASE_ZIP = ROOT / "dist" / "polymarket-execution-suite-v0.26.1.zip"
 
 
 def parse_args() -> argparse.Namespace:

@@ -1,4 +1,4 @@
-# Documentation and evidence status — v0.26.0 controlled real-funds canary source-candidate
+# Documentation and evidence status — v0.26.1 controlled real-funds canary source-candidate
 
 ## Current canonical documents
 
@@ -55,7 +55,7 @@ polymarket-execution-engine/evidence/current/manifest.json
 The current manifest binds the release artifact:
 
 ```text
-polymarket-execution-suite-v0.26.0.zip
+polymarket-execution-suite-v0.26.1.zip
 sha256=recorded in external .zip.sha256 and .zip.evidence.json sidecars
 ```
 

@@ -1,12 +1,12 @@
 # Component compatibility and ownership
 
-## Current v0.26.0 composition
+## Current v0.26.1 composition
 
 | Component | Current repository name | Current version | Pinned commit | Role |
 |---|---|---:|---|---|
-| Integration suite | `polymarket-execution-suite` | `0.26.0` | root tag `v0.26.0` | Pins component commits, release evidence, contract parity, canary packages, and artifact sidecars. |
-| Execution engine | `polymarket-execution-engine` | `0.26.0` | recorded in `.zip.evidence.json` | Rust executor: normalization, policy gates, runtime truth, lifecycle persistence, idempotency, audit, sign-only, and future live boundary. |
-| Hermes adapter | `hermes-polymarket-executor-adapter` | `0.26.0` | recorded in `.zip.evidence.json` | Python Hermes-compatible executor adapter: typed executor client, public schema models, safe reports, and service/admin token split. |
+| Integration suite | `polymarket-execution-suite` | `0.26.1` | root tag `v0.26.1` | Pins component commits, release evidence, contract parity, canary packages, and artifact sidecars. |
+| Execution engine | `polymarket-execution-engine` | `0.26.1` | recorded in `.zip.evidence.json` | Rust executor: normalization, policy gates, runtime truth, lifecycle persistence, idempotency, audit, sign-only, and future live boundary. |
+| Hermes adapter | `hermes-polymarket-executor-adapter` | `0.26.1` | recorded in `.zip.evidence.json` | Python Hermes-compatible executor adapter: typed executor client, public schema models, safe reports, and service/admin token split. |
 
 ## Ownership boundaries
 
@@ -51,7 +51,7 @@ It is not a runtime service and should not be imported by either component.
 
 ## Versioning policy
 
-The three repositories may evolve independently after v0.26.0.
+The three repositories may evolve independently after v0.26.1.
 
 - The execution engine follows its own semver based on executor API, state
   machine, database schema, SDK/gateway behavior, and live-boundary changes.

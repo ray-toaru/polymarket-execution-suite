@@ -1,6 +1,6 @@
-# Polymarket execution suite v0.26.0
+# Polymarket execution suite v0.26.1
 
-v0.26.0 is a **controlled real-funds canary source-candidate**, not a production-ready or live-trading release. It has one closed BUY/GTC post-only canary exercise with cancel, order, trade, and account-activity readback evidence, but further live execution still requires current gates plus a fresh reviewed `go` decision and operator approval.
+v0.26.1 is a **controlled real-funds canary source-candidate**, not a production-ready or live-trading release. It has one closed BUY/GTC post-only canary exercise with cancel, order, trade, and account-activity readback evidence, but further live execution still requires current gates plus a fresh reviewed `go` decision and operator approval.
 
 This repository is the integration repository. It pins two independent implementation repositories as
 submodules:
@@ -115,7 +115,7 @@ python scripts/run_controlled_canary_pipeline.py \
 ```
 
 Release packaging writes `dist/INDEX.json` and `dist/README.md`. Only the
-indexed `polymarket-execution-suite-v0.26.0.zip` plus its detached sidecars are
+indexed `polymarket-execution-suite-v0.26.1.zip` plus its detached sidecars are
 the current source artifact; any other `dist/pmx-*` directory is local review
 material unless explicitly indexed as current. The index classifies no-go,
 consumed, and closed canary material and marks it non-reusable for approval.
