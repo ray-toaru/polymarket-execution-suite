@@ -1121,6 +1121,10 @@ def validate_canary_candidate_market_prep_boundary() -> None:
     for needle in ["limit_order()", "size(size)", "SdkOrderType::GTC", ".post_only(true)", "cancel_order"]:
         if needle not in live_canary:
             fail(f"execution-engine live canary runtime missing size-driven order token: {needle}")
+    canary_cli = (SDK_ADAPTER_SRC / "bin/pmx-real-funds-canary.rs").read_text()
+    for needle in ["append_stage_history", "stage_history_path", ".stages.jsonl"]:
+        if needle not in canary_cli:
+            fail(f"execution-engine real-funds canary CLI missing stage-history token: {needle}")
     real_funds_gate = (SDK_ADAPTER_SRC / "gates/real_funds.rs").read_text()
     for needle in [
         "candidate_notional_usd",

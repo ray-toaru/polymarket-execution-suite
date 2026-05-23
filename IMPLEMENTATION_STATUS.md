@@ -241,6 +241,9 @@
 - Real-funds canary armed mode now requires a reviewed release-decision JSON
   bound to the same artifact SHA-256 and evidence-manifest SHA-256 as the
   approval file.
+- Real-funds canary armed stage reporting now keeps the latest handoff report
+  in `--report-file` and appends every post/cancel stage to
+  `<report-file>.stages.jsonl` for ordered recovery review.
 - Local real-funds canary review package generation now binds artifact/evidence
   hashes and produces review-only material that is not an armed approval.
 - Single-host limited deployment templates now cover `pmx-api`, a dry-run
