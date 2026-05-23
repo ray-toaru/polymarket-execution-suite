@@ -76,6 +76,18 @@ before any armed command can post. An armed canary must cancel the posted order
 and fail if cancel confirmation is missing. Future armed runs must also pass a
 `--report-file` path so the post/cancel receipt is persisted as package evidence.
 
+The fail-closed preparation pipeline below is safe to run locally. It can use a
+fresh candidate or an existing candidate file, then generates a no-go review
+package and proves the armed adapter command is blocked by release decision
+before any remote side effect. It does not create a reviewed-go decision and
+does not submit or cancel live orders.
+
+```bash
+python scripts/run_controlled_canary_pipeline.py \
+  --output-dir dist/pmx-canary-pipeline-no-go-local \
+  --candidate-market-file candidate-market.json
+```
+
 Release packaging writes `dist/INDEX.json` and `dist/README.md`. Only the
 indexed `polymarket-execution-suite-v0.26.0.zip` plus its detached sidecars are
 the current source artifact; any other `dist/pmx-*` directory is local review

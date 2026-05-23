@@ -31,7 +31,9 @@ auditable, fail-closed canary pipeline:
 
 1. Single command or runbook stage for fresh market discovery, reviewed
    candidate generation, release-decision binding, preflight, armed submit,
-   immediate cancel, readback, and closeout.
+   immediate cancel, readback, and closeout. The first landed entry point is
+   no-go only: `scripts/run_controlled_canary_pipeline.py` prepares or accepts a
+   candidate and proves the armed command is blocked before remote side effects.
 2. Runtime truth integration for kill switch, live-submit gates, idempotency
    lease/owner recovery, and order/cancel reconciliation.
 3. Dynamic exchange-rule evidence for minimum size, order type, tick, and

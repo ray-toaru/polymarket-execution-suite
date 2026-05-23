@@ -21,8 +21,14 @@ canary, or an actual real-funds fill target.
 
 ## v0.27 canary-pipeline work
 
-- [ ] Convert the current manual review/preflight/armed/readback/closeout flow
-  into a single fail-closed command or documented staged runbook.
+- [x] Add the first fail-closed pipeline entry point:
+  `scripts/run_controlled_canary_pipeline.py` can prepare or accept a candidate
+  market file, bind the current artifact plus workspace/archived manifest
+  hashes, generate a no-go review package, and prove the armed command remains
+  blocked before any remote side effect.
+- [ ] Extend that pipeline from no-go preparation into a reviewed single-attempt
+  armed/readback/closeout runbook. This remains blocked until a fresh reviewed
+  `go` decision exists.
 - [ ] Bind dynamic exchange-rule discovery into the candidate and armed
   preflight path so minimum size/order-type changes require fresh review.
 - [ ] Integrate kill switch, live-submit gates, idempotency lease/owner
