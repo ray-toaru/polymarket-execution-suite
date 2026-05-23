@@ -100,6 +100,7 @@ Use local checks before CI:
 ```bash
 .venv/bin/python scripts/check_version_consistency.py
 .venv/bin/python scripts/validate_contracts.py
+.venv/bin/python scripts/check_v27_release_readiness.py
 .venv/bin/python scripts/check_dist_index.py dist 0.26.1
 HERMES_PROFILE=hm-pdp-test PYTHONPATH=hermes-polymarket-executor-adapter/src .venv/bin/python -m pytest -q hermes-polymarket-executor-adapter/tests
 HERMES_PROFILE=hm-pdp-test .venv/bin/python -m compileall -q hermes-polymarket-executor-adapter/src scripts polymarket-execution-engine/validation
@@ -108,6 +109,12 @@ cd polymarket-execution-engine && ./validation/run_current_gates.sh
 
 Routine edits should use the relevant local subset first. Remote CI is a release
 confirmation layer, not the default way to validate every small local change.
+
+`check_v27_release_readiness.py` currently reports `not_ready` while the source
+version and release artifacts intentionally remain on the v0.26.1 development
+baseline. It becomes a failing gate only with `--require-ready`, which should be
+used when the v0.27 version bump, manifests, release decision, validation
+report, deterministic artifact, sidecars, and full gates are all refreshed.
 
 ## Canary Review Boundary
 

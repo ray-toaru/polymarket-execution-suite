@@ -1300,6 +1300,40 @@ def validate_single_host_deployment_governance() -> None:
             fail(f"single-host deployment files contain forbidden token: {forbidden}")
 
 
+def validate_v27_release_readiness_guard() -> None:
+    guard = ROOT / "scripts/check_v27_release_readiness.py"
+    test = ROOT / "tests/test_v27_release_readiness.py"
+    readme = ROOT / "README.md"
+    report = ROOT / "VALIDATION_REPORT.md"
+    for path in [guard, test]:
+        if not path.exists():
+            fail(f"v0.27 release readiness guard file missing: {path.relative_to(ROOT)}")
+    guard_text = guard.read_text()
+    for needle in [
+        "TARGET_VERSION = \"0.27.0\"",
+        "--require-ready",
+        "release artifact evidence sidecar missing",
+        "current evidence manifest must bind final artifact.sha256",
+        "validated_release",
+        "production_ready",
+        "live_trading_ready",
+    ]:
+        if needle not in guard_text:
+            fail(f"v0.27 release readiness guard missing token: {needle}")
+    test_text = test.read_text()
+    for needle in [
+        "test_current_tree_is_not_release_ready_while_version_remains_baseline",
+        "test_ready_tree_passes_when_all_release_material_matches_target",
+        "test_missing_artifact_sidecar_blocks_release_readiness",
+    ]:
+        if needle not in test_text:
+            fail(f"v0.27 release readiness tests missing token: {needle}")
+    for path in [readme, report]:
+        text = path.read_text()
+        if "check_v27_release_readiness.py" not in text:
+            fail(f"{path.name} must mention check_v27_release_readiness.py")
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         description="Validate integration contracts across OpenAPI, Rust, Hermes, SQL, and release governance."
@@ -1329,6 +1363,7 @@ def main(argv: list[str] | None = None) -> None:
     validate_controlled_canary_release_decision_governance()
     validate_canary_candidate_market_prep_boundary()
     validate_single_host_deployment_governance()
+    validate_v27_release_readiness_guard()
     print(json.dumps({"status": "ok", "paths": len(spec["paths"]), "schemas": len(spec["components"]["schemas"])}))
 
 
