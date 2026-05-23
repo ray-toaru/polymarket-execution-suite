@@ -60,6 +60,7 @@ Run the relevant subset for the files changed:
 ```bash
 python scripts/check_version_consistency.py
 python scripts/validate_contracts.py
+python -m unittest tests.test_controlled_canary_pipeline
 PYTHONPATH=hermes-polymarket-control/src python -m pytest -q hermes-polymarket-control/tests
 python -m compileall -q hermes-polymarket-control/src scripts polymarket-execution-engine/validation
 python polymarket-execution-engine/validation/check_docs_evidence_governance.py

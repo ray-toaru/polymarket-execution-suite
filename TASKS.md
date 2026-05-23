@@ -26,14 +26,24 @@ canary, or an actual real-funds fill target.
   market file, bind the current artifact plus workspace/archived manifest
   hashes, generate a no-go review package, and prove the armed command remains
   blocked before any remote side effect.
-- [ ] Extend that pipeline from no-go preparation into a reviewed single-attempt
-  armed/readback/closeout runbook. This remains blocked until a fresh reviewed
-  `go` decision exists.
-- [ ] Bind dynamic exchange-rule discovery into the candidate and armed
-  preflight path so minimum size/order-type changes require fresh review.
-- [ ] Integrate kill switch, live-submit gates, idempotency lease/owner
-  recovery, and order/cancel reconciliation into runtime truth instead of local
-  review evidence only.
+- [x] Add local tests for the fail-closed pipeline entry point, including
+  candidate rule snapshot validation, staged plan output, and runtime-truth
+  dependency reporting.
+- [x] Bind supplied candidate files to dynamic exchange-rule evidence at the
+  root pipeline boundary; the engine armed preflight already revalidates the
+  same `BUY/GTC` post-only/min-size/min-tick constraints before a canary can be
+  selected.
+- [x] Emit a machine-readable staged plan for candidate, no-go review, blocked
+  rehearsal, reviewed-go, armed post/cancel, readback, and closeout. Reviewed-go
+  and armed/readback/closeout phases remain blocked by default.
+- [x] Emit machine-readable runtime-truth dependencies for kill switch,
+  live-submit gate, idempotency lease, and order/cancel reconciliation so local
+  review evidence cannot be mistaken for durable runtime authority.
+- [ ] Implement the future reviewed-go single-attempt armed/readback/closeout
+  runbook. This remains blocked until a fresh reviewed `go` decision exists.
+- [ ] Promote kill switch, live-submit gates, idempotency lease/owner recovery,
+  and order/cancel reconciliation from reported dependencies into durable
+  runtime truth.
 - [ ] Keep each future release decision single-attempt scoped: one reviewed
   package, one order, immediate cancel, readback, closeout, then consumed.
 - [ ] Preserve the default no-go state for any second canary or production/live

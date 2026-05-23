@@ -33,9 +33,13 @@ auditable, fail-closed canary pipeline:
    candidate generation, release-decision binding, preflight, armed submit,
    immediate cancel, readback, and closeout. The first landed entry point is
    no-go only: `scripts/run_controlled_canary_pipeline.py` prepares or accepts a
-   candidate and proves the armed command is blocked before remote side effects.
+   candidate, validates dynamic exchange-rule evidence, emits the blocked
+   future live/readback/closeout stages, and proves the armed command is
+   blocked before remote side effects.
 2. Runtime truth integration for kill switch, live-submit gates, idempotency
-   lease/owner recovery, and order/cancel reconciliation.
+   lease/owner recovery, and order/cancel reconciliation. The root pipeline now
+   reports these as required dependencies; they are not yet durable runtime
+   authority.
 3. Dynamic exchange-rule evidence for minimum size, order type, tick, and
    post-only behavior; no permanent `size=5` release invariant.
 4. Tracked closeout summaries plus detached local JSON evidence that remain

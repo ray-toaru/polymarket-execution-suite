@@ -12,6 +12,7 @@ import json
 import subprocess
 import sys
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,149 @@ DEFAULT_MANIFEST = ENGINE / "evidence" / "current" / "manifest.json"
 DEFAULT_EXTERNAL_REFERENCES = ENGINE / "config" / "controlled-canary.external-references.example.json"
 BLOCKED_REHEARSAL = ENGINE / "validation" / "run_real_funds_canary_blocked_rehearsal_package.py"
 PREPARE_CANDIDATE = ROOT / "scripts" / "prepare_canary_candidate_market.py"
+
+
+def parse_decimal(value: Any, field: str) -> Decimal:
+    try:
+        decimal = Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        raise SystemExit(f"candidate {field} must be a decimal")
+    if not decimal.is_finite():
+        raise SystemExit(f"candidate {field} must be finite")
+    return decimal
+
+
+def require_text(data: dict[str, Any], field: str) -> str:
+    value = data.get(field)
+    if not isinstance(value, str) or not value.strip() or "REPLACE_WITH" in value:
+        raise SystemExit(f"candidate {field} is required")
+    return value.strip()
+
+
+def require_bool(data: dict[str, Any], field: str, expected: bool) -> None:
+    if data.get(field) is not expected:
+        raise SystemExit(f"candidate {field} must be {str(expected).lower()}")
+
+
+def validate_candidate_file(path: Path) -> dict[str, Any]:
+    candidate = load_json(path)
+    require_text(candidate, "market_id")
+    require_text(candidate, "token_id")
+    require_text(candidate, "human_review_ref")
+    if candidate.get("side") != "BUY":
+        raise SystemExit("candidate side must be BUY")
+    if candidate.get("order_type") != "GTC":
+        raise SystemExit("candidate order_type must be GTC")
+    require_bool(candidate, "post_only", True)
+    require_bool(candidate, "active", True)
+    require_bool(candidate, "accepting_orders", True)
+    require_bool(candidate, "closed", False)
+    require_bool(candidate, "archived", False)
+
+    best_ask = parse_decimal(candidate.get("best_ask"), "best_ask")
+    limit_price = parse_decimal(candidate.get("limit_price"), "limit_price")
+    ask_size = parse_decimal(candidate.get("ask_size"), "ask_size")
+    target_size = parse_decimal(candidate.get("target_size"), "target_size")
+    min_order_size = parse_decimal(candidate.get("min_order_size"), "min_order_size")
+    if best_ask <= 0 or limit_price <= 0 or ask_size <= 0 or target_size <= 0:
+        raise SystemExit("candidate best_ask, limit_price, ask_size, and target_size must be positive")
+    if limit_price >= best_ask:
+        raise SystemExit("candidate post-only BUY limit_price must be below best_ask")
+    if ask_size < target_size:
+        raise SystemExit("candidate ask_size must cover target_size")
+    if min_order_size > target_size:
+        raise SystemExit("candidate min_order_size must not exceed target_size")
+
+    snapshot = candidate.get("exchange_rule_snapshot")
+    if not isinstance(snapshot, dict):
+        raise SystemExit("candidate exchange_rule_snapshot is required")
+    required_snapshot = {
+        "schema_version": 1,
+        "venue": "polymarket_clob",
+        "order_mode": "post_only_limit",
+        "order_type": "GTC",
+        "side": "BUY",
+        "target_size_semantics": "outcome_shares",
+    }
+    for field, expected in required_snapshot.items():
+        if snapshot.get(field) != expected:
+            raise SystemExit(f"candidate exchange_rule_snapshot.{field} must be {expected!r}")
+    require_text(snapshot, "source")
+    require_text(snapshot, "evidence_ref")
+    min_share_size = parse_decimal(snapshot.get("min_share_size"), "exchange_rule_snapshot.min_share_size")
+    min_tick_size = parse_decimal(snapshot.get("min_tick_size"), "exchange_rule_snapshot.min_tick_size")
+    if min_share_size <= 0 or min_tick_size <= 0:
+        raise SystemExit("candidate exchange_rule_snapshot min_share_size and min_tick_size must be positive")
+    if min_share_size > target_size:
+        raise SystemExit("candidate exchange_rule_snapshot.min_share_size must not exceed target_size")
+    if (limit_price / min_tick_size) % 1 != 0:
+        raise SystemExit("candidate limit_price must align with exchange_rule_snapshot.min_tick_size")
+    for field in ("captured_at", "expires_at"):
+        value = require_text(snapshot, field)
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            raise SystemExit(f"candidate exchange_rule_snapshot.{field} must be RFC3339")
+        if field == "expires_at" and parsed.astimezone(timezone.utc) <= datetime.now(timezone.utc):
+            raise SystemExit("candidate exchange_rule_snapshot.expires_at must be in the future")
+    return candidate
+
+
+def build_stage_plan(*, reviewed_go: bool, closeout_package_dir: Path | None) -> list[dict[str, Any]]:
+    return [
+        {"stage": "candidate", "status": "required", "remote_side_effects": False},
+        {"stage": "no_go_review", "status": "required", "remote_side_effects": False},
+        {"stage": "blocked_rehearsal", "status": "required", "remote_side_effects": False},
+        {
+            "stage": "reviewed_go_decision",
+            "status": "provided" if reviewed_go else "blocked",
+            "remote_side_effects": False,
+        },
+        {
+            "stage": "armed_post_cancel",
+            "status": "blocked" if not reviewed_go else "requires_explicit_operator_run",
+            "remote_side_effects": reviewed_go,
+        },
+        {
+            "stage": "readback",
+            "status": "blocked" if not reviewed_go else "required_after_armed_run",
+            "remote_side_effects": False,
+        },
+        {
+            "stage": "closeout",
+            "status": "available" if closeout_package_dir else "blocked",
+            "remote_side_effects": False,
+        },
+    ]
+
+
+def runtime_truth_dependencies() -> list[dict[str, Any]]:
+    return [
+        {
+            "name": "kill_switch",
+            "required_before_live": True,
+            "current_pipeline_state": "local_evidence_only",
+            "required_truth": "durable runtime state checked before post and cancel",
+        },
+        {
+            "name": "live_submit_gate",
+            "required_before_live": True,
+            "current_pipeline_state": "release_decision_only",
+            "required_truth": "runtime gate evaluated immediately before remote side effect",
+        },
+        {
+            "name": "idempotency_lease",
+            "required_before_live": True,
+            "current_pipeline_state": "local_package_binding_only",
+            "required_truth": "leased owner token with recovery for remote-unknown attempts",
+        },
+        {
+            "name": "order_cancel_reconciliation",
+            "required_before_live": True,
+            "current_pipeline_state": "closeout_evidence_only",
+            "required_truth": "durable order/cancel state machine with operator-required escalation",
+        },
+    ]
 
 
 def sha256(path: Path) -> str:
@@ -55,6 +199,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--human-review-ref")
     parser.add_argument("--target-size")
     parser.add_argument("--max-order-notional-usd", default="1.00")
+    parser.add_argument(
+        "--reviewed-go-decision-file",
+        type=Path,
+        help="Optional future reviewed-go decision input. The current pipeline records its presence but still does not run armed live phases.",
+    )
+    parser.add_argument(
+        "--closeout-package-dir",
+        type=Path,
+        help="Optional existing completed canary package directory for closeout/readback staging metadata.",
+    )
     parser.add_argument("--root-ci-run-id", default="local-pipeline")
     parser.add_argument("--hermes-ci-run-id", default="local-pipeline")
     parser.add_argument("--execution-engine-ci-run-id", default="local-pipeline")
@@ -67,7 +221,15 @@ def prepare_candidate(args: argparse.Namespace, output_dir: Path) -> tuple[Path 
     if args.candidate_market_file:
         path = args.candidate_market_file
         path = path if path.is_absolute() else ROOT / path
-        stages.append({"stage": "candidate_supplied", "status": "pass", "path": str(path)})
+        validate_candidate_file(path)
+        stages.append(
+            {
+                "stage": "candidate_supplied",
+                "status": "pass",
+                "path": str(path),
+                "exchange_rule_snapshot_bound": True,
+            }
+        )
         return path, stages
 
     if not (args.market_url or args.market_slug):
@@ -126,6 +288,10 @@ def main() -> int:
     args = parse_args()
     output_dir = args.output_dir if args.output_dir.is_absolute() else ROOT / args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
+    closeout_package_dir = (
+        args.closeout_package_dir if args.closeout_package_dir is None or args.closeout_package_dir.is_absolute() else ROOT / args.closeout_package_dir
+    )
+    reviewed_go_present = args.reviewed_go_decision_file is not None
 
     release_zip = args.release_zip if args.release_zip.is_absolute() else ROOT / args.release_zip
     manifest = args.manifest if args.manifest.is_absolute() else ROOT / args.manifest
@@ -203,6 +369,11 @@ def main() -> int:
         "reviewed_go_created": False,
         "armed_cli_rehearsal_invoked": True,
         "armed_live_attempted": False,
+        "stage_plan": build_stage_plan(
+            reviewed_go=reviewed_go_present,
+            closeout_package_dir=closeout_package_dir,
+        ),
+        "runtime_truth_dependencies": runtime_truth_dependencies(),
         "stages": stages,
         "failures": failures,
     }

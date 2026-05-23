@@ -48,6 +48,7 @@ Integration-level local/static validation entry points:
 python -m pip install -r requirements-ci.txt
 python scripts/check_version_consistency.py
 python scripts/validate_contracts.py
+python -m unittest tests.test_controlled_canary_pipeline
 HERMES_PROFILE=hm-pdp-test PYTHONPATH=hermes-polymarket-control/src python -m pytest -q hermes-polymarket-control/tests
 HERMES_PROFILE=hm-pdp-test python -m compileall -q hermes-polymarket-control/src scripts polymarket-execution-engine/validation
 python polymarket-execution-engine/validation/check_docs_evidence_governance.py
@@ -81,6 +82,15 @@ fresh candidate or an existing candidate file, then generates a no-go review
 package and proves the armed adapter command is blocked by release decision
 before any remote side effect. It does not create a reviewed-go decision and
 does not submit or cancel live orders.
+
+For a supplied candidate, the pipeline performs a local dynamic-rule check
+before invoking the engine rehearsal. The candidate must bind a fresh
+`exchange_rule_snapshot` for `BUY/GTC` post-only behavior, including
+`min_share_size`, `min_tick_size`, `target_size_semantics=outcome_shares`, and
+an external evidence reference. The pipeline report also emits a stage plan for
+candidate, no-go review, blocked rehearsal, reviewed-go, armed post/cancel,
+readback, and closeout, plus runtime-truth dependencies that must be promoted
+from local evidence before any future live run.
 
 ```bash
 python scripts/run_controlled_canary_pipeline.py \
