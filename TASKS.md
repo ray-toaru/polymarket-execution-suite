@@ -53,14 +53,17 @@ canary, or an actual real-funds fill target.
 - [x] Replace the execution-engine canary CLI's runtime-truth env booleans with
   `--runtime-truth-file`. The file must bind all four durable dependencies with
   evidence refs; missing file input fails closed to false.
+- [x] Add store/provider runtime-truth projection. `CanaryRuntimeTruthStore`
+  derives kill switch, live-submit gate, idempotency lease, and order/cancel
+  reconciliation readiness from runtime state plus `CanaryRuntimeTruth` worker
+  rows, and rejects unscoped worker roles.
 - [x] Add optional read-only closeout stage execution for an exact completed
   package directory. The stage runs local closeout evidence generation and
   records a hash in the pipeline report without remote side effects.
 - [ ] Implement the future reviewed-go single-attempt armed/readback/closeout
   runbook. This remains blocked until a fresh reviewed `go` decision exists.
-- [ ] Promote kill switch, live-submit gates, idempotency lease/owner recovery,
-  and order/cancel reconciliation from a reviewed runtime-truth file into
-  durable runtime truth loaded directly from store/provider rows.
+- [ ] Wire the real-funds canary CLI/runbook to consume store/provider runtime
+  truth directly instead of the reviewed runtime-truth file bridge.
 - [ ] Keep each future release decision single-attempt scoped: one reviewed
   package, one order, immediate cancel, readback, closeout, then consumed.
 - [ ] Preserve the default no-go state for any second canary or production/live
