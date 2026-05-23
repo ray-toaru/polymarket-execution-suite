@@ -164,8 +164,8 @@
   applied-migration recording while preserving the same `PostgresStore`
   schema-apply behavior.
 - API admin reconcile support now separates shared auth/correlation context,
-  placeholder reconcile validation, and local reconcile validation while
-  preserving the same route behavior.
+  non-live request validation, and local reconcile validation while preserving
+  the same route behavior.
 - API fake/PostgreSQL E2E tests now serialize process-env token mutation so
   crate-level tests remain deterministic under parallel scheduling.
 - API read routes now separate submit-receipt reads, lifecycle-event queries,
@@ -202,8 +202,8 @@
   remote-unknown freeze, post-submit reconcile, cancel-unknown escalation, and
   cancel-only fallback checks.
 - Runtime heartbeat worker scaffolding now exposes a non-trading heartbeat
-  loop with an injected persistence sink, replacing the old discard-only
-  placeholder while preserving a deprecated compatibility entry point.
+  loop with an injected persistence sink; the old discard-only placeholder
+  compatibility entry point has been removed on the v0.27 development branch.
 - Guarded real-funds canary preflight is implemented behind explicit
   `live-submit`, `PMX_ALLOW_LIVE_SUBMIT`, `PMX_ALLOW_REAL_FUNDS_CANARY`,
   config, approval, artifact-hash, evidence-manifest-hash, balance/allowance,

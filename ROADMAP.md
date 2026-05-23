@@ -229,8 +229,8 @@ independence:
 57. PostgreSQL migration-helper split: manifest/checksum, apply flow, and
     applied-migration recording now live in focused modules.
 58. API admin reconcile support split: shared auth/correlation context,
-    placeholder reconcile validation, and local reconcile validation now live
-    in focused modules.
+    non-live request validation, and local reconcile validation now live in
+    focused modules.
 59. API E2E env-guard hardening: fake and PostgreSQL E2E suites now serialize
     token env mutation so local crate tests remain deterministic.
 60. API read-route split: submit receipt, lifecycle queries, and runtime
