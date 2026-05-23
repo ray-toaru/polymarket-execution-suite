@@ -170,7 +170,7 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [x] Local review package generation produces review-only material, not an
   armed approval
 - [x] Hermes can build blocked canary readiness reports from references under
-  the `hm-pdp-test` profile without signing or CLOB access
+  an operator-provided local Hermes profile without signing or CLOB access
 
 ## P1 canary-prep evidence
 

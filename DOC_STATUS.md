@@ -59,8 +59,9 @@ polymarket-execution-suite-v0.26.1.zip
 sha256=recorded in external .zip.sha256 and .zip.evidence.json sidecars
 ```
 
-Hermes validation for the adapter side uses the externally created
-`hm-pdp-test` profile.
+Hermes runtime validation for the adapter side requires an externally created
+local profile command supplied as `HERMES_PROFILE_CMD` or `--profile-cmd`; no
+specific workstation profile name is part of the project contract.
 
 Historical or imported logs live under:
 

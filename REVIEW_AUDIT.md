@@ -26,8 +26,9 @@
   value `0`.
 - New canary tooling requires future armed runs to provide `--report-file`, so
   the post/cancel receipt is persisted instead of relying on terminal output.
-- Hermes can report canary readiness references under `hm-pdp-test`, but still
-  cannot sign, submit, cancel, hold executor DB credentials, or call CLOB.
+- Hermes can report canary readiness references under an operator-provided
+  local Hermes profile, but still cannot sign, submit, cancel, hold executor DB
+  credentials, or call CLOB.
 
 ## Current evidence
 

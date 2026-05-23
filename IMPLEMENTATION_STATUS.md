@@ -270,8 +270,8 @@
   candidate, keeps `go_candidate_committed=false`, and verifies the armed CLI
   still requires an explicit reviewed release-decision file.
 - Hermes executor adapter can build a blocked canary readiness report from
-  approval/evidence references under the `hm-pdp-test` profile without signing,
-  direct CLOB access, or remote side effects.
+  approval/evidence references under an operator-provided local Hermes profile
+  without signing, direct CLOB access, or remote side effects.
 
 ## Intentionally blocked
 
