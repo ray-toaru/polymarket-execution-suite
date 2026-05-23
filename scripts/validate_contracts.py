@@ -48,8 +48,8 @@ EXPECTED_202_PATHS = {
     "/v1/submissions": "submit_plan",
     "/v1/sign-only/standard-constructions": "record_standard_sign_only_construction",
     "/v1/admin/kill-switch": "set_kill_switch",
-    "/v1/admin/cancel-order": "cancel_order_placeholder",
-    "/v1/admin/reconcile": "reconcile_placeholder",
+    "/v1/admin/cancel-order": "record_cancel_order_non_live",
+    "/v1/admin/reconcile": "record_reconcile_non_live",
     "/v1/admin/reconcile-order-local": "reconcile_order_local",
 }
 

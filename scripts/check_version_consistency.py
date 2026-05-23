@@ -44,6 +44,10 @@ def read(path: str) -> str:
     return (ROOT / path).read_text()
 
 
+def read_from(root: Path, path: str) -> str:
+    return (root / path).read_text()
+
+
 def expect_equal(failures: list[str], label: str, actual: str, expected: str) -> None:
     if actual != expected:
         failures.append(f"{label}: got {actual!r}, expected {expected!r}")
@@ -71,59 +75,95 @@ def cargo_lock_versions(path: Path) -> dict[str, str]:
     return versions
 
 
-def main() -> int:
+def component_versions(root: Path, failures: list[str]) -> dict[str, str]:
+    path = root / "COMPONENT_COMPATIBILITY.md"
+    if not path.exists():
+        failures.append("COMPONENT_COMPATIBILITY.md missing")
+        return {}
+
+    versions: dict[str, str] = {}
+    text = path.read_text()
+    for line in text.splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) < 3 or cells[0] in {"Component", "---"}:
+            continue
+        component = cells[0].lower()
+        version = cells[2].strip("`")
+        if component == "integration suite":
+            versions["suite"] = version
+        elif component == "execution engine":
+            versions["engine"] = version
+        elif component == "hermes adapter":
+            versions["adapter"] = version
+
+    for key in ["suite", "engine", "adapter"]:
+        version = versions.get(key, "")
+        if not EXPECTED_RE.match(version):
+            failures.append(f"component matrix {key} version is not semver x.y.z: {version!r}")
+    return versions
+
+
+def validate_versions(root: Path = ROOT) -> list[str]:
     failures: list[str] = []
-    expected = read("VERSION").strip()
-    if not EXPECTED_RE.match(expected):
-        failures.append(f"VERSION is not semver x.y.z: {expected!r}")
+    suite_version = read_from(root, "VERSION").strip()
+    if not EXPECTED_RE.match(suite_version):
+        failures.append(f"VERSION is not semver x.y.z: {suite_version!r}")
+
+    matrix_versions = component_versions(root, failures)
+    matrix_suite_version = matrix_versions.get("suite", "")
+    matrix_engine_version = matrix_versions.get("engine", "")
+    matrix_adapter_version = matrix_versions.get("adapter", "")
+    expect_equal(failures, "component matrix suite version", matrix_suite_version, suite_version)
 
     pyproject_version = regex_extract(
         failures,
         "hermes pyproject version",
-        read("hermes-polymarket-executor-adapter/pyproject.toml"),
+        read_from(root, "hermes-polymarket-executor-adapter/pyproject.toml"),
         r'^version = "([^"]+)"',
     )
-    expect_equal(failures, "hermes pyproject version", pyproject_version, expected)
+    expect_equal(failures, "component matrix Hermes adapter version", matrix_adapter_version, pyproject_version)
 
     init_version = regex_extract(
         failures,
         "hermes package __version__",
-        read("hermes-polymarket-executor-adapter/src/hermes_polymarket_executor_adapter/__init__.py"),
+        read_from(root, "hermes-polymarket-executor-adapter/src/hermes_polymarket_executor_adapter/__init__.py"),
         r'^__version__ = "([^"]+)"',
     )
-    expect_equal(failures, "hermes package __version__", init_version, expected)
+    expect_equal(failures, "hermes package __version__", init_version, pyproject_version)
 
     workspace_version = regex_extract(
         failures,
         "execution workspace version",
-        read("polymarket-execution-engine/Cargo.toml"),
+        read_from(root, "polymarket-execution-engine/Cargo.toml"),
         r'^version = "([^"]+)"',
     )
-    expect_equal(failures, "execution workspace version", workspace_version, expected)
+    expect_equal(failures, "component matrix execution engine version", matrix_engine_version, workspace_version)
 
     adapter_version = regex_extract(
         failures,
         "official sdk adapter version",
-        read("polymarket-execution-engine/adapters/pmx-official-sdk-adapter/Cargo.toml"),
+        read_from(root, "polymarket-execution-engine/adapters/pmx-official-sdk-adapter/Cargo.toml"),
         r'^version = "([^"]+)"',
     )
-    expect_equal(failures, "official sdk adapter version", adapter_version, expected)
+    expect_equal(failures, "official sdk adapter version", adapter_version, workspace_version)
 
-    manifest = json.loads(read("polymarket-execution-engine/release/manifest.json"))
-    expect_equal(failures, "release manifest version", manifest.get("version", ""), expected)
+    manifest = json.loads(read_from(root, "polymarket-execution-engine/release/manifest.json"))
+    expect_equal(failures, "release manifest version", manifest.get("version", ""), suite_version)
     status = manifest.get("status", "")
     if "source-candidate" not in status and "shadow-ready-candidate" not in status:
         failures.append("release manifest status must explicitly say source-candidate or shadow-ready-candidate")
     if "not-production" not in manifest.get("status", ""):
         failures.append("release manifest status must explicitly say not-production")
 
-    ci = read(".github/workflows/ci.yml")
-    execution_ci = read("polymarket-execution-engine/.github/workflows/ci.yml")
+    ci = read_from(root, ".github/workflows/ci.yml")
+    execution_ci = read_from(root, "polymarket-execution-engine/.github/workflows/ci.yml")
     if "./validation/run_current_gates.sh" in ci:
         failures.append("integration CI must not own execution-engine current gates")
     if "./validation/run_current_gates.sh" not in execution_ci:
         failures.append("execution-engine CI must run validation/run_current_gates.sh")
-    current_gate = read("polymarket-execution-engine/validation/run_current_gates.sh")
+    current_gate = read_from(root, "polymarket-execution-engine/validation/run_current_gates.sh")
     if "run_current_gates_impl.sh" not in current_gate:
         failures.append("run_current_gates.sh must delegate to run_current_gates_impl.sh")
     if re.search(r"\./validation/run_v0_\d+_gates\.sh", ci + execution_ci):
@@ -134,16 +174,16 @@ def main() -> int:
         "polymarket-execution-engine/adapters/pmx-official-sdk-adapter/Cargo.lock",
         "polymarket-execution-engine/adapters/pmx-official-sdk-spike/Cargo.lock",
     ]:
-        versions = cargo_lock_versions(ROOT / lock_rel)
+        versions = cargo_lock_versions(root / lock_rel)
         for name, version in sorted(versions.items()):
             if name == "pmx-official-sdk-spike":
                 continue
-            expect_equal(failures, f"{lock_rel} package {name}", version, expected)
+            expect_equal(failures, f"{lock_rel} package {name}", version, workspace_version)
 
-    expected_minor_marker = "v" + ".".join(expected.split(".")[:2])
+    expected_minor_marker = "v" + ".".join(suite_version.split(".")[:2])
     missing_doc_refs = []
     for doc in ACTIVE_DOCS:
-        path = ROOT / doc
+        path = root / doc
         if path.exists():
             text = path.read_text()
             if expected_minor_marker not in text and "validation-promotion" not in text:
@@ -153,6 +193,12 @@ def main() -> int:
             f"active docs missing {expected_minor_marker} marker: "
             + ", ".join(missing_doc_refs)
         )
+    return failures
+
+
+def main() -> int:
+    failures = validate_versions(ROOT)
+    expected = read("VERSION").strip()
 
     if failures:
         for failure in failures:
