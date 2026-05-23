@@ -95,7 +95,7 @@ def main() -> int:
         },
         "git": {
             "integration": git_info(ROOT),
-            "hermes": git_info(ROOT / "hermes-polymarket-control"),
+            "hermes": git_info(ROOT / "hermes-polymarket-executor-adapter"),
             "execution": git_info(executor),
             "submodules": run(["git", "submodule", "status"]).get("stdout"),
         },

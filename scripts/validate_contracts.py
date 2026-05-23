@@ -13,7 +13,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 EXECUTOR = ROOT / "polymarket-execution-engine"
-CONTROL = ROOT / "hermes-polymarket-control"
+CONTROL = ROOT / "hermes-polymarket-executor-adapter"
 OPENAPI = EXECUTOR / "openapi" / "executor.v1.yaml"
 API_SRC = EXECUTOR / "crates" / "pmx-api" / "src"
 CORE_SRC = EXECUTOR / "crates" / "pmx-core" / "src"
@@ -165,7 +165,7 @@ def validate_additional_properties(spec: dict) -> None:
 
 def validate_python_field_parity(spec: dict) -> None:
     sys.path.insert(0, str(CONTROL / "src"))
-    models = importlib.import_module("hermes_polymarket_control.models")
+    models = importlib.import_module("hermes_polymarket_executor_adapter.models")
     for schema_name, model_name in PY_MODEL_BY_SCHEMA.items():
         schema = spec["components"]["schemas"][schema_name]
         props = set(schema.get("properties", {}).keys())
@@ -799,8 +799,8 @@ def validate_v23_lifecycle_query_and_hardening() -> None:
 
 
 def validate_current_hermes_client_surface() -> None:
-    client_text = (CONTROL / "src/hermes_polymarket_control/client.py").read_text()
-    model_text = (CONTROL / "src/hermes_polymarket_control/models.py").read_text()
+    client_text = (CONTROL / "src/hermes_polymarket_executor_adapter/client.py").read_text()
+    model_text = (CONTROL / "src/hermes_polymarket_executor_adapter/models.py").read_text()
     for needle in [
         "record_sign_only_lifecycle_event",
         "list_sign_only_lifecycle_events",

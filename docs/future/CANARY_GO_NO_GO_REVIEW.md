@@ -11,7 +11,7 @@ Current source and evidence references:
 
 ```text
 source-refresh root commit: final root commit recorded in .zip.evidence.json sidecar
-hermes-polymarket-control: bb16582e299f9e6f8da6044226e33900c4e2459d
+hermes-polymarket-executor-adapter: bb16582e299f9e6f8da6044226e33900c4e2459d
 polymarket-execution-engine: 76fdb3ee136b0350e4718fff60a1edcee1f67d03
 latest pushed root CI baseline: 26254755001, success
 latest pushed execution-engine CI baseline: 26254745573, success

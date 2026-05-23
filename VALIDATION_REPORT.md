@@ -101,8 +101,8 @@ Use local checks before CI:
 .venv/bin/python scripts/check_version_consistency.py
 .venv/bin/python scripts/validate_contracts.py
 .venv/bin/python scripts/check_dist_index.py dist 0.26.0
-HERMES_PROFILE=hm-pdp-test PYTHONPATH=hermes-polymarket-control/src .venv/bin/python -m pytest -q hermes-polymarket-control/tests
-HERMES_PROFILE=hm-pdp-test .venv/bin/python -m compileall -q hermes-polymarket-control/src scripts polymarket-execution-engine/validation
+HERMES_PROFILE=hm-pdp-test PYTHONPATH=hermes-polymarket-executor-adapter/src .venv/bin/python -m pytest -q hermes-polymarket-executor-adapter/tests
+HERMES_PROFILE=hm-pdp-test .venv/bin/python -m compileall -q hermes-polymarket-executor-adapter/src scripts polymarket-execution-engine/validation
 cd polymarket-execution-engine && ./validation/run_current_gates.sh
 ```
 

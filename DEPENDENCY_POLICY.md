@@ -28,7 +28,7 @@ This integration repository pins implementation repositories as Git submodules
 under the `ray-toaru` GitHub namespace:
 
 ```text
-hermes-polymarket-control -> https://github.com/ray-toaru/hermes-polymarket-control.git
+hermes-polymarket-executor-adapter -> https://github.com/ray-toaru/hermes-polymarket-executor-adapter.git
 polymarket-execution-engine -> https://github.com/ray-toaru/polymarket-execution-engine.git
 ```
 

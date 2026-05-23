@@ -8,7 +8,7 @@ This file applies to the whole repository. More specific `AGENTS.md` files under
 
 This integration repository pins two independent implementation planes as submodules:
 
-- `hermes-polymarket-control/`: Python control plane for intents, approvals, reporting, and executor API calls.
+- `hermes-polymarket-executor-adapter/`: Python Hermes-compatible executor adapter for intents, approvals, reporting, and executor API calls.
 - `polymarket-execution-engine/`: Rust execution plane for validation, lifecycle persistence, runtime state, authorization, signing-boundary isolation, and non-live SDK scaffolding.
 
 When editing implementation code, commit the relevant submodule repository first, then update the
@@ -27,7 +27,7 @@ Version numbers, release status, and promotion decisions belong in `VERSION`, re
 ## Safety boundaries
 
 - Do not add, store, log, expose, or test with real private keys, CLOB secrets, raw signed payloads, raw signatures, or signed order envelopes.
-- `hermes-polymarket-control` must not sign, submit live orders, cancel live orders, hold executor DB credentials, or call Polymarket CLOB directly.
+- `hermes-polymarket-executor-adapter` must not sign, submit live orders, cancel live orders, hold executor DB credentials, or call Polymarket CLOB directly.
 - `polymarket-execution-engine` must keep live submit, live cancel, and production deployment blocked unless a formally reviewed release decision changes that after full gates pass.
 - Sign-only and SDK-related work must remain no-remote-side-effect by default and must be guarded by explicit feature/env gates.
 
@@ -61,8 +61,8 @@ Run the relevant subset for the files changed:
 python scripts/check_version_consistency.py
 python scripts/validate_contracts.py
 python -m unittest tests.test_controlled_canary_pipeline
-PYTHONPATH=hermes-polymarket-control/src python -m pytest -q hermes-polymarket-control/tests
-python -m compileall -q hermes-polymarket-control/src scripts polymarket-execution-engine/validation
+PYTHONPATH=hermes-polymarket-executor-adapter/src python -m pytest -q hermes-polymarket-executor-adapter/tests
+python -m compileall -q hermes-polymarket-executor-adapter/src scripts polymarket-execution-engine/validation
 python polymarket-execution-engine/validation/check_docs_evidence_governance.py
 python scripts/clean_local_artifacts.py
 python polymarket-execution-engine/scripts/check_release_hygiene.py . --dev-worktree

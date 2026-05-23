@@ -2,11 +2,14 @@
 
 ## DDR-001: Two independent projects
 
-Accepted. `hermes-polymarket-control` remains the Python control plane. `polymarket-execution-engine` remains the standalone Rust execution plane.
+Accepted. `hermes-polymarket-executor-adapter` is the Python
+Hermes-compatible executor adapter. `polymarket-execution-engine` remains the
+standalone Rust execution plane.
 
 ## DDR-002: Execution plane owns funds-moving authority
 
-Accepted. The control plane must not sign, post, cancel, hold execution truth, or receive raw signed order material.
+Accepted. The Hermes adapter must not sign, post, cancel, hold execution truth,
+or receive raw signed order material.
 
 ## DDR-003: Server-authoritative execution API
 
@@ -27,3 +30,12 @@ Accepted. Current release evidence must live under `polymarket-execution-engine/
 ## DDR-007: Controlled real-funds canary requires bound human-reviewed market input
 
 Accepted for v0.26.0. The execution engine may consume an externally prepared candidate market file only when its SHA-256 is bound into the approval and reviewed release decision, and the candidate explicitly declares BUY/GTC post-only plus an external human review reference.
+
+## DDR-008: Components may version independently
+
+Accepted. v0.26.0 is a coordinated suite release, so the root suite, adapter,
+and execution engine currently share version `0.26.0`. Future development does
+not require permanent lockstep versions. The execution engine versions executor
+API, state machine, schema, SDK/gateway, and live-boundary changes; the Hermes
+adapter versions client/tool compatibility with executor API contracts; the
+suite versions pinned component combinations and evidence.

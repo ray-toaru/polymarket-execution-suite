@@ -6,7 +6,7 @@ This repository is release-sensitive because it pins independent Hermes and exec
 
 - Create or select the private GitHub repositories for:
   - `polymarket-execution-suite`;
-  - `hermes-polymarket-control`;
+  - `hermes-polymarket-executor-adapter`;
   - `polymarket-execution-engine`.
 - Replace the local `.gitmodules` URLs with GitHub clone URLs that GitHub Actions can reach.
 - Commit each submodule first, then commit the updated submodule pointers in this integration repository.
@@ -25,7 +25,7 @@ This repository is release-sensitive because it pins independent Hermes and exec
   branches.
 - Require the child repository workflows on the pinned commits before promoting a
   release candidate:
-  - `hermes-polymarket-control` `ci`;
+  - `hermes-polymarket-executor-adapter` `ci`;
   - `polymarket-execution-engine` `ci`.
 - Do not duplicate child repository Rust, PostgreSQL, SDK, or credentialed gates
   as standalone integration-repository workflows. The integration repository

@@ -80,7 +80,7 @@ def main() -> int:
     pyproject_version = regex_extract(
         failures,
         "hermes pyproject version",
-        read("hermes-polymarket-control/pyproject.toml"),
+        read("hermes-polymarket-executor-adapter/pyproject.toml"),
         r'^version = "([^"]+)"',
     )
     expect_equal(failures, "hermes pyproject version", pyproject_version, expected)
@@ -88,7 +88,7 @@ def main() -> int:
     init_version = regex_extract(
         failures,
         "hermes package __version__",
-        read("hermes-polymarket-control/src/hermes_polymarket_control/__init__.py"),
+        read("hermes-polymarket-executor-adapter/src/hermes_polymarket_executor_adapter/__init__.py"),
         r'^__version__ = "([^"]+)"',
     )
     expect_equal(failures, "hermes package __version__", init_version, expected)

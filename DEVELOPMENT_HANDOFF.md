@@ -37,7 +37,7 @@ the boundary.
 - `polymarket-execution-engine/openapi/executor.v1.yaml`
 - `polymarket-execution-engine/crates/pmx-api/src/lib.rs`
 - `polymarket-execution-engine/crates/pmx-policy/src/lib.rs`
-- `hermes-polymarket-control/src/hermes_polymarket_control/models.py`
+- `hermes-polymarket-executor-adapter/src/hermes_polymarket_executor_adapter/models.py`
 
 ## Do not enable without new evidence
 

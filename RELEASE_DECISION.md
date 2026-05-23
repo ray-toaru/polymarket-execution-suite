@@ -110,7 +110,7 @@ Repository ownership is split:
 
 - root integration repository: version consistency, contract parity, release
   hygiene, packaging, artifact validation;
-- `hermes-polymarket-control`: Python control plane, model/client contract,
+- `hermes-polymarket-executor-adapter`: Python Hermes-compatible executor adapter, model/client contract,
   no-secret boundary;
 - `polymarket-execution-engine`: Rust locked checks, PostgreSQL gates, SDK
   adapter checks, current gates, manual credentialed SDK workflow.

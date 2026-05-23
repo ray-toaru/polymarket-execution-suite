@@ -2,7 +2,7 @@
 
 ## Implemented source-level items
 
-- Two-plane pre-live boundary: Python control plane + Rust execution plane.
+- Two-plane pre-live boundary: Python executor adapter + Rust execution plane.
 - Server-authoritative execution service scaffold.
 - PostgreSQL-backed store scaffolding for core execution data.
 - Sign-only lifecycle API, store path, query path, and idempotency field.
@@ -109,9 +109,9 @@
 - Core lifecycle domain models now live in focused modules for sign-only
   lifecycle, order-lifecycle transitions, and divergence/reconcile
   classification.
-- Core plan/control-plane models now live in focused modules for decision
+- Core plan/adapter-facing models now live in focused modules for decision
   results, execution summaries/submit receipts, redaction envelopes, and
-  control-plane request/receipt models.
+  adapter request/receipt models.
 - Core base domain primitives now live in focused modules for shared errors,
   typed ids, decimal validation, and canonical JSON hashing/serialization
   helpers.
@@ -249,7 +249,7 @@
 - Single-host `go` candidate drill now creates only a temporary operator-review
   candidate, keeps `go_candidate_committed=false`, and verifies the armed CLI
   still requires an explicit reviewed release-decision file.
-- Hermes control-plane can build a blocked canary readiness report from
+- Hermes executor adapter can build a blocked canary readiness report from
   approval/evidence references under the `hm-pdp-test` profile without signing,
   direct CLOB access, or remote side effects.
 

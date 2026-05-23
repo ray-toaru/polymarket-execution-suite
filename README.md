@@ -5,7 +5,7 @@ v0.26.0 is a **controlled real-funds canary source-candidate**, not a production
 This repository is the integration repository. It pins two independent implementation repositories as
 submodules:
 
-- `hermes-polymarket-control`: Python control plane for intents, approvals, reporting, and executor API calls. It must not hold private keys, CLOB secrets, raw signed payloads, or live-submit authority.
+- `hermes-polymarket-executor-adapter`: Python Hermes-compatible executor adapter for typed executor API calls, schema models, tool/report wrappers, and service/admin token separation. It must not hold private keys, CLOB secrets, raw signed payloads, or live-submit authority.
 - `polymarket-execution-engine`: Rust execution plane for deterministic validation, lifecycle persistence, runtime state, authorization, signing-boundary isolation, and non-live SDK integration scaffolding.
 
 ## Checkout
@@ -19,7 +19,7 @@ git submodule update --init --recursive
 In this local workspace the submodules point at sibling repositories:
 
 ```text
-../hermes-polymarket-control
+../hermes-polymarket-executor-adapter
 ../polymarket-execution-engine
 ```
 
@@ -30,6 +30,7 @@ Use these current documents first:
 - `AGENTS.md` — repository-level agent instructions, safety boundaries, and validation rules.
 
 - `PROJECT_ARCHITECTURE.md` — v0.26 architecture baseline from the v0.3 design split.
+- `COMPONENT_COMPATIBILITY.md` — component ownership, compatibility matrix, and independent versioning policy.
 - `DEPENDENCY_POLICY.md` — pinned runtime/toolchain/dependency policy.
 - `DESIGN_DECISION_RECORD.md` — accepted architectural decisions.
 - `IMPLEMENTATION_STATUS.md` — implemented, blocked, and intentionally disabled areas.
@@ -49,8 +50,8 @@ python -m pip install -r requirements-ci.txt
 python scripts/check_version_consistency.py
 python scripts/validate_contracts.py
 python -m unittest tests.test_controlled_canary_pipeline
-HERMES_PROFILE=hm-pdp-test PYTHONPATH=hermes-polymarket-control/src python -m pytest -q hermes-polymarket-control/tests
-HERMES_PROFILE=hm-pdp-test python -m compileall -q hermes-polymarket-control/src scripts polymarket-execution-engine/validation
+HERMES_PROFILE=hm-pdp-test PYTHONPATH=hermes-polymarket-executor-adapter/src python -m pytest -q hermes-polymarket-executor-adapter/tests
+HERMES_PROFILE=hm-pdp-test python -m compileall -q hermes-polymarket-executor-adapter/src scripts polymarket-execution-engine/validation
 python polymarket-execution-engine/validation/check_docs_evidence_governance.py
 python polymarket-execution-engine/scripts/check_release_hygiene.py . --dev-worktree
 ```

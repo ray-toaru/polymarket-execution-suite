@@ -1,6 +1,6 @@
-[submodule "hermes-polymarket-control"]
-	path = hermes-polymarket-control
-	url = https://github.com/ray-toaru/hermes-polymarket-control.git
+[submodule "hermes-polymarket-executor-adapter"]
+	path = hermes-polymarket-executor-adapter
+	url = https://github.com/ray-toaru/hermes-polymarket-executor-adapter.git
 [submodule "polymarket-execution-engine"]
 	path = polymarket-execution-engine
 	url = https://github.com/ray-toaru/polymarket-execution-engine.git

@@ -5,6 +5,7 @@
 - `AGENTS.md` — repository-level AI agent working rules and safety guardrails.
 - `README.md`
 - `PROJECT_ARCHITECTURE.md`
+- `COMPONENT_COMPATIBILITY.md`
 - `DEPENDENCY_POLICY.md`
 - `DESIGN_DECISION_RECORD.md`
 - `IMPLEMENTATION_STATUS.md`
@@ -58,7 +59,7 @@ polymarket-execution-suite-v0.26.0.zip
 sha256=recorded in external .zip.sha256 and .zip.evidence.json sidecars
 ```
 
-Hermes validation for the control-plane side uses the externally created
+Hermes validation for the adapter side uses the externally created
 `hm-pdp-test` profile.
 
 Historical or imported logs live under:

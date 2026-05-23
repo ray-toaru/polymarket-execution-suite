@@ -6,15 +6,19 @@ v0.26.0 keeps the v0.3 architectural split as the design baseline. The integrati
 the two implementation planes as submodules:
 
 ```text
-hermes-polymarket-control  -> Python control plane
+hermes-polymarket-executor-adapter  -> Python Hermes-compatible executor adapter
 polymarket-execution-engine -> Rust execution plane
 ```
 
-The split is intentional. The control plane may prepare intents, approvals, reports, and API calls, but the execution plane owns validation, lifecycle truth, idempotency, runtime state, signing-boundary isolation, and any future funds-moving authority.
+The split is intentional. The Python adapter may prepare typed executor API
+requests, expose Hermes-compatible tool/report wrappers, and render safe
+reports. The execution plane owns validation, lifecycle truth, idempotency,
+runtime state, signing-boundary isolation, and any future funds-moving
+authority.
 
 ## Trust boundary
 
-Allowed across the public control-plane API:
+Allowed across the public adapter/executor API boundary:
 
 - trade intents and normalized intent references;
 - decision, snapshot, and plan identifiers;
@@ -30,6 +34,13 @@ Forbidden across the public boundary:
 - signed order envelopes;
 - direct database writes;
 - direct live CLOB post/cancel operations.
+
+## Component versioning
+
+The integration suite, execution engine, and Hermes adapter may evolve
+independently after v0.26.0. The suite release pins exact component commits and
+records the compatibility matrix; it does not require the component repositories
+to keep identical version numbers forever. See `COMPONENT_COMPATIBILITY.md`.
 
 ## Rust execution crates
 

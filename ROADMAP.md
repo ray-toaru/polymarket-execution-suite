@@ -172,7 +172,7 @@ auditable, fail-closed canary pipeline:
     transitions, and divergence/reconcile classification now live in focused
     modules.
 37. Core plan module split: decision results, execution summaries/submit
-    receipts, redaction envelopes, and control-plane request/receipt models now
+    receipts, redaction envelopes, and adapter request/receipt models now
     live in focused modules.
 38. In-memory sign-only memory-test split: happy-path, idempotency, and
     reject-path coverage now live in focused modules.

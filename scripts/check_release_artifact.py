@@ -193,7 +193,7 @@ def main() -> int:
             failures.append("shebang scripts must be executable in archive: " + ", ".join(bad_shebang_modes[:20]))
         required_agents = [
             f"{expected_root}/AGENTS.md",
-            f"{expected_root}/hermes-polymarket-control/AGENTS.md",
+            f"{expected_root}/hermes-polymarket-executor-adapter/AGENTS.md",
             f"{expected_root}/polymarket-execution-engine/AGENTS.md",
             f"{expected_root}/polymarket-execution-engine/crates/AGENTS.md",
             f"{expected_root}/polymarket-execution-engine/crates/pmx-api/AGENTS.md",
