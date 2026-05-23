@@ -1118,7 +1118,14 @@ def validate_canary_candidate_market_prep_boundary() -> None:
     ]:
         if forbidden in live_canary:
             fail(f"execution-engine live canary runtime contains forbidden token: {forbidden}")
-    for needle in ["limit_order()", "size(size)", "SdkOrderType::GTC", ".post_only(true)", "cancel_order"]:
+    for needle in [
+        "limit_order()",
+        "size(size)",
+        "SdkOrderType::GTC",
+        ".post_only(true)",
+        "cancel_order",
+        '"cancel_confirmed"',
+    ]:
         if needle not in live_canary:
             fail(f"execution-engine live canary runtime missing size-driven order token: {needle}")
     canary_cli = (SDK_ADAPTER_SRC / "bin/pmx-real-funds-canary.rs").read_text()
@@ -1156,6 +1163,7 @@ def validate_canary_candidate_market_prep_boundary() -> None:
         "notional_rule",
         "limit_price * size",
         "post-canary-report.json.stages.jsonl",
+        "stage_history_has_cancel_confirmed",
         "operator-recovery.json",
         "operator-incident-recovery.json",
         "operator_reviewed_closed_no_retry",

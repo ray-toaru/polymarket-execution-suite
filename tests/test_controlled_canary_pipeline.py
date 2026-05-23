@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "run_controlled_canary_pipeline.py"
+CLOSEOUT_SCRIPT = ROOT / "scripts" / "prepare_canary_closeout.py"
 
 
 def load_pipeline_module():
@@ -18,9 +19,18 @@ def load_pipeline_module():
     return module
 
 
+def load_closeout_module():
+    spec = importlib.util.spec_from_file_location("prepare_canary_closeout", CLOSEOUT_SCRIPT)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
 class ControlledCanaryPipelineTests(unittest.TestCase):
     def setUp(self):
         self.pipeline = load_pipeline_module()
+        self.closeout = load_closeout_module()
 
     def candidate(self, **overrides):
         data = {
@@ -271,17 +281,33 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
             )
         )
         (package / "post-canary-report.json.stages.jsonl").write_text(
-            json.dumps(
-                {
-                    "status": "post_accepted",
-                    "stage": "post_accepted",
-                    "remote_order_id": "order-1",
-                    "posted": True,
-                    "cancelled": False,
-                    "remote_side_effects": True,
-                    "operator_required": False,
-                    "raw_signed_order_exposed": False,
-                }
+            "\n".join(
+                [
+                    json.dumps(
+                        {
+                            "status": "post_accepted",
+                            "stage": "post_accepted",
+                            "remote_order_id": "order-1",
+                            "posted": True,
+                            "cancelled": False,
+                            "remote_side_effects": True,
+                            "operator_required": False,
+                            "raw_signed_order_exposed": False,
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "status": "cancel_confirmed",
+                            "stage": "cancel_confirmed",
+                            "remote_order_id": "order-1",
+                            "posted": True,
+                            "cancelled": True,
+                            "remote_side_effects": True,
+                            "operator_required": False,
+                            "raw_signed_order_exposed": False,
+                        }
+                    ),
+                ]
             )
             + "\n"
         )
@@ -305,15 +331,15 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         )
         stage = self.pipeline.run_closeout_stage(
             package,
-            ROOT / "dist" / "polymarket-execution-suite-v0.26.0.zip",
+            ROOT / "dist" / "polymarket-execution-suite-v0.27.0.zip",
         )
         self.assertEqual(stage["status"], "pass")
         self.assertFalse(stage["remote_side_effects"])
         self.assertTrue((package / "closeout.json").exists())
         closeout = json.loads((package / "closeout.json").read_text())
         self.assertEqual(stage["stage_history_sha256"], closeout["stage_history_summary"]["sha256"])
-        self.assertEqual(stage["stage_history_stage_count"], 1)
-        self.assertEqual(closeout["stage_history_summary"]["stage_count"], 1)
+        self.assertEqual(stage["stage_history_stage_count"], 2)
+        self.assertEqual(closeout["stage_history_summary"]["stage_count"], 2)
         self.assertEqual(closeout["stage_history_summary"]["remote_order_ids"], ["order-1"])
 
     def test_closeout_package_stage_requires_stage_history(self):
@@ -358,7 +384,74 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "stage history"):
             self.pipeline.run_closeout_stage(
                 package,
-                ROOT / "dist" / "polymarket-execution-suite-v0.26.0.zip",
+                ROOT / "dist" / "polymarket-execution-suite-v0.27.0.zip",
+            )
+
+    def test_closeout_default_release_zip_follows_workspace_version(self):
+        version = (ROOT / "VERSION").read_text().strip()
+        self.assertEqual(
+            self.closeout.DEFAULT_RELEASE_ZIP.name,
+            f"polymarket-execution-suite-v{version}.zip",
+        )
+
+    def test_closeout_requires_cancel_confirmed_stage_for_successful_order_closeout(self):
+        package = ROOT / "dist" / "unit-closeout-missing-cancel-confirmed"
+        if package.exists():
+            shutil.rmtree(package)
+        package.mkdir(parents=True)
+        self.addCleanup(lambda: shutil.rmtree(package, ignore_errors=True))
+        candidate = self.candidate()
+        (package / "candidate-market.json").write_text(json.dumps(candidate))
+        (package / "post-canary-report.json").write_text(
+            json.dumps(
+                {
+                    "market_candidate": {
+                        "target_size": "5",
+                        "notional_usd": "0.1",
+                    },
+                    "remote_order_readback": {"order_id": "order-1"},
+                    "no_second_order_placed_by_closure": True,
+                    "raw_signed_order_exposed": False,
+                }
+            )
+        )
+        (package / "post-canary-report.json.stages.jsonl").write_text(
+            json.dumps(
+                {
+                    "status": "post_accepted",
+                    "stage": "post_accepted",
+                    "remote_order_id": "order-1",
+                    "posted": True,
+                    "cancelled": False,
+                    "remote_side_effects": True,
+                    "operator_required": False,
+                    "raw_signed_order_exposed": False,
+                }
+            )
+            + "\n"
+        )
+        (package / "order-status-query.json").write_text(
+            json.dumps({"remote_status": "CANCELED", "size_matched": "0"})
+        )
+        (package / "trade-fill-query.json").write_text(
+            json.dumps({"matching_trades_count": 0, "matching_size_total": "0"})
+        )
+        (package / "account-activity-readback.json").write_text(
+            json.dumps(
+                {
+                    "matching_activity_count": 0,
+                    "matching_trade_count": 0,
+                    "matching_open_position_count": 0,
+                    "matching_closed_position_count": 0,
+                    "matching_value_record_count": 0,
+                    "values": [],
+                }
+            )
+        )
+        with self.assertRaisesRegex(SystemExit, "stage_history_has_cancel_confirmed"):
+            self.closeout.build_closeout(
+                package,
+                ROOT / "dist" / "polymarket-execution-suite-v0.27.0.zip",
             )
 
     def test_closeout_package_stage_rejects_operator_required_history(self):
@@ -418,7 +511,7 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "operator_required"):
             self.pipeline.run_closeout_stage(
                 package,
-                ROOT / "dist" / "polymarket-execution-suite-v0.26.0.zip",
+                ROOT / "dist" / "polymarket-execution-suite-v0.27.0.zip",
             )
 
     def test_closeout_package_stage_accepts_bound_operator_recovery_evidence(self):
@@ -515,7 +608,7 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         )
         stage = self.pipeline.run_closeout_stage(
             package,
-            ROOT / "dist" / "polymarket-execution-suite-v0.26.0.zip",
+            ROOT / "dist" / "polymarket-execution-suite-v0.27.0.zip",
         )
         self.assertEqual(stage["status"], "pass")
         closeout = json.loads((package / "closeout.json").read_text())
@@ -600,7 +693,7 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "operator recovery"):
             self.pipeline.run_closeout_stage(
                 package,
-                ROOT / "dist" / "polymarket-execution-suite-v0.26.0.zip",
+                ROOT / "dist" / "polymarket-execution-suite-v0.27.0.zip",
             )
 
     def test_closeout_package_stage_accepts_post_unknown_incident_recovery(self):
@@ -689,7 +782,7 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         )
         stage = self.pipeline.run_closeout_stage(
             package,
-            ROOT / "dist" / "polymarket-execution-suite-v0.26.0.zip",
+            ROOT / "dist" / "polymarket-execution-suite-v0.27.0.zip",
         )
         self.assertEqual(stage["status"], "pass")
         closeout = json.loads((package / "closeout.json").read_text())
@@ -782,7 +875,7 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "incident recovery"):
             self.pipeline.run_closeout_stage(
                 package,
-                ROOT / "dist" / "polymarket-execution-suite-v0.26.0.zip",
+                ROOT / "dist" / "polymarket-execution-suite-v0.27.0.zip",
             )
 
 

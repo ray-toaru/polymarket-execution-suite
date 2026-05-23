@@ -17,7 +17,8 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_RELEASE_ZIP = ROOT / "dist" / "polymarket-execution-suite-v0.26.1.zip"
+VERSION = (ROOT / "VERSION").read_text().strip()
+DEFAULT_RELEASE_ZIP = ROOT / "dist" / f"polymarket-execution-suite-v{VERSION}.zip"
 
 
 def parse_args() -> argparse.Namespace:
@@ -150,6 +151,13 @@ def summarize_stage_history(
         and bool(stage.get("remote_order_id"))
         for stage in stages
     )
+    has_cancel_confirmed = any(
+        stage.get("stage") == "cancel_confirmed"
+        and stage.get("posted") is True
+        and stage.get("cancelled") is True
+        and bool(stage.get("remote_order_id"))
+        for stage in stages
+    )
     expected_order_text = str(expected_order_id) if expected_order_id else ""
     order_matches = bool(expected_order_text) and remote_order_ids == [expected_order_text]
     return {
@@ -161,6 +169,7 @@ def summarize_stage_history(
         "remote_order_ids": remote_order_ids,
         "operator_required_stages": operator_required,
         "has_post_accepted": has_post_accepted,
+        "has_cancel_confirmed": has_cancel_confirmed,
         "raw_signed_order_exposed": raw_signed_order_exposed,
         "remote_order_matches_report": order_matches,
     }
@@ -391,6 +400,9 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
         ),
         "stage_history_has_post_accepted": incident_closeout
         or stage_history_summary["has_post_accepted"],
+        "stage_history_has_cancel_confirmed": incident_closeout
+        or stage_history_summary["has_cancel_confirmed"]
+        or operator_recovery_summary["status"] == "recovered",
         "stage_history_post_unknown_incident_recovered": (
             not incident_closeout
             or (
