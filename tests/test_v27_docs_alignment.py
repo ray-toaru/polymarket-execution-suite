@@ -29,6 +29,20 @@ class V027DocsAlignmentTests(unittest.TestCase):
         self.assertNotIn("## v0.2\n", roadmap)
         self.assertNotIn("Hermes plugin/tool registration", progress)
 
+    def test_hermes_runtime_validation_does_not_hardcode_local_profile(self):
+        paths = [
+            "README.md",
+            "hermes-polymarket-executor-adapter/docs/HERMES_PLUGIN.md",
+            "hermes-polymarket-executor-adapter/docs/PROGRESS.md",
+            "hermes-polymarket-executor-adapter/docs/REVIEW.md",
+            "hermes-polymarket-executor-adapter/docs/ROADMAP.md",
+            "scripts/check_hermes_profile_plugin.py",
+        ]
+        combined = "\n".join(read(path) for path in paths)
+        self.assertNotIn("hm-pdp-test", combined)
+        self.assertNotIn("/home/vscode", combined)
+        self.assertNotIn("hermes-agent/venv", combined)
+
 
 if __name__ == "__main__":
     unittest.main()

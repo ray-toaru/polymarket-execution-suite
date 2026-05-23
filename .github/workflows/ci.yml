@@ -50,7 +50,7 @@ permissions:
   contents: read
 
 env:
-  HERMES_PROFILE: hm-pdp-test
+  HERMES_PROFILE: ci-test
 
 jobs:
   integration-static:

@@ -4,13 +4,14 @@ from __future__ import annotations
 import argparse
 import importlib.metadata
 import importlib.util
+import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_HERMES_PYTHON = Path("/home/vscode/.hermes/hermes-agent/venv/bin/python")
 PLUGIN_PACKAGE = "hermes_polymarket_executor_adapter"
 ENTRYPOINT_GROUP = "hermes_agent.plugins"
 ENTRYPOINT_NAME = "polymarket-executor"
@@ -26,6 +27,35 @@ def run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         stderr=subprocess.STDOUT,
         check=False,
     )
+
+
+def infer_hermes_python(profile_cmd: str) -> Path | None:
+    explicit = os.environ.get("HERMES_RUNTIME_PYTHON", "").strip()
+    if explicit:
+        return Path(explicit)
+
+    hermes_cmd = shutil.which("hermes")
+    candidates: list[Path] = []
+    if hermes_cmd:
+        hermes_path = Path(hermes_cmd)
+        candidates.append(hermes_path.with_name("python"))
+        try:
+            text = hermes_path.read_text(errors="ignore")
+        except OSError:
+            text = ""
+        match = re.search(r'exec\s+"([^"]*/bin/hermes)"', text)
+        if match:
+            candidates.append(Path(match.group(1)).with_name("python"))
+
+    profile_executable = shutil.which(profile_cmd)
+    if profile_executable:
+        profile_path = Path(profile_executable)
+        candidates.append(profile_path.with_name("python"))
+
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def check_runtime_python(python_path: Path) -> list[str]:
@@ -68,13 +98,31 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Validate local Hermes profile discovery for the Polymarket executor plugin."
     )
-    parser.add_argument("--profile-cmd", default="hm-pdp-test")
+    parser.add_argument(
+        "--profile-cmd",
+        default=os.environ.get("HERMES_PROFILE_CMD"),
+        help="Hermes profile command or alias. Can also be set with HERMES_PROFILE_CMD.",
+    )
     parser.add_argument("--platform", default="cli")
-    parser.add_argument("--hermes-python", type=Path, default=DEFAULT_HERMES_PYTHON)
+    parser.add_argument(
+        "--hermes-python",
+        type=Path,
+        default=None,
+        help="Python interpreter used by the Hermes runtime. Defaults to HERMES_RUNTIME_PYTHON or best-effort inference from the hermes command.",
+    )
     args = parser.parse_args()
 
+    if not args.profile_cmd:
+        print("missing --profile-cmd or HERMES_PROFILE_CMD")
+        return 1
+
+    hermes_python = args.hermes_python or infer_hermes_python(args.profile_cmd)
+    if hermes_python is None:
+        print("missing --hermes-python or HERMES_RUNTIME_PYTHON; could not infer Hermes runtime Python")
+        return 1
+
     failures: list[str] = []
-    failures.extend(check_runtime_python(args.hermes_python))
+    failures.extend(check_runtime_python(hermes_python))
     failures.extend(check_profile_tools(args.profile_cmd, args.platform))
 
     if failures:
