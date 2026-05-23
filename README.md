@@ -128,6 +128,8 @@ Validate runtime truth before passing it to the pipeline:
 
 ```bash
 cd polymarket-execution-engine
+python validation/run_real_funds_canary_store_truth_cli_preflight.py \
+  --runtime-truth-output /path/to/reviewed-runtime-truth.json
 python validation/validate_controlled_canary_runtime_truth.py \
   --file /path/to/reviewed-runtime-truth.json
 ```

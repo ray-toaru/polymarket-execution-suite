@@ -1094,6 +1094,15 @@ def validate_controlled_canary_release_decision_governance() -> None:
     gate_text = (EXECUTOR / "validation/run_current_gates_impl.sh").read_text()
     if "73-controlled-canary-runtime-truth.log" not in gate_text:
         fail("current gates must emit controlled canary runtime-truth validator log")
+    store_truth_cli_preflight_text = (EXECUTOR / "validation/run_real_funds_canary_store_truth_cli_preflight.py").read_text()
+    for needle in [
+        "--runtime-truth-output",
+        "runtime_truth_document",
+        "references_only_no_secret_values",
+        "pg://canary-runtime-truth",
+    ]:
+        if needle not in store_truth_cli_preflight_text:
+            fail(f"store truth CLI preflight missing runtime-truth output token: {needle}")
     readiness_text = readiness_doc.read_text()
     rehearsal = EXECUTOR / "validation/run_real_funds_canary_blocked_rehearsal_package.py"
     if not rehearsal.exists():
