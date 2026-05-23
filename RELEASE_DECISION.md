@@ -55,7 +55,13 @@ polymarket-execution-engine/evidence/current/manifest.json
 The manifest currently records:
 
 - local/current gates: pass;
-- PostgreSQL validation: pass when `PMX_TEST_DATABASE_URL` is supplied;
+- 2026-05-23 local refresh: Rust workspace, SDK adapter, static guards,
+  governance drills, release packaging, and review-package drills passed;
+- PostgreSQL external validation: skipped in the 2026-05-23 refresh because
+  `PMX_TEST_DATABASE_URL` was not set; this remains a blocker for promotion
+  and must not be treated as current PostgreSQL proof;
+- PostgreSQL validation: pass only when `PMX_TEST_DATABASE_URL` is supplied and
+  the dedicated migration, store, and HTTP PostgreSQL logs are present;
 - credentialed non-trading and sign-only dry-run sections: pass only when their
   explicit env-gated logs are present, otherwise skipped and not promotion
   evidence;

@@ -35,6 +35,16 @@ Canonical manifest:
 polymarket-execution-engine/evidence/current/manifest.json
 ```
 
+Latest local refresh:
+
+- date: 2026-05-23 UTC;
+- gate source root commit before this report refresh: `849c2e4`;
+- gate source execution-engine commit: `861c6d1`;
+- release artifact SHA-256: `d108046170acbf0d48556babf3b513a5a3bea0f93a5d267668962c0b9a0dfecf`;
+- result: local/Rust/SDK/static/governance/package gates passed, but
+  PostgreSQL external proof was skipped because `PMX_TEST_DATABASE_URL` was not
+  set.
+
 Current evidence policy:
 
 - `postgres_validation=pass` only when the PostgreSQL logs are present and the
