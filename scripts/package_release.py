@@ -143,19 +143,41 @@ def write_deterministic(zf: ZipFile, path: Path) -> None:
     zf.writestr(info, archive_bytes(path))
 
 
+def classify_dist_entry(name: str, *, is_dir: bool, child_names: set[str] | None = None) -> dict[str, object]:
+    child_names = child_names or set()
+    status = "local_review_material_not_release_artifact"
+    approval_reuse_allowed = False
+    remote_side_effects_authorized = False
+    if name.startswith("pmx-canary-reviewed-go-"):
+        if "closeout.json" in child_names or "CLOSEOUT.md" in child_names:
+            status = "consumed_closed"
+        elif any(child.startswith("approval-consumed") for child in child_names):
+            status = "consumed_not_closed"
+        else:
+            status = "reviewed_go_local_material_not_current_approval"
+    elif name.startswith("pmx-canary-review-") and "no-go" in name:
+        status = "current_no_go_review_material"
+    elif name.startswith("pmx-canary-review-"):
+        status = "review_material_not_release_artifact"
+    elif name.startswith("pmx-canary-"):
+        status = "historical_or_local_canary_material"
+    return {
+        "path": name,
+        "kind": "directory" if is_dir else "file",
+        "status": status,
+        "approval_reuse_allowed": approval_reuse_allowed,
+        "remote_side_effects_authorized": remote_side_effects_authorized,
+    }
+
+
 def write_dist_index(artifact_sha256: str, manifest_sha256: str | None) -> None:
     current_release_files = {OUT.name, OUT.with_suffix(OUT.suffix + ".sha256").name, OUT.with_suffix(OUT.suffix + ".evidence.json").name}
     local_material = []
     for path in sorted(DIST.iterdir()):
         if path.name in current_release_files or path.name in {"INDEX.json", "README.md"}:
             continue
-        local_material.append(
-            {
-                "path": path.name,
-                "kind": "directory" if path.is_dir() else "file",
-                "status": "local_review_material_not_release_artifact",
-            }
-        )
+        child_names = {child.name for child in path.iterdir()} if path.is_dir() else set()
+        local_material.append(classify_dist_entry(path.name, is_dir=path.is_dir(), child_names=child_names))
     index = {
         "schema_version": 1,
         "generated_at": datetime.now(timezone.utc).isoformat(),

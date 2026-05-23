@@ -24,7 +24,7 @@ real-funds canary execution without a fresh reviewed `go` decision.
    v0.26 controlled canary; the source JSON evidence remains local `dist/`
    review material.
 
-## v0.27 target
+## Next-phase target on the v0.26 branch
 
 The next release should not broaden live trading. Its goal is a repeatable,
 auditable, fail-closed canary pipeline:

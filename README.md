@@ -102,6 +102,11 @@ stage as operator-runnable. A closeout package runs the read-only closeout
 script and records the resulting local evidence hash; it does not query remote
 APIs or place/cancel orders.
 
+The pipeline also emits an `operator_runbook` block. It is blocked by default;
+even with a future fresh reviewed-go decision and durable runtime-truth input,
+the runbook is marked operator-runnable, not auto-executed. Already consumed or
+closed reviewed-go package directories are rejected before rehearsal.
+
 ```bash
 python scripts/run_controlled_canary_pipeline.py \
   --output-dir dist/pmx-canary-pipeline-no-go-local \
@@ -111,7 +116,8 @@ python scripts/run_controlled_canary_pipeline.py \
 Release packaging writes `dist/INDEX.json` and `dist/README.md`. Only the
 indexed `polymarket-execution-suite-v0.26.0.zip` plus its detached sidecars are
 the current source artifact; any other `dist/pmx-*` directory is local review
-material unless explicitly indexed as current.
+material unless explicitly indexed as current. The index classifies no-go,
+consumed, and closed canary material and marks it non-reusable for approval.
 
 Full Rust/SDK/PostgreSQL validation requires an external Rust 1.88 + PostgreSQL environment:
 

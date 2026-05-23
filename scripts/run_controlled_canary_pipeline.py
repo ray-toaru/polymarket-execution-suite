@@ -156,6 +156,70 @@ def build_stage_plan(
     ]
 
 
+def build_operator_runbook(
+    *,
+    reviewed_go: bool,
+    runtime_truth_ready: bool,
+    reviewed_go_decision: dict[str, Any] | None,
+) -> dict[str, Any]:
+    enabled = reviewed_go and runtime_truth_ready and reviewed_go_decision is not None
+    steps = [
+        {
+            "stage": "preflight",
+            "remote_side_effects": False,
+            "required": True,
+            "success_condition": "fresh reviewed-go decision and durable runtime truth are still valid",
+        },
+        {
+            "stage": "armed_post_cancel",
+            "remote_side_effects": True,
+            "required": True,
+            "success_condition": "exactly one post-only BUY/GTC order is posted and cancel is attempted immediately",
+        },
+        {
+            "stage": "readback_order",
+            "remote_side_effects": False,
+            "required": True,
+            "success_condition": "remote order status is cancelled or escalated operator-required",
+        },
+        {
+            "stage": "readback_trades",
+            "remote_side_effects": False,
+            "required": True,
+            "success_condition": "trade query is persisted even when zero fills are observed",
+        },
+        {
+            "stage": "readback_account_activity",
+            "remote_side_effects": False,
+            "required": True,
+            "success_condition": "account activity and position readback are persisted",
+        },
+        {
+            "stage": "closeout",
+            "remote_side_effects": False,
+            "required": True,
+            "success_condition": "closeout.json and CLOSEOUT.md are generated for the exact package",
+        },
+        {
+            "stage": "mark_consumed",
+            "remote_side_effects": False,
+            "required": True,
+            "success_condition": "approval-consumed marker prevents reuse",
+        },
+    ]
+    return {
+        "schema_version": 1,
+        "status": "operator_runnable_not_auto_executed" if enabled else "blocked",
+        "auto_execute": False,
+        "requires_fresh_reviewed_go": True,
+        "requires_runtime_truth": True,
+        "requires_closeout": True,
+        "reviewed_go_decision": reviewed_go_decision,
+        "steps": steps,
+        "blocked_reason": None if enabled else "reviewed-go decision and durable runtime truth are required",
+    }
+
+
 def runtime_truth_dependencies() -> list[dict[str, Any]]:
     return [
         {
@@ -544,6 +608,11 @@ def main() -> int:
             reviewed_go=reviewed_go_present,
             closeout_package_dir=closeout_package_dir,
             runtime_truth_ready=runtime_truth_ready,
+        ),
+        "operator_runbook": build_operator_runbook(
+            reviewed_go=reviewed_go_present,
+            runtime_truth_ready=runtime_truth_ready,
+            reviewed_go_decision=reviewed_go_decision,
         ),
         "runtime_truth_dependencies": runtime_truth_dependencies(),
         "runtime_truth": runtime_truth,

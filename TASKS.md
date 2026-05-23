@@ -19,7 +19,7 @@ canary, or an actual real-funds fill target.
 - [x] Generate `closeout.json` and `CLOSEOUT.md` from local evidence.
 - [x] Add tracked summary `CONTROLLED_CANARY_CLOSEOUT.md`.
 
-## v0.27 canary-pipeline work
+## Next-phase canary-pipeline work on the v0.26 branch
 
 - [x] Add the first fail-closed pipeline entry point:
   `scripts/run_controlled_canary_pipeline.py` can prepare or accept a candidate
@@ -60,7 +60,7 @@ canary, or an actual real-funds fill target.
 - [x] Add optional read-only closeout stage execution for an exact completed
   package directory. The stage runs local closeout evidence generation and
   records a hash in the pipeline report without remote side effects.
-- [ ] Implement the future reviewed-go single-attempt armed/readback/closeout
+- [x] Implement the future reviewed-go single-attempt armed/readback/closeout
   runbook. This remains blocked until a fresh reviewed `go` decision exists.
 - [x] Wire the real-funds canary CLI to consume store/provider runtime truth
   directly via `--runtime-truth-store postgres`,

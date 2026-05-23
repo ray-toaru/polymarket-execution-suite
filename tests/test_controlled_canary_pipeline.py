@@ -116,6 +116,31 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         self.assertFalse(by_stage["armed_post_cancel"]["remote_side_effects"])
         self.assertEqual(by_stage["readback"]["status"], "blocked")
 
+    def test_reviewed_go_with_runtime_truth_emits_operator_runbook_without_auto_side_effects(self):
+        runbook = self.pipeline.build_operator_runbook(
+            reviewed_go=True,
+            runtime_truth_ready=True,
+            reviewed_go_decision={"path": "dist/fresh/release-decision.json", "sha256": "a" * 64},
+        )
+        self.assertEqual(runbook["status"], "operator_runnable_not_auto_executed")
+        self.assertFalse(runbook["auto_execute"])
+        self.assertTrue(runbook["requires_fresh_reviewed_go"])
+        self.assertTrue(runbook["requires_runtime_truth"])
+        self.assertTrue(runbook["requires_closeout"])
+        self.assertEqual(
+            [step["stage"] for step in runbook["steps"]],
+            [
+                "preflight",
+                "armed_post_cancel",
+                "readback_order",
+                "readback_trades",
+                "readback_account_activity",
+                "closeout",
+                "mark_consumed",
+            ],
+        )
+        self.assertTrue(all(step["remote_side_effects"] is False for step in runbook["steps"] if step["stage"] != "armed_post_cancel"))
+
     def test_report_exposes_runtime_truth_dependencies(self):
         dependencies = self.pipeline.runtime_truth_dependencies()
         names = {item["name"] for item in dependencies}

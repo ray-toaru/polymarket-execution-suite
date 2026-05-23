@@ -62,3 +62,16 @@ cancel, a second real-funds canary, or a real-funds fill target.
   review, alert/rollback/runbook review, runtime/reconcile review, account and
   market whitelist review, and cap review before any second real-funds canary
   attempt.
+
+## Next-phase local pipeline evidence
+
+- Added a fail-closed operator runbook block to the local controlled-canary
+  pipeline. It can describe preflight, armed post/cancel, readback, closeout,
+  and consumed-marker steps, but it never auto-executes them.
+- Classified `dist/` review material in `INDEX.json` as no-go, consumed, or
+  closed so historical reviewed-go packages cannot be mistaken for current
+  approval.
+- Generated local no-go pipeline evidence under
+  `dist/pmx-canary-pipeline-next-phase-no-go-local/` on the current v0.26
+  branch. The report records `remote_side_effects=false`,
+  `armed_live_attempted=false`, and `operator_runbook.status=blocked`.

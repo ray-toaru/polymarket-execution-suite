@@ -56,6 +56,10 @@ Latest local refresh:
   directory;
 - next canary review package: must start from a fresh no-go review package and
   cannot reuse the consumed reviewed-go package;
+- next-phase local no-go pipeline evidence:
+  `dist/pmx-canary-pipeline-next-phase-no-go-local/pipeline-report.json`
+  records `status=pass`, `remote_side_effects=false`,
+  `armed_live_attempted=false`, and `operator_runbook.status=blocked`;
 - result: local/Rust/SDK/static/governance/package gates passed; PostgreSQL
   migration/store/API gates passed; the PostgreSQL-backed store-truth CLI
   preflight passed as
