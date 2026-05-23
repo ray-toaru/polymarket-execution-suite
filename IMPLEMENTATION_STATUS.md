@@ -296,5 +296,5 @@ checks:
 polymarket-execution-engine/evidence/current/manifest.json
 ```
 
-Current release status remains `shadow-ready SDK sign-only candidate`; live submit/cancel and
-production deployment are still intentionally blocked.
+Current release status remains `controlled real-funds canary source-candidate`;
+live submit/cancel and production deployment are still intentionally blocked.

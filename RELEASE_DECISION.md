@@ -37,7 +37,8 @@ The package advances controlled canary preparation:
   with remote-unknown cancel outcomes requiring operator review;
 - release-review package generation;
 - no-go and blocked rehearsal material;
-- PostgreSQL, SDK, local static, governance, and deployment-template evidence.
+- PostgreSQL, SDK, credentialed smoke, sign-only dry-run, local static,
+  governance, and deployment-template evidence.
 
 It does not implement a production live execution stack. Any future live canary
 requires a separate reviewed `go` release-decision JSON bound to the exact
@@ -55,17 +56,25 @@ polymarket-execution-engine/evidence/current/manifest.json
 The manifest currently records:
 
 - local/current gates: pass;
-- 2026-05-23 local refresh: Rust workspace, SDK adapter, static guards,
-  governance drills, release packaging, and review-package drills passed;
-- PostgreSQL external validation: skipped in the 2026-05-23 refresh because
-  `PMX_TEST_DATABASE_URL` was not set; this remains a blocker for promotion
-  and must not be treated as current PostgreSQL proof;
-- PostgreSQL validation: pass only when `PMX_TEST_DATABASE_URL` is supplied and
-  the dedicated migration, store, and HTTP PostgreSQL logs are present;
-- credentialed non-trading and sign-only dry-run sections: pass only when their
-  explicit env-gated logs are present, otherwise skipped and not promotion
-  evidence;
+- 2026-05-23 local refresh: Rust workspace, SDK adapter, PostgreSQL migration,
+  PostgreSQL store tests, HTTP PostgreSQL E2E, credentialed non-trading smoke,
+  sign-only dry-run, static guards, governance drills, release packaging, and
+  review-package drills passed;
+- PostgreSQL validation: pass, backed by `13-pg-migration.log`,
+  `14-pg-store-tests.log`, and `15-http-postgres-e2e.log`;
+- credentialed non-trading and sign-only dry-run sections: pass, backed by
+  `16-authenticated-smoke.log` and `17-sign-only-dry-run.log` under explicit
+  env gates;
 - release decision: not validated, not production-ready, not live-ready.
+
+Current detached artifact binding:
+
+- artifact SHA-256: recorded in the detached `.zip.sha256` sidecar;
+- evidence manifest SHA-256: recorded in the detached `.zip.evidence.json`
+  sidecar and the current review package;
+- current user-selected review package: the latest
+  `dist/pmx-canary-review-v0.26-*-gtc-post-only-current-no-go` directory;
+- review package decision: `no_go`, `real_funds_canary_authorized=false`.
 
 Detached release sidecars bind the final containing zip hash. The manifest
 inside the source zip intentionally does not self-bind the containing archive.

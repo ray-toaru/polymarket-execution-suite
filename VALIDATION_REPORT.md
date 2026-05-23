@@ -38,12 +38,16 @@ polymarket-execution-engine/evidence/current/manifest.json
 Latest local refresh:
 
 - date: 2026-05-23 UTC;
-- gate source root commit before this report refresh: `849c2e4`;
-- gate source execution-engine commit: `861c6d1`;
-- release artifact SHA-256: `d108046170acbf0d48556babf3b513a5a3bea0f93a5d267668962c0b9a0dfecf`;
-- result: local/Rust/SDK/static/governance/package gates passed, but
-  PostgreSQL external proof was skipped because `PMX_TEST_DATABASE_URL` was not
-  set.
+- gate source root commit before this report refresh: `86f8801`;
+- gate source execution-engine commit before this report refresh: `f6cc896`;
+- release artifact SHA-256: recorded in the detached `.zip.sha256` sidecar;
+- evidence manifest SHA-256: recorded in the detached `.zip.evidence.json`
+  sidecar and the current review package;
+- current canary review package: the latest
+  `dist/pmx-canary-review-v0.26-*-gtc-post-only-current-no-go` directory;
+- result: local/Rust/SDK/static/governance/package gates passed; PostgreSQL
+  migration/store/API gates passed; credentialed non-trading smoke passed; and
+  sign-only dry-run passed under explicit env gates.
 
 Current evidence policy:
 
@@ -91,6 +95,18 @@ The user-selected canary market review package must bind:
 The controlled canary dry-run may report `dry_run_ready`, but that status still
 means no live submit, no live cancel, no posted order, and no remote side
 effects.
+
+The current user-selected review package remains `no_go` and not armed:
+
+- market: `will-iran-legalize-gay-marriage`;
+- side/outcome: BUY Yes;
+- execution style: GTC limit post-only cancel;
+- target size: `5` outcome shares;
+- limit price: `0.02`;
+- maximum order notional: `1.00` USD;
+- `real_funds_canary_authorized=false`;
+- `live_submit_authorized=false`;
+- `live_cancel_authorized=false`.
 
 ## Non-Claims
 
