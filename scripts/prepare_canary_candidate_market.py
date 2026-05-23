@@ -64,6 +64,7 @@ class Candidate:
             "limit_price": decimal_text(self.limit_price),
             "ask_size": decimal_text(self.ask_size),
             "target_size": decimal_text(self.target_size),
+            "estimated_order_notional_usd": decimal_text(self.limit_price * self.target_size),
             "spread_bps": self.spread_bps,
             "min_order_size": decimal_text(self.min_order_size),
             "exchange_rule_snapshot": {

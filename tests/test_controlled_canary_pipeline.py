@@ -47,6 +47,7 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
             "limit_price": "0.02",
             "ask_size": "20",
             "target_size": "5",
+            "estimated_order_notional_usd": "0.1",
             "spread_bps": 100,
             "min_order_size": "5",
             "exchange_rule_snapshot": {
@@ -116,6 +117,11 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         candidate = self.candidate(target_size="5")
         candidate["exchange_rule_snapshot"]["min_share_size"] = "6"
         with self.assertRaisesRegex(SystemExit, "min_share_size"):
+            self.pipeline.validate_candidate_file(self.write_candidate(candidate))
+
+    def test_supplied_candidate_requires_bound_notional(self):
+        candidate = self.candidate(estimated_order_notional_usd="0.2")
+        with self.assertRaisesRegex(SystemExit, "estimated_order_notional_usd"):
             self.pipeline.validate_candidate_file(self.write_candidate(candidate))
 
     def test_stage_plan_is_no_go_by_default_and_blocks_live_phases(self):

@@ -71,8 +71,14 @@ def validate_candidate_file(path: Path) -> dict[str, Any]:
     ask_size = parse_decimal(candidate.get("ask_size"), "ask_size")
     target_size = parse_decimal(candidate.get("target_size"), "target_size")
     min_order_size = parse_decimal(candidate.get("min_order_size"), "min_order_size")
+    estimated_notional = parse_decimal(
+        candidate.get("estimated_order_notional_usd"),
+        "estimated_order_notional_usd",
+    )
     if best_ask <= 0 or limit_price <= 0 or ask_size <= 0 or target_size <= 0:
         raise SystemExit("candidate best_ask, limit_price, ask_size, and target_size must be positive")
+    if estimated_notional != limit_price * target_size:
+        raise SystemExit("candidate estimated_order_notional_usd must equal limit_price * target_size")
     if limit_price >= best_ask:
         raise SystemExit("candidate post-only BUY limit_price must be below best_ask")
     if ask_size < target_size:
