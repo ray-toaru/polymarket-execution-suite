@@ -124,6 +124,14 @@ valid; the package must instead include `operator-incident-recovery.json` with
 window, and account-level open-order/trade/activity readback proving no matching
 remote order or fill was found.
 
+Validate runtime truth before passing it to the pipeline:
+
+```bash
+cd polymarket-execution-engine
+python validation/validate_controlled_canary_runtime_truth.py \
+  --file /path/to/reviewed-runtime-truth.json
+```
+
 The pipeline also emits an `operator_runbook` block. It is blocked by default;
 even with a future fresh reviewed-go decision and durable runtime-truth input,
 the runbook is marked operator-runnable, not auto-executed. Already consumed or

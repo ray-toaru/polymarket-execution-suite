@@ -938,14 +938,23 @@ def validate_controlled_canary_release_decision_governance() -> None:
     external_invalid = EXECUTOR / "config/controlled-canary.external-references.invalid-sensitive.fixture.json"
     external_validator = EXECUTOR / "validation/validate_controlled_canary_external_references.py"
     runtime_truth_template = EXECUTOR / "config/controlled-canary.runtime-truth.template.json"
+    runtime_truth_invalid_partial = EXECUTOR / "config/controlled-canary.runtime-truth.invalid-partial.fixture.json"
+    runtime_truth_invalid_sensitive = EXECUTOR / "config/controlled-canary.runtime-truth.invalid-sensitive.fixture.json"
+    runtime_truth_validator = EXECUTOR / "validation/validate_controlled_canary_runtime_truth.py"
     for path in [template, example, invalid, invalid_mismatched, validator]:
         if not path.exists():
             fail(f"controlled canary release-decision governance file missing: {path.relative_to(ROOT)}")
     for path in [external_template, external_example, external_invalid, external_validator]:
         if not path.exists():
             fail(f"controlled canary external-reference governance file missing: {path.relative_to(ROOT)}")
-    if not runtime_truth_template.exists():
-        fail(f"controlled canary runtime-truth governance file missing: {runtime_truth_template.relative_to(ROOT)}")
+    for path in [
+        runtime_truth_template,
+        runtime_truth_invalid_partial,
+        runtime_truth_invalid_sensitive,
+        runtime_truth_validator,
+    ]:
+        if not path.exists():
+            fail(f"controlled canary runtime-truth governance file missing: {path.relative_to(ROOT)}")
     template_data = json.loads(template.read_text())
     example_data = json.loads(example.read_text())
     invalid_data = json.loads(invalid.read_text())
@@ -1070,6 +1079,21 @@ def validate_controlled_canary_release_decision_governance() -> None:
         evidence_ref = item.get("evidence_ref")
         if not isinstance(evidence_ref, str) or "REPLACE_WITH" not in evidence_ref:
             fail(f"controlled canary runtime-truth template dependency {item.get('name')} must use placeholder evidence_ref")
+    runtime_truth_validator_text = runtime_truth_validator.read_text()
+    for needle in [
+        "Validate an operator-supplied runtime truth candidate",
+        "--allow-placeholders",
+        "runtime truth missing durable dependencies",
+        "invalid partial fixture must be rejected",
+        "invalid sensitive fixture must be rejected",
+        "forbidden sensitive runtime-truth key",
+        "references_only_no_secret_values",
+    ]:
+        if needle not in runtime_truth_validator_text:
+            fail(f"controlled canary runtime-truth validator missing token: {needle}")
+    gate_text = (EXECUTOR / "validation/run_current_gates_impl.sh").read_text()
+    if "73-controlled-canary-runtime-truth.log" not in gate_text:
+        fail("current gates must emit controlled canary runtime-truth validator log")
     readiness_text = readiness_doc.read_text()
     rehearsal = EXECUTOR / "validation/run_real_funds_canary_blocked_rehearsal_package.py"
     if not rehearsal.exists():
