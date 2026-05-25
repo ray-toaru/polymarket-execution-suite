@@ -72,12 +72,17 @@ def validate_candidate(path: Path) -> dict[str, Any]:
 
 def validate_runtime_truth(path: Path) -> dict[str, Any]:
     data = load_json(path)
-    if data.get("posted") is not False:
-        raise SystemExit("runtime truth must keep posted=false")
+    report = data.get("preflight_report")
+    if not isinstance(report, dict):
+        raise SystemExit("runtime truth preflight_report must be an object")
+    if report.get("posted") is not False:
+        raise SystemExit("runtime truth must keep preflight_report.posted=false")
+    if report.get("remote_side_effects") is not False:
+        raise SystemExit("runtime truth must keep preflight_report.remote_side_effects=false")
+    if report.get("status") != "preflight_ready":
+        raise SystemExit("runtime truth must keep preflight_report.status=preflight_ready")
     if data.get("remote_side_effects") is not False:
         raise SystemExit("runtime truth must keep remote_side_effects=false")
-    if data.get("preflight_ready") is not True:
-        raise SystemExit("runtime truth must keep preflight_ready=true")
     return data
 
 

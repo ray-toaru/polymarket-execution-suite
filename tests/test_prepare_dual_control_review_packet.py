@@ -43,9 +43,12 @@ class PrepareDualControlReviewPacketTests(unittest.TestCase):
             "artifact_sha256": artifact_sha,
             "workspace_manifest_sha256": "b" * 64,
             "archived_manifest_sha256": "c" * 64,
-            "posted": False,
+            "preflight_report": {
+                "posted": False,
+                "remote_side_effects": False,
+                "status": "preflight_ready",
+            },
             "remote_side_effects": False,
-            "preflight_ready": True,
         }
 
     def approval_request(self, artifact_sha: str, candidate_sha: str, runtime_sha: str) -> dict:
