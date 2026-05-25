@@ -148,6 +148,27 @@ python scripts/run_controlled_canary_pipeline.py \
   --candidate-market-file candidate-market.json
 ```
 
+When an independent reviewer has produced an approved dual-control review JSON,
+build the self-contained reviewed-go package locally from the current artifact,
+candidate, runtime-truth, approval request, and external references:
+
+```bash
+python scripts/prepare_reviewed_go_package.py \
+  --output-dir dist/pmx-canary-reviewed-go-<timestamp> \
+  --release-zip dist/polymarket-execution-suite-v0.27.3.zip \
+  --candidate-market-file <candidate-market.json> \
+  --runtime-truth-file <runtime-truth.json> \
+  --approval-request-file <operator-approval-request.json> \
+  --dual-control-review-file <approved-dual-control-review.json> \
+  --external-references-file <external-references.json> \
+  --decision-id reviewed-go-<timestamp> \
+  --decision-reason "approved by independent reviewer"
+```
+
+This package is authorization-bearing local material. It must stay single-use,
+must be marked consumed after any armed attempt, and must then be closed with
+the tracked closeout flow before any later review.
+
 Release packaging writes `dist/INDEX.json` and `dist/README.md`. Only the
 indexed `polymarket-execution-suite-v0.27.3.zip` plus its detached sidecars are
 the current source artifact after v0.27 packaging; any other `dist/pmx-*`
