@@ -77,6 +77,8 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
             "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
             "review_ref": "dual://review",
             "reviewer_identity_ref": "operator://second-reviewer",
+            "reviewed_at": datetime.now(timezone.utc).isoformat(),
+            "approval_request_sha256": "8" * 64,
             "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
             "approval_hash": request["approval_hash"],
             "artifact_sha256": request["artifact_sha256"],
@@ -88,6 +90,17 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
             "risk_limits": {
                 "max_order_notional_usd": request["risk_limits"]["max_order_notional_usd"],
                 "max_daily_notional_usd": request["risk_limits"]["max_daily_notional_usd"],
+            },
+            "required_reviewer_checks": {
+                "artifact_hash_reviewed": True,
+                "evidence_manifest_hash_reviewed": True,
+                "market_candidate_reviewed": True,
+                "runtime_truth_reviewed": True,
+                "risk_limits_reviewed": True,
+                "secret_custody_reviewed": True,
+                "alerting_reviewed": True,
+                "rollback_reviewed": True,
+                "reconcile_and_cancel_fallback_reviewed": True,
             },
             "secrets_included": False,
         }
@@ -140,6 +153,29 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
                 dual_control_review=self.dual_control_review(artifact_sha256="1" * 64),
             )
 
+    def test_rejects_missing_required_reviewer_check(self):
+        review = self.dual_control_review()
+        review["required_reviewer_checks"]["runtime_truth_reviewed"] = False
+        with self.assertRaisesRegex(SystemExit, "runtime_truth_reviewed"):
+            self.module.build_decision(
+                self.approval_request(),
+                self.external_references(),
+                decision_id="decision-1",
+                decision_reason="test",
+                dual_control_review=review,
+            )
+
+    def test_rejects_approval_request_sha_mismatch(self):
+        with self.assertRaisesRegex(SystemExit, "approval_request_sha256"):
+            self.module.build_decision(
+                self.approval_request(),
+                self.external_references(),
+                decision_id="decision-1",
+                decision_reason="test",
+                dual_control_review=self.dual_control_review(approval_request_sha256="7" * 64),
+                approval_request_sha256="8" * 64,
+            )
+
     def test_builds_reviewed_go_with_strict_notional_limit(self):
         decision = self.module.build_decision(
             self.approval_request(),
@@ -148,6 +184,7 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
             decision_reason="test",
             dual_control_review=self.dual_control_review(),
             dual_control_review_sha256="9" * 64,
+            approval_request_sha256="8" * 64,
         )
         self.assertEqual(decision["decision"], "go")
         self.assertEqual(decision["status"], "reviewed_go")

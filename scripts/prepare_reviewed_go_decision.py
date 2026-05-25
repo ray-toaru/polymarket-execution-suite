@@ -36,6 +36,17 @@ REVIEW_SIGNALS = [
     "runtime_health_reviewed",
     "reconcile_and_cancel_fallback_reviewed",
 ]
+REQUIRED_DUAL_CONTROL_CHECKS = [
+    "artifact_hash_reviewed",
+    "evidence_manifest_hash_reviewed",
+    "market_candidate_reviewed",
+    "runtime_truth_reviewed",
+    "risk_limits_reviewed",
+    "secret_custody_reviewed",
+    "alerting_reviewed",
+    "rollback_reviewed",
+    "reconcile_and_cancel_fallback_reviewed",
+]
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -134,7 +145,12 @@ def external_refs(
     return refs
 
 
-def validate_dual_control_review(review: dict[str, Any], request: dict[str, Any]) -> str:
+def validate_dual_control_review(
+    review: dict[str, Any],
+    request: dict[str, Any],
+    *,
+    approval_request_sha256: str | None = None,
+) -> str:
     if review.get("schema_version") != 1:
         raise SystemExit("dual-control review schema_version must be 1")
     if review.get("status") != "approved":
@@ -147,6 +163,17 @@ def validate_dual_control_review(review: dict[str, Any], request: dict[str, Any]
         raise SystemExit("dual-control review must not include secrets")
     if parse_time(review.get("expires_at"), "dual-control review expires_at") <= datetime.now(timezone.utc):
         raise SystemExit("dual-control review is expired")
+    reviewed_at = parse_time(review.get("reviewed_at"), "dual-control review reviewed_at")
+    if reviewed_at > datetime.now(timezone.utc):
+        raise SystemExit("dual-control review reviewed_at must not be in the future")
+
+    if approval_request_sha256 is not None:
+        reviewed_approval_sha = require_sha256(
+            review.get("approval_request_sha256"),
+            "dual-control review approval_request_sha256",
+        )
+        if reviewed_approval_sha != approval_request_sha256:
+            raise SystemExit("dual-control review approval_request_sha256 does not match approval request file")
 
     reviewer = review.get("reviewer_identity_ref")
     if not isinstance(reviewer, str) or not reviewer.strip() or reviewer.startswith("REPLACE_WITH_"):
@@ -179,6 +206,12 @@ def validate_dual_control_review(review: dict[str, Any], request: dict[str, Any]
     for field in ["max_order_notional_usd", "max_daily_notional_usd"]:
         if review_limits.get(field) != request_limits.get(field):
             raise SystemExit(f"dual-control review risk_limits.{field} does not match approval request")
+    checks = review.get("required_reviewer_checks")
+    if not isinstance(checks, dict):
+        raise SystemExit("dual-control review required_reviewer_checks must be an object")
+    missing_checks = [key for key in REQUIRED_DUAL_CONTROL_CHECKS if checks.get(key) is not True]
+    if missing_checks:
+        raise SystemExit("dual-control review missing required reviewer checks: " + ", ".join(missing_checks))
     return review_ref
 
 
@@ -190,9 +223,14 @@ def build_decision(
     decision_reason: str,
     dual_control_review: dict[str, Any],
     dual_control_review_sha256: str | None = None,
+    approval_request_sha256: str | None = None,
 ) -> dict[str, Any]:
     validate_approval_request(request)
-    dual_control_review_ref = validate_dual_control_review(dual_control_review, request)
+    dual_control_review_ref = validate_dual_control_review(
+        dual_control_review,
+        request,
+        approval_request_sha256=approval_request_sha256,
+    )
     refs = external_refs(
         external,
         dual_control_review_ref=dual_control_review_ref,
@@ -266,6 +304,7 @@ def main() -> int:
         decision_reason=args.decision_reason,
         dual_control_review=load_json(review_path),
         dual_control_review_sha256=require_sha256(sha256(review_path), "dual-control review file sha256"),
+        approval_request_sha256=require_sha256(sha256(approval_path), "approval request file sha256"),
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     validate_decision_output(decision)
