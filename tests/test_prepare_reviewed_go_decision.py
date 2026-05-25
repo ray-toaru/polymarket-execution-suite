@@ -68,14 +68,40 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
             },
         }
 
-    def test_requires_dual_control_ref(self):
-        with self.assertRaisesRegex(SystemExit, "dual-control"):
+    def dual_control_review(self, **overrides):
+        request = self.approval_request()
+        data = {
+            "schema_version": 1,
+            "status": "approved",
+            "scope": "REAL_FUNDS_CANARY",
+            "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
+            "review_ref": "dual://review",
+            "reviewer_identity_ref": "operator://second-reviewer",
+            "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
+            "approval_hash": request["approval_hash"],
+            "artifact_sha256": request["artifact_sha256"],
+            "workspace_manifest_sha256": request["workspace_manifest_sha256"],
+            "archived_manifest_sha256": request["archived_manifest_sha256"],
+            "evidence_manifest_sha256": request["evidence_manifest_sha256"],
+            "market_candidate_sha256": request["market_candidate_sha256"],
+            "runtime_truth_sha256": request["runtime_truth_sha256"],
+            "risk_limits": {
+                "max_order_notional_usd": request["risk_limits"]["max_order_notional_usd"],
+                "max_daily_notional_usd": request["risk_limits"]["max_daily_notional_usd"],
+            },
+            "secrets_included": False,
+        }
+        data.update(overrides)
+        return data
+
+    def test_requires_approved_dual_control_review(self):
+        with self.assertRaisesRegex(SystemExit, "status"):
             self.module.build_decision(
                 self.approval_request(),
                 self.external_references(),
                 decision_id="decision-1",
                 decision_reason="test",
-                dual_control_review_ref="",
+                dual_control_review=self.dual_control_review(status="draft"),
             )
 
     def test_rejects_expired_approval_request(self):
@@ -88,7 +114,30 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
                 self.external_references(),
                 decision_id="decision-1",
                 decision_reason="test",
-                dual_control_review_ref="dual://review",
+                dual_control_review=self.dual_control_review(),
+            )
+
+    def test_rejects_same_operator_and_reviewer(self):
+        request = self.approval_request()
+        with self.assertRaisesRegex(SystemExit, "differ"):
+            self.module.build_decision(
+                request,
+                self.external_references(),
+                decision_id="decision-1",
+                decision_reason="test",
+                dual_control_review=self.dual_control_review(
+                    reviewer_identity_ref=request["operator_identity_ref"]
+                ),
+            )
+
+    def test_rejects_dual_control_hash_mismatch(self):
+        with self.assertRaisesRegex(SystemExit, "artifact_sha256"):
+            self.module.build_decision(
+                self.approval_request(),
+                self.external_references(),
+                decision_id="decision-1",
+                decision_reason="test",
+                dual_control_review=self.dual_control_review(artifact_sha256="1" * 64),
             )
 
     def test_builds_reviewed_go_with_strict_notional_limit(self):
@@ -97,13 +146,16 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
             self.external_references(),
             decision_id="decision-1",
             decision_reason="test",
-            dual_control_review_ref="dual://review",
+            dual_control_review=self.dual_control_review(),
+            dual_control_review_sha256="9" * 64,
         )
         self.assertEqual(decision["decision"], "go")
         self.assertEqual(decision["status"], "reviewed_go")
         self.assertEqual(decision["risk_limits"]["max_order_notional_usd"], "0.2")
         self.assertTrue(decision["required_review_signals"]["operator_dual_control_reviewed"])
         self.assertFalse(decision["production_deployment_authorized"])
+        self.assertEqual(decision["external_references"]["operator_dual_control_review_ref"], "dual://review")
+        self.assertEqual(decision["external_references"]["operator_dual_control_review_sha256"], "9" * 64)
 
 
 if __name__ == "__main__":

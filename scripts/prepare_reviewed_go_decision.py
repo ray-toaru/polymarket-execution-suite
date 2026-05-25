@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 from datetime import datetime, timezone
@@ -39,6 +40,14 @@ REVIEW_SIGNALS = [
 
 def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text())
+
+
+def sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def has_placeholder(value: object) -> bool:
@@ -100,7 +109,12 @@ def validate_approval_request(request: dict[str, Any]) -> None:
         raise SystemExit("approval request archived/evidence manifest hashes must match")
 
 
-def external_refs(external: dict[str, Any], dual_control_review_ref: str) -> dict[str, str]:
+def external_refs(
+    external: dict[str, Any],
+    *,
+    dual_control_review_ref: str,
+    dual_control_review_sha256: str | None = None,
+) -> dict[str, str]:
     if has_placeholder(external):
         raise SystemExit("external references must not contain placeholders")
     refs: dict[str, str] = {}
@@ -115,7 +129,57 @@ def external_refs(external: dict[str, Any], dual_control_review_ref: str) -> dic
             raise SystemExit(f"external reference missing {'.'.join(path)}")
         refs[output_key] = current
     refs["operator_dual_control_review_ref"] = dual_control_review_ref
+    if dual_control_review_sha256 is not None:
+        refs["operator_dual_control_review_sha256"] = dual_control_review_sha256
     return refs
+
+
+def validate_dual_control_review(review: dict[str, Any], request: dict[str, Any]) -> str:
+    if review.get("schema_version") != 1:
+        raise SystemExit("dual-control review schema_version must be 1")
+    if review.get("status") != "approved":
+        raise SystemExit("dual-control review status must be approved")
+    if review.get("scope") != "REAL_FUNDS_CANARY":
+        raise SystemExit("dual-control review scope must be REAL_FUNDS_CANARY")
+    if review.get("execution_style") != "GTC_LIMIT_POST_ONLY_CANCEL":
+        raise SystemExit("dual-control review execution_style must be GTC_LIMIT_POST_ONLY_CANCEL")
+    if review.get("secrets_included") is not False:
+        raise SystemExit("dual-control review must not include secrets")
+    if parse_time(review.get("expires_at"), "dual-control review expires_at") <= datetime.now(timezone.utc):
+        raise SystemExit("dual-control review is expired")
+
+    reviewer = review.get("reviewer_identity_ref")
+    if not isinstance(reviewer, str) or not reviewer.strip() or reviewer.startswith("REPLACE_WITH_"):
+        raise SystemExit("dual-control review reviewer_identity_ref is required")
+    if reviewer == request.get("operator_identity_ref"):
+        raise SystemExit("dual-control reviewer must differ from operator_identity_ref")
+
+    review_ref = review.get("review_ref")
+    if not isinstance(review_ref, str) or not review_ref.strip() or review_ref.startswith("REPLACE_WITH_"):
+        raise SystemExit("dual-control review_ref is required")
+
+    for field in [
+        "approval_hash",
+        "artifact_sha256",
+        "workspace_manifest_sha256",
+        "archived_manifest_sha256",
+        "evidence_manifest_sha256",
+        "market_candidate_sha256",
+        "runtime_truth_sha256",
+    ]:
+        reviewed_value = require_sha256(review.get(field), f"dual-control review {field}")
+        requested_value = require_sha256(request.get(field), f"approval request {field}")
+        if reviewed_value != requested_value:
+            raise SystemExit(f"dual-control review {field} does not match approval request")
+
+    request_limits = request.get("risk_limits", {})
+    review_limits = review.get("risk_limits", {})
+    if not isinstance(request_limits, dict) or not isinstance(review_limits, dict):
+        raise SystemExit("dual-control review risk_limits must be an object")
+    for field in ["max_order_notional_usd", "max_daily_notional_usd"]:
+        if review_limits.get(field) != request_limits.get(field):
+            raise SystemExit(f"dual-control review risk_limits.{field} does not match approval request")
+    return review_ref
 
 
 def build_decision(
@@ -124,12 +188,16 @@ def build_decision(
     *,
     decision_id: str,
     decision_reason: str,
-    dual_control_review_ref: str,
+    dual_control_review: dict[str, Any],
+    dual_control_review_sha256: str | None = None,
 ) -> dict[str, Any]:
-    if not dual_control_review_ref.strip() or dual_control_review_ref.startswith("REPLACE_WITH_"):
-        raise SystemExit("dual-control review ref is required")
     validate_approval_request(request)
-    refs = external_refs(external, dual_control_review_ref)
+    dual_control_review_ref = validate_dual_control_review(dual_control_review, request)
+    refs = external_refs(
+        external,
+        dual_control_review_ref=dual_control_review_ref,
+        dual_control_review_sha256=dual_control_review_sha256,
+    )
     return {
         "schema_version": 1,
         "decision_id": decision_id,
@@ -178,7 +246,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--approval-request-file", required=True, type=Path)
     parser.add_argument("--external-references-file", required=True, type=Path)
-    parser.add_argument("--dual-control-review-ref", required=True)
+    parser.add_argument("--dual-control-review-file", required=True, type=Path)
     parser.add_argument("--decision-id", required=True)
     parser.add_argument("--decision-reason", required=True)
     parser.add_argument("--output", required=True, type=Path)
@@ -189,13 +257,15 @@ def main() -> int:
     args = parse_args()
     approval_path = args.approval_request_file if args.approval_request_file.is_absolute() else ROOT / args.approval_request_file
     external_path = args.external_references_file if args.external_references_file.is_absolute() else ROOT / args.external_references_file
+    review_path = args.dual_control_review_file if args.dual_control_review_file.is_absolute() else ROOT / args.dual_control_review_file
     output = args.output if args.output.is_absolute() else ROOT / args.output
     decision = build_decision(
         load_json(approval_path),
         load_json(external_path),
         decision_id=args.decision_id,
         decision_reason=args.decision_reason,
-        dual_control_review_ref=args.dual_control_review_ref,
+        dual_control_review=load_json(review_path),
+        dual_control_review_sha256=require_sha256(sha256(review_path), "dual-control review file sha256"),
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     validate_decision_output(decision)
