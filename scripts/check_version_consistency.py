@@ -152,8 +152,12 @@ def validate_versions(root: Path = ROOT) -> list[str]:
     manifest = json.loads(read_from(root, "polymarket-execution-engine/release/manifest.json"))
     expect_equal(failures, "release manifest version", manifest.get("version", ""), suite_version)
     status = manifest.get("status", "")
-    if "source-candidate" not in status and "shadow-ready-candidate" not in status:
-        failures.append("release manifest status must explicitly say source-candidate or shadow-ready-candidate")
+    if (
+        "source-candidate" not in status
+        and "shadow-ready-candidate" not in status
+        and "production-live-candidate" not in status
+    ):
+        failures.append("release manifest status must explicitly say source-candidate, shadow-ready-candidate, or production-live-candidate")
     if "not-production" not in manifest.get("status", ""):
         failures.append("release manifest status must explicitly say not-production")
 

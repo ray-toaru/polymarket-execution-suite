@@ -1,4 +1,9 @@
-# Canary decision-prep audit — v0.27
+# Canary decision-prep audit — v0.28
+
+Status: active v0.28 production-live-candidate governance material. Older
+v0.25/v0.26/v0.27 references below are historical evidence pointers only and
+do not authorize live submit, live cancel, production deployment, or another
+real-funds canary.
 
 ## Current conclusion
 

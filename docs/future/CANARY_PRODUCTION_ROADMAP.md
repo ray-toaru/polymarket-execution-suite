@@ -1,9 +1,8 @@
 # Canary and Production Roadmap
 
-Current source phase: `v0.26.0` is a controlled real-funds canary
-source-candidate. Live submit, live cancel, and production deployment remain
-blocked until a later reviewed release decision changes that boundary with
-current evidence.
+Current source phase: `v0.28.0` is a production-live-candidate. Live submit,
+live cancel, and production deployment remain blocked until a later reviewed
+release decision changes that boundary with current evidence.
 
 ## P0: Preserve the v0.25 baseline while advancing v0.26
 

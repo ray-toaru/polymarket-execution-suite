@@ -1,4 +1,4 @@
-# Development handoff — v0.27.3 controlled real-funds canary source-candidate
+# Development handoff — v0.28.0 production-live-candidate
 
 ## Start here
 

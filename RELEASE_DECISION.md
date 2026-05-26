@@ -1,12 +1,12 @@
-# Release Decision — v0.27.3 controlled real-funds canary source-candidate
+# Release Decision — v0.28.0 production-live-candidate
 
 ## Decision
 
-Current decision: `controlled real-funds canary source-candidate`
+Current decision: `production-live-candidate`
 
-This is a source-candidate and review-material release. It is not a validated
-production release, not live-trading-ready, and not an approval to submit or
-cancel live orders.
+This is a production-live candidate and review-material release. It is not a
+validated production release, not live-trading-ready, and not an approval to
+submit or cancel live orders.
 
 Current explicit non-claims:
 
@@ -20,16 +20,16 @@ Current explicit non-claims:
 Do not claim production readiness. Do not claim live-trading readiness. The
 first controlled canary was authorized through a separate reviewed-go package,
 then consumed and closed; this release decision remains the durable non-live
-source-candidate decision and does not authorize a second attempt.
+production-live-candidate decision and does not authorize a second attempt.
 
 ## Scope
 
-This decision applies to v0.27.3 source at the integration repository commit
+This decision applies to v0.28.0 source at the integration repository commit
 that contains this file. The release package is the source archive
-`polymarket-execution-suite-v0.27.3.zip` plus its detached `.sha256` and
+`polymarket-execution-suite-v0.28.0.zip` plus its detached `.sha256` and
 `.zip.evidence.json` sidecars.
 
-The package advances controlled canary preparation, v0.27 release-governance
+The package advances controlled canary preparation, v0.28 release-governance
 hardening, and records one completed controlled canary closeout:
 
 - reviewed candidate-market binding;
@@ -119,8 +119,36 @@ Repository ownership is split:
   adapter checks, current gates, manual credentialed SDK workflow.
 
 Historical v0.25 and v0.26 CI runs and review packages are audit context only.
-They are not current v0.27 artifact proof unless a report explicitly binds the
-exact v0.27 artifact SHA-256 and evidence manifest SHA-256.
+They are not current v0.28 artifact proof unless a report explicitly binds the
+exact v0.28 artifact SHA-256 and evidence manifest SHA-256.
+
+## Production-Live Candidate Closure Criteria
+
+v0.28 moves the project toward production/live operation only when all eight
+candidate criteria below have fresh evidence bound to the exact artifact under
+review:
+
+1. Release decision: a fresh reviewed release decision must bind the final
+   artifact SHA-256, evidence manifest SHA-256, candidate-market SHA-256, and
+   approval hash.
+2. Canary approval: operator approval must be dual-control reviewed, scoped to
+   one bounded attempt, expired after use, and marked consumed before closeout.
+3. Runtime truth: runtime state healthy, kill switch open, no geoblock, market
+   live, account allowlisted, balance/allowance checked, idempotency reservation
+   ready, and reconciliation worker healthy must all be durable facts.
+4. Execution boundary: live submit and live cancel remain disabled by default;
+   any enabled path must prove post/cancel/readback/closeout stage persistence
+   and operator-required handling for remote-unknown outcomes.
+5. Deployment: production deployment evidence must include service topology,
+   database migration plan, health probes, rollback command, and recovery path.
+6. Operations: alert routing, incident runbook, monitoring/SLO, audit export,
+   and rollback drills must be reviewed and attached as external references.
+7. Custody and permissions: secret custody, key management, service/admin token
+   split, no raw signed payload exposure, and Hermes no-secret/no-signing
+   boundaries must remain enforced.
+8. Risk limits: explicit account, market, size, notional, daily caps, price
+   tick, post-only/GTC semantics, and no-fill/zero-impact closeout checks must
+   be bound to the reviewed attempt.
 
 ## Required Before Any `go`
 
@@ -138,5 +166,5 @@ A future armed canary attempt must have all of the following:
   freeze, and idempotency reservation path verified;
 - rollback, cancel-only, incident, alert, audit, and custody runbooks reviewed.
 
-Until those conditions are met, v0.27.3 remains a non-live controlled canary
-source-candidate.
+Until those conditions are met, v0.28.0 remains a non-live
+production-live-candidate.

@@ -1,6 +1,6 @@
 # Project architecture — current baseline
 
-Status: v0.27 source-candidate architecture baseline.
+Status: v0.28 production-live-candidate architecture baseline.
 
 ## Baseline
 
@@ -60,7 +60,9 @@ pmx-release    release/version scaffold
 
 ## Conservative pre-live policy
 
-v0.27.3 is the controlled real-funds canary source-candidate baseline.
+v0.28.0 is the production-live-candidate baseline. It is still non-live by
+default and does not approve production deployment or general funds-moving
+execution.
 Runtime worker `DEGRADED`, `STALE`, or `UNKNOWN` status must not be treated as
 live-trading safe. Live submit/cancel remain blocked unless current gates,
 artifact/evidence binding, one-time approval consumption, human-reviewed

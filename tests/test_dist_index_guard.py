@@ -42,6 +42,7 @@ class DistIndexGuardTests(unittest.TestCase):
                 "sha256": self.sha,
                 "sha256_sidecar": "polymarket-execution-suite-v0.26.0.zip.sha256",
                 "evidence_sidecar": "polymarket-execution-suite-v0.26.0.zip.evidence.json",
+                "artifact_class": "controlled_real_funds_canary_source_candidate_non_live",
                 "validated_release": False,
                 "production_ready": False,
                 "live_trading_ready": False,
@@ -66,6 +67,21 @@ class DistIndexGuardTests(unittest.TestCase):
 
     def test_valid_index_passes(self):
         self.write_index()
+        self.assertEqual(self.guard.validate(self.dist, "0.26.0"), [])
+
+    def test_valid_production_live_candidate_class_passes(self):
+        self.write_index(
+            current_release_artifact={
+                "path": self.artifact.name,
+                "sha256": self.sha,
+                "sha256_sidecar": "polymarket-execution-suite-v0.26.0.zip.sha256",
+                "evidence_sidecar": "polymarket-execution-suite-v0.26.0.zip.evidence.json",
+                "artifact_class": "production_live_candidate_non_live_by_default",
+                "validated_release": False,
+                "production_ready": False,
+                "live_trading_ready": False,
+            }
+        )
         self.assertEqual(self.guard.validate(self.dist, "0.26.0"), [])
 
     def test_rejects_mismatched_sidecar_hash(self):

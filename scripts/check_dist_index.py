@@ -50,8 +50,15 @@ def validate(dist: Path, expected_version: str) -> list[str]:
     if len(current_zip_entries) != 1:
         failures.append("dist must contain exactly one current versioned release artifact")
 
+    artifact_class = artifact.get("artifact_class")
+    allowed_classes = {
+        "controlled_real_funds_canary_source_candidate_non_live",
+        "production_live_candidate_non_live_by_default",
+    }
+    if artifact_class not in allowed_classes:
+        failures.append("INDEX.json current_release_artifact.artifact_class is not recognized")
     if artifact.get("validated_release") is not False:
-        failures.append("INDEX.json must keep validated_release=false for this source-candidate")
+        failures.append("INDEX.json must keep validated_release=false for this non-live candidate")
     if artifact.get("production_ready") is not False:
         failures.append("INDEX.json must keep production_ready=false")
     if artifact.get("live_trading_ready") is not False:

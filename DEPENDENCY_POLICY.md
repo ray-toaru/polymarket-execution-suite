@@ -1,4 +1,4 @@
-# Dependency and environment policy — v0.27
+# Dependency and environment policy — v0.28
 
 ## Current baseline
 
@@ -40,4 +40,9 @@ attestation claim is made unless a later release process adds one.
 
 ## Current limitation
 
-This v0.26.0 package requires Rust/SDK/PostgreSQL compatibility evidence from the current full gate before release promotion. `cargo check --workspace --locked`, SDK adapter checks, and PostgreSQL E2E must remain green for the bound artifact; controlled real-funds canary promotion additionally requires reviewed release-decision and market-candidate evidence.
+The v0.28.0 production-live-candidate package requires Rust/SDK/PostgreSQL
+compatibility evidence from the current full gate before any promotion.
+`cargo check --workspace --locked`, SDK adapter checks, and PostgreSQL E2E must
+remain green for the bound artifact; any live canary or production promotion
+additionally requires reviewed release-decision, market-candidate, runtime
+truth, custody, alerting, rollback, and operator-approval evidence.

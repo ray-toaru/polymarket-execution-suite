@@ -1,9 +1,9 @@
-# Validation Report — v0.27.3 controlled real-funds canary source-candidate
+# Validation Report — v0.28.0 production-live-candidate
 
 ## Current Conclusion
 
-v0.27.3 is being prepared as a controlled real-funds canary source-candidate.
-It is not production-ready and not live-trading-ready until the v0.27 full
+v0.28.0 is being prepared as a production-live-candidate.
+It is not production-ready and not live-trading-ready until the v0.28 full
 current gates, package, detached sidecars, and release readiness audit are
 refreshed together.
 
@@ -26,9 +26,9 @@ The current package is valid only when the following detached sidecars are
 present next to the source archive:
 
 ```text
-dist/polymarket-execution-suite-v0.27.3.zip
-dist/polymarket-execution-suite-v0.27.3.zip.sha256
-dist/polymarket-execution-suite-v0.27.3.zip.evidence.json
+dist/polymarket-execution-suite-v0.28.0.zip
+dist/polymarket-execution-suite-v0.28.0.zip.sha256
+dist/polymarket-execution-suite-v0.28.0.zip.evidence.json
 ```
 
 The source archive does not self-bind its containing zip hash. The detached
@@ -38,7 +38,7 @@ SHA-256.
 `dist/INDEX.json` is part of the local release boundary. It is not embedded in
 the source archive; it indexes the generated artifact and local review
 directories in the developer `dist/` workspace. The index is valid only when
-`scripts/check_dist_index.py dist 0.27.3` passes and
+`scripts/check_dist_index.py dist 0.28.0` passes and
 `scripts/check_release_artifact.py` confirms the same artifact and sidecar
 hashes.
 
@@ -90,14 +90,14 @@ Current evidence policy:
   `status=pass`, `preflight_ready=true`, no post/cancel side effects, no raw
   signed order exposure, and `runtime_truth_source=postgres`;
 - local static, Rust, SDK, package, governance, and deployment-template gates
-  are evidence only for the source-candidate boundary.
+  are evidence only for the production-live-candidate boundary.
 - controlled canary closeout evidence is valid only for the single order id
   recorded in `CONTROLLED_CANARY_CLOSEOUT.md`; it is not reusable authorization
   for a later canary.
 
-Full current gates for v0.27 are required before tagging or promotion. Until
+Full current gates for v0.28 are required before tagging or promotion. Until
 `polymarket-execution-engine/validation/run_current_gates.sh` has refreshed the
-canonical evidence manifest for v0.27.3 and the v0.27 artifact sidecars exist,
+canonical evidence manifest for v0.28.0 and the v0.28 artifact sidecars exist,
 this report is a development-state report rather than final release evidence.
 
 ## Local Validation Commands
@@ -107,8 +107,8 @@ Use local checks before CI:
 ```bash
 .venv/bin/python scripts/check_version_consistency.py
 .venv/bin/python scripts/validate_contracts.py
-.venv/bin/python scripts/check_v27_release_readiness.py
-.venv/bin/python scripts/check_dist_index.py dist 0.27.3
+.venv/bin/python scripts/check_v28_production_live_candidate.py
+.venv/bin/python scripts/check_dist_index.py dist 0.28.0
 PYTHONPATH=hermes-polymarket-executor-adapter/src .venv/bin/python -m pytest -q hermes-polymarket-executor-adapter/tests
 .venv/bin/python -m compileall -q hermes-polymarket-executor-adapter/src scripts polymarket-execution-engine/validation
 HERMES_PROFILE_CMD=<local-profile-command> .venv/bin/python scripts/check_hermes_profile_plugin.py
@@ -118,8 +118,8 @@ cd polymarket-execution-engine && ./validation/run_current_gates.sh
 Routine edits should use the relevant local subset first. Remote CI is a release
 confirmation layer, not the default way to validate every small local change.
 
-`check_v27_release_readiness.py` remains audit-only by default. It becomes a
-failing gate only with `--require-ready`, which should be used when the v0.27
+`check_v28_production_live_candidate.py` remains audit-only by default. It becomes a
+failing gate only with `--require-ready`, which should be used when the v0.28
 version bump, manifests, release decision, validation report, deterministic
 artifact, sidecars, and full gates are all refreshed.
 
@@ -172,7 +172,7 @@ This validation report does not claim:
 - live submit or live cancel availability;
 - a successful real-funds canary fill;
 - readiness for a second real-funds canary without a fresh reviewed decision;
-- equivalence between historical v0.25 evidence and the current v0.27 package.
+- equivalence between historical v0.25 evidence and the current v0.28 package.
 
 Any future live attempt needs a new reviewed release decision and fresh evidence
 bound to the exact artifact under review.

@@ -1,17 +1,18 @@
-# Roadmap — v0.27 development from v0.26.1 canary baseline
+# Roadmap — v0.28 production-live-candidate from v0.26.1 canary baseline
 
 ## Current baseline
 
-`v0.26.1` is the current controlled canary source-candidate baseline. One explicitly authorized
-BUY/GTC post-only canary was posted, cancelled, and closed with zero observed
-fill/position impact. It is still not production-ready, not live-canary-approved
-for a second attempt, and does not authorize live submit, live cancel, or
-real-funds canary execution without a fresh reviewed `go` decision.
+`v0.28.0` is the current production-live-candidate baseline. It carries forward
+one explicitly authorized BUY/GTC post-only canary that was posted, cancelled,
+and closed with zero observed fill/position impact. It is still not
+production-ready, not live-canary-approved for a second attempt, and does not
+authorize live submit, live cancel, or real-funds canary execution without a
+fresh reviewed `go` decision.
 
-Active development now continues on `v0.27-development`. The source version
-must remain `0.26.1` until the root suite, execution engine, adapter,
-compatibility matrix, release manifest, evidence, and validation reports are
-coherently bumped and revalidated. Branch name alone is not release evidence.
+Active development continues on the current development branch. The version
+number, compatibility matrix, release manifest, evidence, validation reports,
+artifact sidecars, and tags must be coherently bumped and revalidated together.
+Branch name alone is not release evidence.
 
 ## Immediate next validation
 
@@ -26,7 +27,7 @@ coherently bumped and revalidated. Branch name alone is not release evidence.
    v0.26 controlled canary; the source JSON evidence remains local `dist/`
    review material.
 
-## v0.27 development target
+## v0.28 development target
 
 The next release should not broaden general live trading. Its goal is a
 repeatable, auditable, fail-closed canary pipeline plus clearer component

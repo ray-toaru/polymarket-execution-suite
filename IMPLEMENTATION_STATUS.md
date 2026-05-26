@@ -1,4 +1,4 @@
-# Implementation status — v0.27.3 controlled real-funds canary source-candidate
+# Implementation status — v0.28.0 production-live-candidate
 
 ## Implemented source-level items
 
@@ -21,7 +21,7 @@
   lifecycle divergence records.
 - Lifecycle and admin audit query APIs.
 - Redacted lifecycle payload envelope at public API/model level.
-- v0.27 controlled real-funds canary source-candidate gate runner, static guards, version guard, and docs/evidence governance guard.
+- v0.28 production-live-candidate gate runner, static guards, version guard, and docs/evidence governance guard.
 - Runtime worker loop/tick models for heartbeat lease, resource refresh,
   reconcile backlog, WebSocket liveness, geoblock, and worker crash recovery.
 - Order lifecycle event query API and per-order correlation trace field.
@@ -207,7 +207,7 @@
   cancel-only fallback checks.
 - Runtime heartbeat worker scaffolding now exposes a non-trading heartbeat
   loop with an injected persistence sink; the old discard-only placeholder
-  compatibility entry point has been removed on the v0.27 development branch.
+  compatibility entry point has been removed on the v0.28 development branch.
 - Guarded real-funds canary preflight is implemented behind explicit
   `live-submit`, `PMX_ALLOW_LIVE_SUBMIT`, `PMX_ALLOW_REAL_FUNDS_CANARY`,
   config, approval, artifact-hash, evidence-manifest-hash, balance/allowance,
@@ -325,5 +325,5 @@ checks:
 polymarket-execution-engine/evidence/current/manifest.json
 ```
 
-Current release status remains `controlled real-funds canary source-candidate`;
+Current release status remains `production-live-candidate`;
 live submit/cancel and production deployment are still intentionally blocked.

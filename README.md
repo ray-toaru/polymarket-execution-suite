@@ -1,6 +1,6 @@
-# Polymarket execution suite v0.27.3
+# Polymarket execution suite v0.28.0
 
-v0.27.3 is a **controlled real-funds canary source-candidate**, not a production-ready or live-trading release. It preserves the closed v0.26 BUY/GTC post-only canary evidence and adds executor-side safety and release-governance hardening. Further live execution still requires current gates plus a fresh reviewed `go` decision and operator approval.
+v0.28.0 is a **production-live-candidate**, not a production-ready or live-trading release. It preserves the closed v0.26 BUY/GTC post-only canary evidence and adds executor-side safety and release-governance hardening. Further live execution still requires current gates plus a fresh reviewed `go` decision and operator approval.
 
 This repository is the integration repository. It pins two independent implementation repositories as
 submodules:
@@ -49,7 +49,7 @@ Integration-level local/static validation entry points:
 python -m pip install -r requirements-ci.txt
 python scripts/check_version_consistency.py
 python scripts/validate_contracts.py
-python scripts/check_v27_release_readiness.py
+python scripts/check_v28_production_live_candidate.py
 python -m unittest discover -s tests -p "test_*.py"
 HERMES_PROFILE=<local-profile> PYTHONPATH=hermes-polymarket-executor-adapter/src python -m pytest -q hermes-polymarket-executor-adapter/tests
 HERMES_PROFILE=<local-profile> python -m compileall -q hermes-polymarket-executor-adapter/src scripts tests polymarket-execution-engine/validation
@@ -58,8 +58,8 @@ python polymarket-execution-engine/validation/check_docs_evidence_governance.py
 python polymarket-execution-engine/scripts/check_release_hygiene.py . --dev-worktree
 ```
 
-`scripts/check_v27_release_readiness.py` is audit-only by default. It reports
-the remaining blockers before a v0.27 release; use `--require-ready` only for
+`scripts/check_v28_production_live_candidate.py` is audit-only by default. It reports
+the remaining blockers before a v0.28 release; use `--require-ready` only for
 the final release gate after version files, manifests, reports, sidecars, and
 full gates have been refreshed together.
 
@@ -112,7 +112,7 @@ as the input shape; it is references-only and does not authorize live submit by
 itself. A closeout package runs the read-only closeout
 script and records the resulting local evidence hash plus
 `post-canary-report.json.stages.jsonl` summary/hash; it does not query remote
-APIs or place/cancel orders. v0.27 closeout refuses to claim clean closure if
+APIs or place/cancel orders. v0.28 closeout refuses to claim clean closure if
 the ordered stage history is missing, exposes raw signed material, references a
 different remote order id, or contains an unresolved `operator_required` stage.
 If an `operator_required` stage occurred, the package must also include
@@ -170,7 +170,7 @@ If you need the lower-level file-by-file entry, it remains available:
 ```bash
 python scripts/prepare_reviewed_go_package.py \
   --output-dir dist/pmx-canary-reviewed-go-<timestamp> \
-  --release-zip dist/polymarket-execution-suite-v0.27.3.zip \
+  --release-zip dist/polymarket-execution-suite-v0.28.0.zip \
   --candidate-market-file <candidate-market.json> \
   --runtime-truth-file <runtime-truth.json> \
   --approval-request-file <operator-approval-request.json> \
@@ -224,7 +224,7 @@ python scripts/prepare_canary_prereview_bundle.py \
   --approval-request-output <operator-approval-request.json> \
   --dual-control-template-output <dual-control-review.template.json> \
   --review-packet-output-dir <review-packet-dir> \
-  --release-zip dist/polymarket-execution-suite-v0.27.3.zip \
+  --release-zip dist/polymarket-execution-suite-v0.28.0.zip \
   --market-url <polymarket-event-or-market-url> \
   --outcome Yes \
   --human-review-ref <market-review-ref> \
@@ -258,7 +258,7 @@ python scripts/prepare_canary_review_bundle.py \
   --approval-request-output <operator-approval-request.json> \
   --dual-control-template-output <dual-control-review.template.json> \
   --review-packet-output-dir <review-packet-dir> \
-  --release-zip dist/polymarket-execution-suite-v0.27.3.zip \
+  --release-zip dist/polymarket-execution-suite-v0.28.0.zip \
   --candidate-market-file <candidate-market.json> \
   --runtime-truth-file <runtime-truth.json> \
   --root-ci-run-id <root-ci-run-id> \
@@ -284,7 +284,7 @@ python scripts/prepare_canary_runtime_bundle.py \
   --source-env-file polymarket-execution-engine/.env.profiles \
   --runtime-env-output polymarket-execution-engine/.env.runtime \
   --approval-request-output <operator-approval-request.json> \
-  --release-zip dist/polymarket-execution-suite-v0.27.3.zip \
+  --release-zip dist/polymarket-execution-suite-v0.28.0.zip \
   --candidate-market-file <candidate-market.json> \
   --runtime-truth-file <runtime-truth.json> \
   --root-ci-run-id <root-ci-run-id> \
@@ -300,7 +300,7 @@ The lower-level command remains available when you already have a prepared
 ```bash
 python scripts/prepare_operator_approval_request.py \
   --output <operator-approval-request.json> \
-  --release-zip dist/polymarket-execution-suite-v0.27.3.zip \
+  --release-zip dist/polymarket-execution-suite-v0.28.0.zip \
   --candidate-market-file <candidate-market.json> \
   --runtime-truth-file <runtime-truth.json> \
   --runtime-env-file polymarket-execution-engine/.env.runtime \
@@ -362,8 +362,8 @@ explicit operator assertions, and the script will report any that are missing in
 its invocation plan output.
 
 Release packaging writes `dist/INDEX.json` and `dist/README.md`. Only the
-indexed `polymarket-execution-suite-v0.27.3.zip` plus its detached sidecars are
-the current source artifact after v0.27 packaging; any other `dist/pmx-*`
+indexed `polymarket-execution-suite-v0.28.0.zip` plus its detached sidecars are
+the current source artifact after v0.28 packaging; any other `dist/pmx-*`
 directory is local review material unless explicitly indexed as current. The
 index classifies no-go, consumed, and closed canary material and marks it
 non-reusable for approval.

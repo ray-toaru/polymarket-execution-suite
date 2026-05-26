@@ -1,4 +1,4 @@
-# Review audit — v0.27 controlled real-funds canary source-candidate
+# Review audit — v0.28 production-live-candidate
 
 ## Confirmed source-level improvements
 
@@ -46,5 +46,5 @@ recorded in external .zip.sha256 and .zip.evidence.json sidecars
 
 ## Current conclusion
 
-v0.26.0 controlled canary source has one closed real-funds canary exercise, but
-it is still not a production/live-trading release.
+v0.28.0 records one closed real-funds canary exercise from the prior controlled
+canary line, but it is still not a production/live-trading release.

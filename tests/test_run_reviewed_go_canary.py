@@ -132,7 +132,7 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
             {
                 "schema_version": 1,
                 "status": "reviewed_runtime_truth_candidate",
-                "source_release": "v0.27.3",
+                "source_release": "v0.28.0",
                 "scope": "REAL_FUNDS_CANARY",
                 "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
                 "artifact_sha256": "a" * 64,

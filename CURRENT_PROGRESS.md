@@ -1,8 +1,8 @@
-# Current progress — v0.27.3
+# Current progress — v0.28.0
 
 This note records the transition from the v0.26.1 controlled real-funds canary
-source-candidate into the v0.27 line. The checked source-candidate is v0.27.3.
-The v0.26 controlled canary remains historical evidence; v0.27 focuses on
+source-candidate into the v0.28 line. The checked source-candidate is v0.28.0.
+The v0.26 controlled canary remains historical evidence; v0.28 focuses on
 release-governance hardening, independent component versioning, and safer
 canary closeout/recovery evidence.
 
@@ -74,6 +74,6 @@ cancel, a second real-funds canary, or a real-funds fill target.
   closed so historical reviewed-go packages cannot be mistaken for current
   approval.
 - Generated local no-go pipeline evidence under
-  `dist/pmx-canary-pipeline-next-phase-no-go-local/` during the v0.26-to-v0.27
+  `dist/pmx-canary-pipeline-next-phase-no-go-local/` during the v0.26-to-v0.28
   transition. The report records `remote_side_effects=false`,
   `armed_live_attempted=false`, and `operator_runbook.status=blocked`.

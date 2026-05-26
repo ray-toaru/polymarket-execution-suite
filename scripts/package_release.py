@@ -187,7 +187,7 @@ def write_dist_index(artifact_sha256: str, manifest_sha256: str | None) -> None:
             "sha256": artifact_sha256,
             "sha256_sidecar": OUT.with_suffix(OUT.suffix + ".sha256").name,
             "evidence_sidecar": OUT.with_suffix(OUT.suffix + ".evidence.json").name,
-            "artifact_class": "controlled_real_funds_canary_source_candidate_non_live",
+            "artifact_class": "production_live_candidate_non_live_by_default",
             "validated_release": False,
             "production_ready": False,
             "live_trading_ready": False,
@@ -212,7 +212,7 @@ def write_dist_index(artifact_sha256: str, manifest_sha256: str | None) -> None:
                 "",
                 f"- `{OUT.name}`",
                 f"- SHA-256: `{artifact_sha256}`",
-                "- Status: controlled real-funds canary source-candidate, non-live",
+                "- Status: production-live-candidate, non-live",
                 "- Not production-ready; not live-trading-ready; not a `go` approval",
                 "",
                 "`INDEX.json` is the machine-readable index. Any other files or directories in",
@@ -221,6 +221,40 @@ def write_dist_index(artifact_sha256: str, manifest_sha256: str | None) -> None:
             ]
         )
     )
+
+
+def bind_workspace_manifest(evidence_manifest: Path, artifact_sha256: str) -> None:
+    if not evidence_manifest.exists():
+        return
+    data = json.loads(evidence_manifest.read_text())
+    external = data.setdefault("external_artifact_sidecar", {})
+    if isinstance(external, dict):
+        external.update(
+            {
+                "name": OUT.name,
+                "path": f"dist/{OUT.name}",
+                "sha256": artifact_sha256,
+                "sha256_sidecar": f"{OUT.name}.sha256",
+                "evidence_sidecar": f"{OUT.name}.evidence.json",
+                "binding_note": (
+                    "Current workspace evidence binds the final release artifact here. "
+                    "When this manifest is archived inside the artifact, package_release.py "
+                    "normalizes this volatile hash to null to avoid archive self-reference."
+                ),
+            }
+        )
+    data.setdefault("artifact", {}).update(
+        {
+            "name": None,
+            "path": None,
+            "sha256": None,
+            "binding_note": (
+                "The canonical manifest does not self-bind a containing zip. "
+                "Release artifacts are bound by external .zip.sha256 and .zip.evidence.json sidecars."
+            ),
+        }
+    )
+    evidence_manifest.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
 
 
 def main() -> int:
@@ -237,6 +271,7 @@ def main() -> int:
     sidecar = OUT.with_suffix(OUT.suffix + ".sha256")
     artifact_sha256 = sha256(OUT)
     evidence_manifest = ROOT / "polymarket-execution-engine" / "evidence" / "current" / "manifest.json"
+    bind_workspace_manifest(evidence_manifest, artifact_sha256)
     workspace_manifest_sha256 = sha256(evidence_manifest) if evidence_manifest.exists() else None
     manifest_sha256 = (
         hashlib.sha256(archive_bytes(evidence_manifest)).hexdigest()
