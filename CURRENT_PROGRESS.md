@@ -1,9 +1,10 @@
-# Current progress — v0.27.0
+# Current progress — v0.27.3
 
-This pass advances the repository from the v0.26.1 controlled real-funds
-canary source-candidate into v0.27.0 development. The v0.26 controlled canary
-remains historical evidence; v0.27 focuses on release-governance hardening,
-independent component versioning, and safer canary closeout/recovery evidence.
+This note records the transition from the v0.26.1 controlled real-funds canary
+source-candidate into the v0.27 line. The checked source-candidate is v0.27.3.
+The v0.26 controlled canary remains historical evidence; v0.27 focuses on
+release-governance hardening, independent component versioning, and safer
+canary closeout/recovery evidence.
 
 ## Done in this cleanup pass
 
@@ -26,9 +27,9 @@ independent component versioning, and safer canary closeout/recovery evidence.
   `CONTROLLED_CANARY_CLOSEOUT.md`; the source JSON evidence remains local
   `dist/` review material.
 
-## Local release-candidate checkpoint
+## Historical local release-candidate checkpoint
 
-As of 2026-05-23 UTC, the checked state is:
+As of 2026-05-23 UTC, the then-current checked state was:
 
 - root commit: recorded in the detached `.zip.evidence.json` sidecar generated
   by `scripts/package_release.py`;
@@ -73,6 +74,6 @@ cancel, a second real-funds canary, or a real-funds fill target.
   closed so historical reviewed-go packages cannot be mistaken for current
   approval.
 - Generated local no-go pipeline evidence under
-  `dist/pmx-canary-pipeline-next-phase-no-go-local/` on the current v0.26
-  branch. The report records `remote_side_effects=false`,
+  `dist/pmx-canary-pipeline-next-phase-no-go-local/` during the v0.26-to-v0.27
+  transition. The report records `remote_side_effects=false`,
   `armed_live_attempted=false`, and `operator_runbook.status=blocked`.
