@@ -1,4 +1,4 @@
-# Documentation and evidence status — v0.26.1 controlled real-funds canary source-candidate
+# Documentation and evidence status — v0.27.3 controlled real-funds canary source-candidate
 
 ## Current canonical documents
 
@@ -20,8 +20,8 @@
 - `DEVELOPMENT_HANDOFF.md`
 - `NO_LOCAL_ACTIONS_REMAINING.md`
 
-Canary decision-prep documents are active v0.26 governance material. The first
-authorized controlled canary is closed and summarized in
+Canary decision-prep documents are active v0.27 governance material. The first
+authorized v0.26 controlled canary is closed and summarized in
 `CONTROLLED_CANARY_CLOSEOUT.md`. Future canary decision-prep material must
 continue to state `no_go` unless a fresh reviewed release decision explicitly
 changes the live/production boundary for that single attempt.
@@ -55,7 +55,7 @@ polymarket-execution-engine/evidence/current/manifest.json
 The current manifest binds the release artifact:
 
 ```text
-polymarket-execution-suite-v0.26.1.zip
+polymarket-execution-suite-v0.27.3.zip
 sha256=recorded in external .zip.sha256 and .zip.evidence.json sidecars
 ```
 

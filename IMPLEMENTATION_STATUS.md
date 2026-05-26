@@ -1,4 +1,4 @@
-# Implementation status — v0.26.1 controlled real-funds canary source-candidate
+# Implementation status — v0.27.3 controlled real-funds canary source-candidate
 
 ## Implemented source-level items
 
@@ -21,7 +21,7 @@
   lifecycle divergence records.
 - Lifecycle and admin audit query APIs.
 - Redacted lifecycle payload envelope at public API/model level.
-- v0.26 controlled real-funds canary source-candidate gate runner, static guards, version guard, and docs/evidence governance guard.
+- v0.27 controlled real-funds canary source-candidate gate runner, static guards, version guard, and docs/evidence governance guard.
 - Runtime worker loop/tick models for heartbeat lease, resource refresh,
   reconcile backlog, WebSocket liveness, geoblock, and worker crash recovery.
 - Order lifecycle event query API and per-order correlation trace field.

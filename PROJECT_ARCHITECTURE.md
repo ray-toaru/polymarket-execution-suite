@@ -60,7 +60,7 @@ pmx-release    release/version scaffold
 
 ## Conservative pre-live policy
 
-v0.26.1 is the controlled real-funds canary source-candidate baseline.
+v0.27.3 is the controlled real-funds canary source-candidate baseline.
 Runtime worker `DEGRADED`, `STALE`, or `UNKNOWN` status must not be treated as
 live-trading safe. Live submit/cancel remain blocked unless current gates,
 artifact/evidence binding, one-time approval consumption, human-reviewed
