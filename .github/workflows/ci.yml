@@ -1,6 +1,7 @@
 name: ci
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - ".github/**"
@@ -8,6 +9,7 @@ on:
       - "constraints-ci.txt"
       - "requirements-ci.txt"
       - "scripts/**"
+      - "tests/**"
       - "docs/**"
       - "hermes-polymarket-executor-adapter"
       - "polymarket-execution-engine"
@@ -30,6 +32,7 @@ on:
       - "constraints-ci.txt"
       - "requirements-ci.txt"
       - "scripts/**"
+      - "tests/**"
       - "docs/**"
       - "hermes-polymarket-executor-adapter"
       - "polymarket-execution-engine"
@@ -50,7 +53,7 @@ permissions:
   contents: read
 
 env:
-  HERMES_PROFILE: ci-test
+  HERMES_PROFILE: hm-pdp-test
 
 jobs:
   integration-static:
