@@ -1,4 +1,4 @@
-# No local actions remaining? — v0.27.0
+# No local actions remaining? — v0.27.3
 
 This file is retained as a compatibility entry point for older checks. It does **not** mean the project is production-ready.
 
@@ -11,6 +11,7 @@ After local/static checks pass, remaining validation depends on tools not guaran
 
 Live submit, live cancel, and production deployment remain blocked.
 
-The current v0.26 controlled-canary review decision is `no_go`. A live
+The current v0.27.3 source-candidate decision remains non-live. Another
 real-funds canary remains blocked until a later reviewed release decision and
-the required external approval evidence explicitly change that boundary.
+the required external approval evidence explicitly change that boundary for one
+bounded attempt.

@@ -172,7 +172,7 @@ This validation report does not claim:
 - live submit or live cancel availability;
 - a successful real-funds canary fill;
 - readiness for a second real-funds canary without a fresh reviewed decision;
-- equivalence between historical v0.25 evidence and the current v0.26 package.
+- equivalence between historical v0.25 evidence and the current v0.27 package.
 
 Any future live attempt needs a new reviewed release decision and fresh evidence
 bound to the exact artifact under review.

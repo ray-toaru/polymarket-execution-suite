@@ -1,4 +1,4 @@
-# Development handoff — v0.27.0 controlled real-funds canary source-candidate
+# Development handoff — v0.27.3 controlled real-funds canary source-candidate
 
 ## Start here
 
@@ -13,7 +13,7 @@ cd polymarket-execution-engine
 ./validation/run_current_gates.sh
 ```
 
-## Current v0.26 canary decision-prep state
+## Current canary decision-prep state
 
 The current next phase is still decision preparation, not live execution. Read
 `docs/future/CANARY_DECISION_PREP_AUDIT.md` and `docs/future/CANARY_GO_NO_GO_REVIEW.md` before any
@@ -21,11 +21,11 @@ canary-related work.
 
 Current review decision: `no_go`.
 
-The regenerated local review package under
-`dist/pmx-canary-review-v0.26-current/` is no-go review material only. It is
-ignored by Git, must not be treated as armed approval, and must not be used to
-run a live canary unless a later reviewed release decision explicitly changes
-the boundary.
+Local review packages under `dist/pmx-*` are ignored by Git and must be
+classified by `dist/INDEX.json` before use. No-go material is not armed
+approval. Consumed or closed reviewed-go packages are historical evidence only.
+A later reviewed release decision must explicitly change the boundary for one
+bounded canary attempt before any live canary work resumes.
 
 ## Important paths
 

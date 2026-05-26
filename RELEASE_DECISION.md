@@ -84,9 +84,9 @@ Current detached artifact binding:
 - artifact SHA-256: recorded in the detached `.zip.sha256` sidecar;
 - evidence manifest SHA-256: recorded in the detached `.zip.evidence.json`
   sidecar and the current review package;
-- current user-selected review package: the latest
-  `dist/pmx-canary-review-v0.26-*-gtc-post-only-current-no-go` directory;
-- review package decision: `no_go`, `real_funds_canary_authorized=false`.
+- current user-selected review package: any future package must be freshly
+  generated, classified in `dist/INDEX.json`, and default to `no_go`;
+- review package decision: `no_go`, `real_funds_canary_authorized=false`;
 - consumed reviewed-go package: one local v0.26 package produced a posted,
   cancelled, zero-fill closeout summarized in `CONTROLLED_CANARY_CLOSEOUT.md`.
 
@@ -118,9 +118,9 @@ Repository ownership is split:
 - `polymarket-execution-engine`: Rust locked checks, PostgreSQL gates, SDK
   adapter checks, current gates, manual credentialed SDK workflow.
 
-Historical v0.25 CI runs and review packages are audit context only. They are
-not current v0.26 artifact proof unless a report explicitly binds the exact
-v0.26 artifact SHA-256 and evidence manifest SHA-256.
+Historical v0.25 and v0.26 CI runs and review packages are audit context only.
+They are not current v0.27 artifact proof unless a report explicitly binds the
+exact v0.27 artifact SHA-256 and evidence manifest SHA-256.
 
 ## Required Before Any `go`
 

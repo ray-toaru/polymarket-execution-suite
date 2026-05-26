@@ -19,7 +19,7 @@ second canary, or an actual real-funds fill target.
 - [x] Generate `closeout.json` and `CLOSEOUT.md` from local evidence.
 - [x] Add tracked summary `CONTROLLED_CANARY_CLOSEOUT.md`.
 
-## Next-phase canary-pipeline work on the v0.26 branch
+## Next-phase canary-pipeline work
 
 - [x] Add the first fail-closed pipeline entry point:
   `scripts/run_controlled_canary_pipeline.py` can prepare or accept a candidate
@@ -78,9 +78,9 @@ second canary, or an actual real-funds fill target.
 - [x] Preserve the default no-go state for any second canary or production/live
   trading claim until fresh gates and a new decision exist.
 
-## Next-phase controlled canary decision-prep
+## Historical controlled canary decision-prep
 
-- [x] Audit the current v0.26 canary decision-prep state against the latest
+- [x] Audit the then-current v0.26 canary decision-prep state against the latest
   `v0.25.0-evidence.20260521` baseline.
 - [x] Identify that the existing `dist/pmx-canary-review-reviewed/` package is
   no-go review material but is not bound to the latest artifact and evidence
@@ -120,7 +120,7 @@ second canary, or an actual real-funds fill target.
 - [x] Keep the release decision explicit that live submit, live cancel,
   production deployment, and actual real-funds canary fill remain blocked unless
   a later reviewed release decision changes that boundary.
-- [x] Record the current v0.26 controlled-canary go/no-go review as `no_go`,
+- [x] Record the v0.26 controlled-canary go/no-go review as `no_go`,
   with required external approval evidence listed before any future transition
   to `go`.
 
