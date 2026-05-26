@@ -265,6 +265,13 @@ def main() -> int:
         print(json.dumps(invocation, indent=2, sort_keys=True))
         return 0
 
+    missing = invocation["missing_gate_env_vars"]
+    if missing:
+        raise SystemExit(
+            "cannot execute reviewed-go canary; missing required gate env vars: "
+            + ", ".join(missing)
+        )
+
     completed = subprocess.run(
         invocation["command"],
         cwd=ROOT,

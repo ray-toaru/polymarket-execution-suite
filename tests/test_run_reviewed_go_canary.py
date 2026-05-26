@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -221,6 +222,43 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                     report_file=None,
                     approval_consumed_marker=None,
                 )
+
+    def test_main_run_fails_closed_when_gate_env_vars_are_missing(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            package, env_file = self.package_fixture(tmp)
+            original = dict(os.environ)
+            try:
+                for key in self.module.REQUIRED_GATE_ENV_VARS:
+                    os.environ.pop(key, None)
+                argv = [
+                    "--package-dir",
+                    str(package),
+                    "--env-file",
+                    str(env_file),
+                    "--mode",
+                    "preflight",
+                    "--run",
+                ]
+                original_parse_args = self.module.parse_args
+                self.module.parse_args = lambda: self.module.argparse.Namespace(
+                    package_dir=Path(argv[1]),
+                    env_file=Path(argv[3]),
+                    mode="preflight",
+                    daily_used_notional_usd="0",
+                    idempotency_key=None,
+                    execution_id=None,
+                    plan_hash=None,
+                    report_file=None,
+                    approval_consumed_marker=None,
+                    run=True,
+                )
+                with self.assertRaisesRegex(SystemExit, "missing required gate env vars"):
+                    self.module.main()
+            finally:
+                self.module.parse_args = original_parse_args
+                os.environ.clear()
+                os.environ.update(original)
 
 
 if __name__ == "__main__":
