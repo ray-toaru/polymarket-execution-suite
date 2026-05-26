@@ -27,6 +27,7 @@ class PrepareDualControlReviewTemplateTests(unittest.TestCase):
             "status": "operator_approval_request_not_authorization",
             "approval_hash": "a" * 64,
             "scope": "REAL_FUNDS_CANARY",
+            "active_profile_ref": "local-profile://acct-b",
             "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
             "expires_at": "2099-01-01T00:15:00Z",
             "operator_identity_ref": "operator://requester",

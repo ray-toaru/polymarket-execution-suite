@@ -1,4 +1,5 @@
 import importlib.util
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -25,10 +26,52 @@ class PrepareOperatorApprovalRequestTests(unittest.TestCase):
             "status": "operator_approval_request_not_authorization",
             "approval_hash": "x" * 64,
             "artifact_sha256": "a" * 64,
+            "account_id": "acct-canary",
+            "active_profile_ref": "local-profile://acct-b",
         }
         first = self.module.compute_approval_hash(request)
         request["approval_hash"] = "y" * 64
         self.assertEqual(first, self.module.compute_approval_hash(request))
+
+    def test_active_profile_ref_must_not_be_placeholder(self):
+        with self.assertRaisesRegex(SystemExit, "active_profile_ref"):
+            self.module.require_nonempty_text("REPLACE_WITH_PROFILE_REF", "active_profile_ref")
+
+    def test_runtime_env_file_can_supply_account_and_profile_ref(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            env_file = Path(tmp_name) / ".env.runtime"
+            env_file.write_text(
+                "\n".join(
+                    [
+                        "# Active local account profile label.",
+                        "PMX_ACTIVE_ACCOUNT_PROFILE=acct_b",
+                        "# Active local account id bound to the selected profile.",
+                        "PMX_ACTIVE_ACCOUNT_ID=acct-canary",
+                        "# Local non-secret profile reference.",
+                        "PMX_ACTIVE_PROFILE_REF=local-profile://acct-b",
+                        "# Generic runtime signer material.",
+                        "POLYMARKET_PRIVATE_KEY=0xabc123",
+                        "# Generic runtime L2 API key.",
+                        "POLY_API_KEY=123e4567-e89b-12d3-a456-426614174000",
+                        "# Generic runtime L2 API secret.",
+                        "POLY_API_SECRET=api-secret",
+                        "# Generic runtime L2 API passphrase.",
+                        "POLY_API_PASSPHRASE=api-pass",
+                        "# Generic runtime CLOB funder for deposit-wallet / Poly1271 auth.",
+                        "PMX_CLOB_FUNDER=0x00000000000000000000000000000000000000b0",
+                        "# Generic runtime signature type for the active account.",
+                        "PMX_CLOB_SIGNATURE_TYPE=POLY_1271",
+                        "",
+                    ]
+                )
+            )
+            account_id, profile_ref = self.module.resolve_runtime_identity(
+                runtime_env_file=env_file,
+                account_id=None,
+                active_profile_ref=None,
+            )
+        self.assertEqual(account_id, "acct-canary")
+        self.assertEqual(profile_ref, "local-profile://acct-b")
 
     def test_candidate_notional_must_match_limit_times_size(self):
         candidate = {

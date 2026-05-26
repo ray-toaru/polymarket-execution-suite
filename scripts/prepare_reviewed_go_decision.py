@@ -104,6 +104,8 @@ def validate_approval_request(request: dict[str, Any]) -> None:
         raise SystemExit("approval request must not itself authorize remote side effects")
     if request.get("secrets_included") is not False:
         raise SystemExit("approval request must not include secrets")
+    if not isinstance(request.get("active_profile_ref"), str) or not request["active_profile_ref"].strip():
+        raise SystemExit("approval request active_profile_ref is required")
     if parse_time(request.get("expires_at"), "approval request expires_at") <= datetime.now(timezone.utc):
         raise SystemExit("approval request is expired")
     for field in [
@@ -263,6 +265,10 @@ def build_decision(
         "production_deployment_authorized": False,
         "real_funds_canary_authorized": True,
         "remote_side_effects_authorized": True,
+        "single_attempt": True,
+        "max_order_count": 1,
+        "post_cancel_required": True,
+        "readback_closeout_required": True,
         "allow_real_funds_canary": True,
         "reviewed_release_decision_present": True,
         "operator_identity_ref": request["operator_identity_ref"],

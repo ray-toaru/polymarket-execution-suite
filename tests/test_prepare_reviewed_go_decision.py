@@ -27,6 +27,7 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
             "approval_id": "approval-request-1",
             "approval_hash": "a" * 64,
             "scope": "REAL_FUNDS_CANARY",
+            "active_profile_ref": "local-profile://acct-b",
             "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
             "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
             "operator_identity_ref": "chat-authorization://operator",

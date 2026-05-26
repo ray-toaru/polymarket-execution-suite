@@ -14,6 +14,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "VERSION").read_text().strip()
 DEFAULT_RELEASE_ZIP = ROOT / "dist" / f"polymarket-execution-suite-v{VERSION}.zip"
+ACTIVE_PROFILE_CHECK = ROOT / "polymarket-execution-engine" / "validation" / "check_active_profile_consistency.py"
 
 
 def sha256(path: Path) -> str:
@@ -28,10 +29,26 @@ def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text())
 
 
+def load_module(path: Path, name: str):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
 def require_sha256(value: object, label: str) -> str:
     if not isinstance(value, str) or len(value) != 64 or any(ch not in "0123456789abcdefABCDEF" for ch in value):
         raise SystemExit(f"{label} must be a 64-character SHA-256 hex digest")
     return value.lower()
+
+
+def require_nonempty_text(value: object, label: str) -> str:
+    if not isinstance(value, str) or not value.strip() or value.startswith("REPLACE_WITH_"):
+        raise SystemExit(f"{label} must be a non-empty non-placeholder string")
+    return value.strip()
 
 
 def decimal_value(value: object, label: str) -> Decimal:
@@ -47,6 +64,105 @@ def decimal_value(value: object, label: str) -> Decimal:
 def decimal_text(value: Decimal) -> str:
     text = format(value.normalize(), "f")
     return "0" if text == "-0" else text
+
+
+def resolve_runtime_identity(
+    *,
+    runtime_env_file: Path | None,
+    account_id: str | None,
+    active_profile_ref: str | None,
+) -> tuple[str, str]:
+    resolved_account = account_id.strip() if isinstance(account_id, str) and account_id.strip() else None
+    resolved_profile_ref = (
+        active_profile_ref.strip()
+        if isinstance(active_profile_ref, str) and active_profile_ref.strip()
+        else None
+    )
+    if runtime_env_file is not None:
+        checker = load_module(ACTIVE_PROFILE_CHECK, "check_active_profile_consistency")
+        report = checker.evaluate_env_file(runtime_env_file, expected_account_id=resolved_account)
+        env_account = require_nonempty_text(report.get("active_account_id"), "runtime env active_account_id")
+        env_profile_ref = require_nonempty_text(report.get("active_profile_ref"), "runtime env active_profile_ref")
+        if resolved_account is not None and resolved_account != env_account:
+            raise SystemExit("runtime env account_id does not match explicit --account-id")
+        if resolved_profile_ref is not None and resolved_profile_ref != env_profile_ref:
+            raise SystemExit("runtime env active_profile_ref does not match explicit --active-profile-ref")
+        return env_account, env_profile_ref
+    if resolved_account is None:
+        raise SystemExit("either --account-id or --runtime-env-file is required")
+    if resolved_profile_ref is None:
+        raise SystemExit("either --active-profile-ref or --runtime-env-file is required")
+    return resolved_account, resolved_profile_ref
+
+
+def build_request(
+    *,
+    account_id: str,
+    active_profile_ref: str,
+    operator_identity_ref: str,
+    approval_ticket_ref: str,
+    candidate_market_file: Path,
+    runtime_truth_file: Path,
+    sidecar: dict[str, str],
+    candidate_limits: dict[str, str],
+    max_order_notional: Decimal,
+    max_daily_notional: Decimal,
+    root_ci_run_id: str,
+    hermes_ci_run_id: str,
+    execution_engine_ci_run_id: str,
+    credentialed_sdk_run_id: str,
+    valid_for_minutes: int,
+) -> dict[str, Any]:
+    now = datetime.now(timezone.utc)
+    request = {
+        "schema_version": 1,
+        "status": "operator_approval_request_not_authorization",
+        "approval_id": f"approval-request-controlled-canary-{now.strftime('%Y%m%dT%H%M%SZ')}",
+        "scope": "REAL_FUNDS_CANARY",
+        "account_id": account_id,
+        "active_profile_ref": active_profile_ref,
+        "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
+        "requested_at": now.isoformat(),
+        "expires_at": (now + timedelta(minutes=valid_for_minutes)).isoformat(),
+        "operator_identity_ref": require_nonempty_text(
+            operator_identity_ref, "operator_identity_ref"
+        ),
+        "approval_ticket_ref": require_nonempty_text(
+            approval_ticket_ref, "approval_ticket_ref"
+        ),
+        "dual_control_required": True,
+        "approval_replay_block_required": True,
+        "approval_expiry_enforced": True,
+        "artifact_sha256": sidecar["artifact_sha256"],
+        "workspace_manifest_sha256": sidecar["workspace_manifest_sha256"],
+        "archived_manifest_sha256": sidecar["archived_manifest_sha256"],
+        "evidence_manifest_sha256": sidecar["evidence_manifest_sha256"],
+        "market_candidate_sha256": sha256(candidate_market_file),
+        "runtime_truth_sha256": sha256(runtime_truth_file),
+        "github_evidence": {
+            "root_ci_run_id": root_ci_run_id,
+            "hermes_ci_run_id": hermes_ci_run_id,
+            "execution_engine_ci_run_id": execution_engine_ci_run_id,
+            "credentialed_sdk_run_id": credentialed_sdk_run_id,
+        },
+        "risk_limits": {
+            "max_order_notional_usd": decimal_text(max_order_notional),
+            "max_daily_notional_usd": decimal_text(max_daily_notional),
+            "candidate_target_size": candidate_limits["target_size"],
+            "candidate_limit_price": candidate_limits["limit_price"],
+            "candidate_estimated_order_notional_usd": candidate_limits[
+                "estimated_order_notional_usd"
+            ],
+        },
+        "live_submit_authorized": False,
+        "live_cancel_authorized": False,
+        "real_funds_canary_authorized": False,
+        "remote_side_effects_authorized": False,
+        "production_deployment_authorized": False,
+        "secrets_included": False,
+    }
+    request["approval_hash"] = compute_approval_hash(request)
+    return request
 
 
 def load_release_sidecar(release_zip: Path) -> dict[str, Any]:
@@ -124,12 +240,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--release-zip", default=DEFAULT_RELEASE_ZIP, type=Path)
     parser.add_argument("--candidate-market-file", required=True, type=Path)
     parser.add_argument("--runtime-truth-file", required=True, type=Path)
+    parser.add_argument("--runtime-env-file", type=Path)
+    parser.add_argument("--account-id")
     parser.add_argument("--root-ci-run-id", required=True)
     parser.add_argument("--hermes-ci-run-id", required=True)
     parser.add_argument("--execution-engine-ci-run-id", required=True)
     parser.add_argument("--credentialed-sdk-run-id", default="local-current-gates-20260523")
     parser.add_argument("--operator-identity-ref", required=True)
     parser.add_argument("--approval-ticket-ref", required=True)
+    parser.add_argument("--active-profile-ref")
     parser.add_argument("--max-order-notional-usd", default="0.20")
     parser.add_argument("--max-daily-notional-usd", default="0.20")
     parser.add_argument("--valid-for-minutes", type=int, default=15)
@@ -146,6 +265,16 @@ def main() -> int:
     sidecar = load_release_sidecar(release_zip)
     candidate = load_json(candidate_path)
     runtime_truth = load_json(runtime_truth_path)
+    runtime_env_file = (
+        args.runtime_env_file
+        if args.runtime_env_file is None or args.runtime_env_file.is_absolute()
+        else ROOT / args.runtime_env_file
+    )
+    account_id, active_profile_ref = resolve_runtime_identity(
+        runtime_env_file=runtime_env_file,
+        account_id=args.account_id,
+        active_profile_ref=args.active_profile_ref,
+    )
     max_order_notional = decimal_value(args.max_order_notional_usd, "max_order_notional_usd")
     max_daily_notional = decimal_value(args.max_daily_notional_usd, "max_daily_notional_usd")
     if max_order_notional > Decimal("1"):
@@ -158,47 +287,23 @@ def main() -> int:
     if runtime_artifact != sidecar["artifact_sha256"]:
         raise SystemExit("runtime truth artifact hash does not match release sidecar")
 
-    now = datetime.now(timezone.utc)
-    request = {
-        "schema_version": 1,
-        "status": "operator_approval_request_not_authorization",
-        "approval_id": f"approval-request-controlled-canary-{now.strftime('%Y%m%dT%H%M%SZ')}",
-        "scope": "REAL_FUNDS_CANARY",
-        "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
-        "requested_at": now.isoformat(),
-        "expires_at": (now + timedelta(minutes=args.valid_for_minutes)).isoformat(),
-        "operator_identity_ref": args.operator_identity_ref,
-        "approval_ticket_ref": args.approval_ticket_ref,
-        "dual_control_required": True,
-        "approval_replay_block_required": True,
-        "approval_expiry_enforced": True,
-        "artifact_sha256": sidecar["artifact_sha256"],
-        "workspace_manifest_sha256": sidecar["workspace_manifest_sha256"],
-        "archived_manifest_sha256": sidecar["archived_manifest_sha256"],
-        "evidence_manifest_sha256": sidecar["evidence_manifest_sha256"],
-        "market_candidate_sha256": sha256(candidate_path),
-        "runtime_truth_sha256": sha256(runtime_truth_path),
-        "github_evidence": {
-            "root_ci_run_id": args.root_ci_run_id,
-            "hermes_ci_run_id": args.hermes_ci_run_id,
-            "execution_engine_ci_run_id": args.execution_engine_ci_run_id,
-            "credentialed_sdk_run_id": args.credentialed_sdk_run_id,
-        },
-        "risk_limits": {
-            "max_order_notional_usd": decimal_text(max_order_notional),
-            "max_daily_notional_usd": decimal_text(max_daily_notional),
-            "candidate_target_size": candidate_limits["target_size"],
-            "candidate_limit_price": candidate_limits["limit_price"],
-            "candidate_estimated_order_notional_usd": candidate_limits["estimated_order_notional_usd"],
-        },
-        "live_submit_authorized": False,
-        "live_cancel_authorized": False,
-        "real_funds_canary_authorized": False,
-        "remote_side_effects_authorized": False,
-        "production_deployment_authorized": False,
-        "secrets_included": False,
-    }
-    request["approval_hash"] = compute_approval_hash(request)
+    request = build_request(
+        account_id=account_id,
+        active_profile_ref=active_profile_ref,
+        operator_identity_ref=args.operator_identity_ref,
+        approval_ticket_ref=args.approval_ticket_ref,
+        candidate_market_file=candidate_path,
+        runtime_truth_file=runtime_truth_path,
+        sidecar=sidecar,
+        candidate_limits=candidate_limits,
+        max_order_notional=max_order_notional,
+        max_daily_notional=max_daily_notional,
+        root_ci_run_id=args.root_ci_run_id,
+        hermes_ci_run_id=args.hermes_ci_run_id,
+        execution_engine_ci_run_id=args.execution_engine_ci_run_id,
+        credentialed_sdk_run_id=args.credentialed_sdk_run_id,
+        valid_for_minutes=args.valid_for_minutes,
+    )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(request, indent=2, sort_keys=True) + "\n")
     print(json.dumps({"status": "pass", "output": str(output), "approval_hash": request["approval_hash"]}, sort_keys=True))

@@ -59,6 +59,8 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
             "approval_id": "approval-request-1",
             "approval_hash": "d" * 64,
             "scope": "REAL_FUNDS_CANARY",
+            "account_id": "acct-canary",
+            "active_profile_ref": "local-profile://acct-b",
             "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
             "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
             "operator_identity_ref": "operator://primary",
@@ -172,12 +174,19 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
 
             self.assertEqual(package["status"], "reviewed_go_package_ready_single_attempt")
             self.assertTrue(package["live_submit_authorized"])
+            self.assertEqual(package["active_profile_ref"], "local-profile://acct-b")
             self.assertTrue((out / "release-decision.json").exists())
             self.assertTrue((out / "approval.json").exists())
+            self.assertTrue((out / "approval-request.json").exists())
             self.assertTrue((out / "dual-control-review.json").exists())
             decision = json.loads((out / "release-decision.json").read_text())
+            approval = json.loads((out / "approval.json").read_text())
             self.assertEqual(decision["status"], "reviewed_go")
+            self.assertTrue(decision["single_attempt"])
+            self.assertEqual(decision["max_order_count"], 1)
             self.assertTrue(decision["remote_side_effects_authorized"])
+            self.assertEqual(approval["account_id"], "acct-canary")
+            self.assertEqual(approval["approval_hash"], approval_doc["approval_hash"])
             self.assertEqual(
                 decision["external_references"]["operator_dual_control_review_ref"],
                 "dual://review",

@@ -833,6 +833,85 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         self.assertEqual(closeout["operator_recovery_summary"]["status"], "incident_recovered_no_remote_order_found")
         self.assertTrue(closeout["evidence_checks"]["incident_recovery_no_matching_open_orders"])
 
+    def test_closeout_package_stage_accepts_real_receipt_shape_without_synthetic_market_candidate_block(self):
+        package = ROOT / "dist" / "unit-closeout-real-receipt-shape"
+        if package.exists():
+            shutil.rmtree(package)
+        package.mkdir(parents=True)
+        self.addCleanup(lambda: shutil.rmtree(package, ignore_errors=True))
+        candidate = self.candidate()
+        (package / "candidate-market.json").write_text(json.dumps(candidate))
+        (package / "post-canary-report.json").write_text(
+            json.dumps(
+                {
+                    "remote_order_id": "order-1",
+                    "posted": True,
+                    "cancelled": True,
+                    "remote_side_effects": True,
+                    "raw_signed_order_exposed": False,
+                }
+            )
+        )
+        stage_history = package / "post-canary-report.json.stages.jsonl"
+        stage_history.write_text(
+            "\n".join(
+                [
+                    json.dumps(
+                        {
+                            "status": "post_accepted",
+                            "stage": "post_accepted",
+                            "remote_order_id": "order-1",
+                            "posted": True,
+                            "cancelled": False,
+                            "remote_side_effects": True,
+                            "operator_required": False,
+                            "raw_signed_order_exposed": False,
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "status": "cancel_confirmed",
+                            "stage": "cancel_confirmed",
+                            "remote_order_id": "order-1",
+                            "posted": True,
+                            "cancelled": True,
+                            "remote_side_effects": True,
+                            "operator_required": False,
+                            "raw_signed_order_exposed": False,
+                        }
+                    ),
+                ]
+            )
+            + "\n"
+        )
+        (package / "order-status-query.json").write_text(
+            json.dumps({"remote_status": "CANCELED", "size_matched": "0"})
+        )
+        (package / "trade-fill-query.json").write_text(
+            json.dumps({"matching_trades_count": 0, "matching_size_total": "0"})
+        )
+        (package / "account-activity-readback.json").write_text(
+            json.dumps(
+                {
+                    "matching_activity_count": 0,
+                    "matching_trade_count": 0,
+                    "matching_open_position_count": 0,
+                    "matching_closed_position_count": 0,
+                    "matching_value_record_count": 1,
+                    "values": [{"value": "0"}],
+                    "raw_signed_order_exposed": False,
+                }
+            )
+        )
+        stage = self.pipeline.run_closeout_stage(
+            package,
+            ROOT / "dist" / "polymarket-execution-suite-v0.27.3.zip",
+        )
+        self.assertEqual(stage["status"], "pass")
+        closeout = json.loads((package / "closeout.json").read_text())
+        self.assertEqual(closeout["remote_order_id"], "order-1")
+        self.assertEqual(closeout["decision"], "controlled_real_funds_canary_closed")
+
     def test_closeout_package_stage_rejects_post_unknown_incident_recovery_with_matching_trade(self):
         package = ROOT / "dist" / "unit-closeout-post-unknown-matching-trade"
         if package.exists():

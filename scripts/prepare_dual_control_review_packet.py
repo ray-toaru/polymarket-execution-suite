@@ -90,6 +90,8 @@ def validate_approval_request(path: Path) -> dict[str, Any]:
     data = load_json(path)
     if data.get("status") != "operator_approval_request_not_authorization":
         raise SystemExit("approval request status must be operator_approval_request_not_authorization")
+    if not isinstance(data.get("active_profile_ref"), str) or not data["active_profile_ref"].strip():
+        raise SystemExit("approval request active_profile_ref is required")
     if data.get("live_submit_authorized") is not False:
         raise SystemExit("approval request must not authorize live submit")
     if data.get("remote_side_effects_authorized") is not False:
@@ -178,6 +180,7 @@ def build_packet(
         "candidate_market_sha256": sha256(candidate),
         "runtime_truth_sha256": sha256(runtime_truth),
         "approval_hash": approval_doc["approval_hash"],
+        "active_profile_ref": approval_doc["active_profile_ref"],
         "approval_request_sha256": sha256(approval_request),
         "review_scope": "REAL_FUNDS_CANARY",
         "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
@@ -202,6 +205,7 @@ def packet_readme(packet: dict[str, Any]) -> str:
             f"- Candidate SHA-256: `{packet['candidate_market_sha256']}`",
             f"- Runtime-truth SHA-256: `{packet['runtime_truth_sha256']}`",
             f"- Approval hash: `{packet['approval_hash']}`",
+            f"- Active profile ref: `{packet['active_profile_ref']}`",
             "",
             "Required reviewer output:",
             "",

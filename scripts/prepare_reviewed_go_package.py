@@ -53,6 +53,31 @@ def copy_into_package(src: Path, output_dir: Path, *, target_name: str | None = 
     return {"path": dest.name, "sha256": sha256(dest)}
 
 
+def build_cli_approval(approval_request: dict[str, Any]) -> dict[str, Any]:
+    account_id = approval_request.get("account_id")
+    if not isinstance(account_id, str) or not account_id.strip():
+        raise SystemExit("approval request account_id is required to build canonical approval.json")
+    risk_limits = approval_request.get("risk_limits")
+    if not isinstance(risk_limits, dict):
+        raise SystemExit("approval request risk_limits must be an object")
+    return {
+        "approval_id": approval_request["approval_id"],
+        "approval_hash": approval_request["approval_hash"],
+        "account_id": account_id.strip(),
+        "scope": approval_request["scope"],
+        "expires_at": approval_request["expires_at"],
+        "artifact_sha256": approval_request["artifact_sha256"],
+        "evidence_manifest_sha256": approval_request["evidence_manifest_sha256"],
+        "workspace_manifest_sha256": approval_request["workspace_manifest_sha256"],
+        "archived_manifest_sha256": approval_request["archived_manifest_sha256"],
+        "market_candidate_sha256": approval_request["market_candidate_sha256"],
+        "max_order_notional_usd": risk_limits["max_order_notional_usd"],
+        "max_daily_notional_usd": risk_limits["max_daily_notional_usd"],
+        "execution_style": approval_request["execution_style"],
+        "operator_identity_ref": approval_request["operator_identity_ref"],
+    }
+
+
 def build_package(
     *,
     output_dir: Path,
@@ -74,6 +99,7 @@ def build_package(
     review_packet.validate_candidate(candidate_market)
     runtime_doc = review_packet.validate_runtime_truth(runtime_truth)
     approval_doc = review_packet.validate_approval_request(approval_request)
+    cli_approval = build_cli_approval(approval_doc)
 
     candidate_sha = sha256(candidate_market)
     runtime_sha = sha256(runtime_truth)
@@ -116,10 +142,17 @@ def build_package(
         "release_evidence": copy_into_package(release_evidence, output_dir),
         "candidate_market": copy_into_package(candidate_market, output_dir),
         "runtime_truth": copy_into_package(runtime_truth, output_dir),
-        "approval_request": copy_into_package(approval_request, output_dir, target_name="approval.json"),
+        "approval_request": copy_into_package(
+            approval_request,
+            output_dir,
+            target_name="approval-request.json",
+        ),
         "dual_control_review": copy_into_package(dual_control_review, output_dir, target_name="dual-control-review.json"),
         "external_references": copy_into_package(external_references, output_dir),
     }
+    approval_path = output_dir / "approval.json"
+    approval_path.write_text(json.dumps(cli_approval, indent=2, sort_keys=True) + "\n")
+    copied["approval"] = {"path": "approval.json", "sha256": sha256(approval_path)}
     (output_dir / "release-decision.json").write_text(json.dumps(decision, indent=2, sort_keys=True) + "\n")
     copied["release_decision"] = {"path": "release-decision.json", "sha256": sha256(output_dir / "release-decision.json")}
 
@@ -137,6 +170,7 @@ def build_package(
         "candidate_market_sha256": candidate_sha,
         "runtime_truth_sha256": runtime_sha,
         "approval_hash": approval_doc["approval_hash"],
+        "active_profile_ref": approval_doc.get("active_profile_ref"),
         "approval_request_sha256": approval_sha,
         "dual_control_review_sha256": review_sha,
         "live_submit_authorized": True,
@@ -165,13 +199,15 @@ def package_readme(review: dict[str, Any]) -> str:
             f"- Candidate SHA-256: `{review['candidate_market_sha256']}`",
             f"- Runtime-truth SHA-256: `{review['runtime_truth_sha256']}`",
             f"- Approval hash: `{review['approval_hash']}`",
+            f"- Active profile ref: `{review.get('active_profile_ref')}`",
             f"- Approval request SHA-256: `{review['approval_request_sha256']}`",
             f"- Dual-control review SHA-256: `{review['dual_control_review_sha256']}`",
             "",
             "Included files:",
             "",
             "- `release-decision.json`",
-            "- `approval.json`",
+            "- `approval.json` (canonical CLI approval)",
+            "- `approval-request.json` (governance request evidence)",
             "- `dual-control-review.json`",
             "- `external-references.json`",
             "- `candidate-market.json`",

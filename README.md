@@ -149,8 +149,23 @@ python scripts/run_controlled_canary_pipeline.py \
 ```
 
 When an independent reviewer has produced an approved dual-control review JSON,
-build the self-contained reviewed-go package locally from the current artifact,
-candidate, runtime-truth, approval request, and external references:
+the highest-level promotion helper can turn the review packet into a
+self-contained reviewed-go package:
+
+```bash
+python scripts/prepare_canary_reviewed_go_bundle.py \
+  --review-packet-dir <review-packet-dir> \
+  --approved-dual-control-review-file <approved-dual-control-review.json> \
+  --external-references-file <external-references.json> \
+  --output-dir dist/pmx-canary-reviewed-go-<timestamp> \
+  --decision-reason "approved by independent reviewer"
+```
+
+This promotion step remains local and authorization-bearing, but still does not
+run an armed canary. It packages the reviewed decision and canonical CLI
+approval for a later explicit armed invocation.
+
+If you need the lower-level file-by-file entry, it remains available:
 
 ```bash
 python scripts/prepare_reviewed_go_package.py \
@@ -168,6 +183,183 @@ python scripts/prepare_reviewed_go_package.py \
 This package is authorization-bearing local material. It must stay single-use,
 must be marked consumed after any armed attempt, and must then be closed with
 the tracked closeout flow before any later review.
+
+The reviewed-go package now contains two distinct approval artifacts:
+
+- `approval-request.json`: the governance request and dual-control binding record
+- `approval.json`: the canonical CLI approval consumed by `pmx-real-funds-canary`
+
+For multi-account local operation, keep profile-specific secrets in a private
+source inventory and activate exactly one account profile into generic runtime
+variables before any preflight or armed command:
+
+```bash
+python scripts/activate_pmx_profile.py \
+  --profile <profile> \
+  --source-env-file polymarket-execution-engine/.env.profiles \
+  --output polymarket-execution-engine/.env.runtime
+
+python polymarket-execution-engine/validation/check_active_profile_consistency.py \
+  --env-file polymarket-execution-engine/.env.runtime \
+  --expected-account-id <approved-account-id>
+```
+
+The runtime-facing env file must expose only generic variables such as
+`POLYMARKET_PRIVATE_KEY`, `POLY_API_*`, `PMX_CLOB_FUNDER`,
+`PMX_CLOB_SIGNATURE_TYPE`, and active-profile metadata. Runtime commands must
+not consume `PMX_PROFILE_*` or `PMX_ACCT_*` source inventory directly.
+
+For the full local pre-review path, you can now prepare the fresh public
+candidate, PostgreSQL-backed runtime-truth, activated runtime env, approval
+request, dual-control template, and non-authorizing review packet in one step:
+
+```bash
+python scripts/prepare_canary_prereview_bundle.py \
+  --profile <profile> \
+  --source-env-file polymarket-execution-engine/.env.profiles \
+  --runtime-env-output polymarket-execution-engine/.env.runtime \
+  --candidate-market-output <candidate-market.json> \
+  --candidate-audit-output <candidate-market.audit.json> \
+  --runtime-truth-output <runtime-truth.json> \
+  --approval-request-output <operator-approval-request.json> \
+  --dual-control-template-output <dual-control-review.template.json> \
+  --review-packet-output-dir <review-packet-dir> \
+  --release-zip dist/polymarket-execution-suite-v0.27.3.zip \
+  --market-url <polymarket-event-or-market-url> \
+  --outcome Yes \
+  --human-review-ref <market-review-ref> \
+  --root-ci-run-id <root-ci-run-id> \
+  --hermes-ci-run-id <hermes-ci-run-id> \
+  --execution-engine-ci-run-id <execution-engine-ci-run-id> \
+  --operator-identity-ref <operator-ref> \
+  --approval-ticket-ref <ticket-ref>
+```
+
+This highest-level helper prepares:
+
+- `candidate-market.json`
+- `candidate-market.audit.json`
+- `runtime-truth.json`
+- `.env.runtime`
+- `operator-approval-request.json`
+- `dual-control-review.template.json`
+- a non-authorizing dual-control review packet directory
+
+If you already have a fresh candidate and runtime-truth, the narrower review
+bundle helper remains available. It still binds the same runtime env so
+`account_id` and `active_profile_ref` are derived from the activated profile
+instead of being retyped by hand:
+
+```bash
+python scripts/prepare_canary_review_bundle.py \
+  --profile <profile> \
+  --source-env-file polymarket-execution-engine/.env.profiles \
+  --runtime-env-output polymarket-execution-engine/.env.runtime \
+  --approval-request-output <operator-approval-request.json> \
+  --dual-control-template-output <dual-control-review.template.json> \
+  --review-packet-output-dir <review-packet-dir> \
+  --release-zip dist/polymarket-execution-suite-v0.27.3.zip \
+  --candidate-market-file <candidate-market.json> \
+  --runtime-truth-file <runtime-truth.json> \
+  --root-ci-run-id <root-ci-run-id> \
+  --hermes-ci-run-id <hermes-ci-run-id> \
+  --execution-engine-ci-run-id <execution-engine-ci-run-id> \
+  --operator-identity-ref <operator-ref> \
+  --approval-ticket-ref <ticket-ref>
+```
+
+This high-level helper prepares:
+
+- `.env.runtime`
+- `operator-approval-request.json`
+- `dual-control-review.template.json`
+- a non-authorizing dual-control review packet directory
+
+If you only need the runtime env plus approval request, the narrower bundle
+script remains available:
+
+```bash
+python scripts/prepare_canary_runtime_bundle.py \
+  --profile <profile> \
+  --source-env-file polymarket-execution-engine/.env.profiles \
+  --runtime-env-output polymarket-execution-engine/.env.runtime \
+  --approval-request-output <operator-approval-request.json> \
+  --release-zip dist/polymarket-execution-suite-v0.27.3.zip \
+  --candidate-market-file <candidate-market.json> \
+  --runtime-truth-file <runtime-truth.json> \
+  --root-ci-run-id <root-ci-run-id> \
+  --hermes-ci-run-id <hermes-ci-run-id> \
+  --execution-engine-ci-run-id <execution-engine-ci-run-id> \
+  --operator-identity-ref <operator-ref> \
+  --approval-ticket-ref <ticket-ref>
+```
+
+The lower-level command remains available when you already have a prepared
+`.env.runtime` and only want to regenerate the approval request:
+
+```bash
+python scripts/prepare_operator_approval_request.py \
+  --output <operator-approval-request.json> \
+  --release-zip dist/polymarket-execution-suite-v0.27.3.zip \
+  --candidate-market-file <candidate-market.json> \
+  --runtime-truth-file <runtime-truth.json> \
+  --runtime-env-file polymarket-execution-engine/.env.runtime \
+  --root-ci-run-id <root-ci-run-id> \
+  --hermes-ci-run-id <hermes-ci-run-id> \
+  --execution-engine-ci-run-id <execution-engine-ci-run-id> \
+  --operator-identity-ref <operator-ref> \
+  --approval-ticket-ref <ticket-ref>
+```
+
+For armed execution, pass the canonical approval file plus an explicit env file:
+
+```bash
+cargo run --manifest-path polymarket-execution-engine/adapters/pmx-official-sdk-adapter/Cargo.toml \
+  --features live-submit --bin pmx-real-funds-canary -- \
+  --armed \
+  --env-file polymarket-execution-engine/.env.runtime \
+  --approval-file <reviewed-go-package>/approval.json \
+  --release-decision-file <reviewed-go-package>/release-decision.json \
+  --runtime-truth-file <runtime-truth.json> \
+  ...
+```
+
+To avoid rebuilding that command by hand every time, the wrapper below resolves
+the package files, validates that the reviewed-go package is still fresh, checks
+the active runtime profile env, and prints the exact invocation plan. It does
+not execute unless `--run` is supplied:
+
+```bash
+python scripts/run_reviewed_go_canary.py \
+  --package-dir <reviewed-go-package-dir> \
+  --env-file polymarket-execution-engine/.env.runtime \
+  --mode preflight
+```
+
+For a real invocation, keep the required gate env vars explicit in the shell
+and opt into execution:
+
+```bash
+PMX_ALLOW_LIVE_SUBMIT=1 \
+PMX_ALLOW_REAL_FUNDS_CANARY=1 \
+PMX_KILL_SWITCH_OPEN=1 \
+PMX_RUNTIME_WORKER_HEALTHY=1 \
+PMX_GEOBLOCK_ALLOWED=1 \
+PMX_REPOSITORY_RESERVATION_EXISTS=1 \
+PMX_IDEMPOTENCY_KEY_WRITTEN=1 \
+PMX_RECONCILE_WORKER_HEALTHY=1 \
+PMX_CANCEL_ONLY_FALLBACK_READY=1 \
+PMX_BALANCE_ALLOWANCE_CHECKED=1 \
+python scripts/run_reviewed_go_canary.py \
+  --package-dir <reviewed-go-package-dir> \
+  --env-file polymarket-execution-engine/.env.runtime \
+  --mode armed \
+  --run
+```
+
+This wrapper deliberately does not auto-set those gate env vars. They remain
+explicit operator assertions, and the script will report any that are missing in
+its invocation plan output.
 
 Release packaging writes `dist/INDEX.json` and `dist/README.md`. Only the
 indexed `polymarket-execution-suite-v0.27.3.zip` plus its detached sidecars are

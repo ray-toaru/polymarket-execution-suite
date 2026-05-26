@@ -44,6 +44,8 @@ def require_approval_request(request: dict[str, Any]) -> None:
         raise SystemExit("approval request must not authorize remote side effects")
     if request.get("secrets_included") is not False:
         raise SystemExit("approval request must not include secrets")
+    if not isinstance(request.get("active_profile_ref"), str) or not request["active_profile_ref"].strip():
+        raise SystemExit("approval request active_profile_ref is required")
     for field in [
         "approval_hash",
         "artifact_sha256",

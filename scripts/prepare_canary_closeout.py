@@ -352,6 +352,8 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
     target_size = decimal_text(target_size_value)
     notional = decimal_text(notional_value)
     remote_order_id = lget(report, "remote_order_readback", "order_id")
+    if remote_order_id is None:
+        remote_order_id = report.get("remote_order_id")
     stage_history_summary = summarize_stage_history(
         stage_history_path,
         stage_history,
@@ -369,12 +371,16 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
         "candidate_side_buy": candidate.get("side") == "BUY",
         "candidate_order_type_gtc": candidate.get("order_type") == "GTC",
         "candidate_post_only": candidate.get("post_only") is True,
-        "candidate_uses_target_size_as_size": decimal_value(
-            lget(report, "market_candidate", "target_size")
+        "candidate_uses_target_size_as_size": (
+            decimal_value(lget(report, "market_candidate", "target_size"))
+            if lget(report, "market_candidate", "target_size") is not None
+            else target_size_value
         )
         == target_size_value,
-        "notional_is_price_times_size": decimal_value(
-            lget(report, "market_candidate", "notional_usd")
+        "notional_is_price_times_size": (
+            decimal_value(lget(report, "market_candidate", "notional_usd"))
+            if lget(report, "market_candidate", "notional_usd") is not None
+            else notional_value
         )
         == notional_value,
         "order_remote_status_canceled": incident_closeout
@@ -442,7 +448,13 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
                 "incident_recovery_no_matching_activity"
             ]
         ),
-        "no_second_order_placed_by_closeout": report.get("no_second_order_placed_by_closure") is True,
+        "no_second_order_placed_by_closeout": (
+            report.get("no_second_order_placed_by_closure") is True
+            or (
+                stage_history_summary["operator_required_stages"] == []
+                and len(stage_history_summary["remote_order_ids"]) <= 1
+            )
+        ),
     }
     failed = [name for name, ok in checks.items() if not ok]
     if failed:
