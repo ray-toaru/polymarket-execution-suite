@@ -23,8 +23,8 @@ class ActivatePmxProfileTests(unittest.TestCase):
 
     def test_activate_profile_builds_generic_runtime_env(self):
         source = {
-            "PMX_PROFILE_ACCT_B_ACCOUNT_ID": "acct-b",
-            "PMX_PROFILE_ACCT_B_PROFILE_REF": "local-profile://acct-b",
+            "PMX_PROFILE_ACCT_B_ACCOUNT_ID": "acct_b",
+            "PMX_PROFILE_ACCT_B_PROFILE_REF": "local-profile://acct_b",
             "PMX_PROFILE_ACCT_B_POLYMARKET_PRIVATE_KEY": "0xabc123",
             "PMX_PROFILE_ACCT_B_POLY_API_KEY": "api-key",
             "PMX_PROFILE_ACCT_B_POLY_API_SECRET": "api-secret",
@@ -34,8 +34,8 @@ class ActivatePmxProfileTests(unittest.TestCase):
         }
         activated = self.module.activate_profile("acct_b", source)
         self.assertEqual(activated["PMX_ACTIVE_ACCOUNT_PROFILE"], "acct_b")
-        self.assertEqual(activated["PMX_ACTIVE_ACCOUNT_ID"], "acct-b")
-        self.assertEqual(activated["PMX_ACTIVE_PROFILE_REF"], "local-profile://acct-b")
+        self.assertEqual(activated["PMX_ACTIVE_ACCOUNT_ID"], "acct_b")
+        self.assertEqual(activated["PMX_ACTIVE_PROFILE_REF"], "local-profile://acct_b")
         self.assertEqual(activated["POLYMARKET_PRIVATE_KEY"], "0xabc123")
         self.assertEqual(activated["POLY_API_KEY"], "api-key")
         self.assertEqual(activated["POLY_API_SECRET"], "api-secret")
@@ -48,8 +48,8 @@ class ActivatePmxProfileTests(unittest.TestCase):
 
     def test_activate_profile_normalizes_deposit_wallet_numeric_alias(self):
         source = {
-            "PMX_PROFILE_ACCT_B_ACCOUNT_ID": "acct-b",
-            "PMX_PROFILE_ACCT_B_PROFILE_REF": "local-profile://acct-b",
+            "PMX_PROFILE_ACCT_B_ACCOUNT_ID": "acct_b",
+            "PMX_PROFILE_ACCT_B_PROFILE_REF": "local-profile://acct_b",
             "PMX_PROFILE_ACCT_B_POLYMARKET_PRIVATE_KEY": "0xabc123",
             "PMX_PROFILE_ACCT_B_POLY_API_KEY": "api-key",
             "PMX_PROFILE_ACCT_B_POLY_API_SECRET": "api-secret",
@@ -62,7 +62,7 @@ class ActivatePmxProfileTests(unittest.TestCase):
 
     def test_activate_profile_requires_complete_source_contract(self):
         source = {
-            "PMX_PROFILE_ACCT_B_ACCOUNT_ID": "acct-b",
+            "PMX_PROFILE_ACCT_B_ACCOUNT_ID": "acct_b",
             "PMX_PROFILE_ACCT_B_POLYMARKET_PRIVATE_KEY": "0xabc123",
         }
         with self.assertRaisesRegex(SystemExit, "missing required profile source variables"):
@@ -70,8 +70,8 @@ class ActivatePmxProfileTests(unittest.TestCase):
 
     def test_activate_profile_rejects_missing_funder_for_poly1271(self):
         source = {
-            "PMX_PROFILE_ACCT_B_ACCOUNT_ID": "acct-b",
-            "PMX_PROFILE_ACCT_B_PROFILE_REF": "local-profile://acct-b",
+            "PMX_PROFILE_ACCT_B_ACCOUNT_ID": "acct_b",
+            "PMX_PROFILE_ACCT_B_PROFILE_REF": "local-profile://acct_b",
             "PMX_PROFILE_ACCT_B_POLYMARKET_PRIVATE_KEY": "0xabc123",
             "PMX_PROFILE_ACCT_B_POLY_API_KEY": "api-key",
             "PMX_PROFILE_ACCT_B_POLY_API_SECRET": "api-secret",
@@ -84,8 +84,8 @@ class ActivatePmxProfileTests(unittest.TestCase):
     def test_write_runtime_env_contains_comments_and_no_profile_source_vars(self):
         activated = {
             "PMX_ACTIVE_ACCOUNT_PROFILE": "acct_b",
-            "PMX_ACTIVE_ACCOUNT_ID": "acct-b",
-            "PMX_ACTIVE_PROFILE_REF": "local-profile://acct-b",
+            "PMX_ACTIVE_ACCOUNT_ID": "acct_b",
+            "PMX_ACTIVE_PROFILE_REF": "local-profile://acct_b",
             "POLYMARKET_PRIVATE_KEY": "0xabc123",
             "POLY_API_KEY": "api-key",
             "POLY_API_SECRET": "api-secret",

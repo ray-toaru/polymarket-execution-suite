@@ -55,7 +55,7 @@ class PrepareDualControlReviewPacketTests(unittest.TestCase):
         return {
             "status": "operator_approval_request_not_authorization",
             "approval_hash": "d" * 64,
-            "active_profile_ref": "local-profile://acct-b",
+            "active_profile_ref": "local-profile://acct_b",
             "artifact_sha256": artifact_sha,
             "workspace_manifest_sha256": "b" * 64,
             "archived_manifest_sha256": "c" * 64,
@@ -141,7 +141,7 @@ class PrepareDualControlReviewPacketTests(unittest.TestCase):
             self.assertEqual(packet["artifact_sha256"], artifact_sha)
             self.assertEqual(packet["candidate_market_sha256"], candidate_sha)
             self.assertEqual(packet["runtime_truth_sha256"], runtime_sha)
-            self.assertEqual(packet["active_profile_ref"], "local-profile://acct-b")
+            self.assertEqual(packet["active_profile_ref"], "local-profile://acct_b")
             self.assertFalse(packet["live_submit_authorized"])
             self.assertFalse(packet["remote_side_effects_authorized"])
             self.assertTrue((out / "approval-request.json").exists())

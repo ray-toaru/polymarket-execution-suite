@@ -34,7 +34,7 @@ class PrepareCanaryPrereviewBundleTests(unittest.TestCase):
 
             def fake_prepare_runtime_truth(**kwargs):
                 calls.append(("runtime_truth", kwargs))
-                self.assertEqual(kwargs["account_id"], "acct-b")
+                self.assertEqual(kwargs["account_id"], "acct_b")
                 kwargs["runtime_truth_output"].write_text("{}\n")
                 return {"runtime_truth_output": str(kwargs["runtime_truth_output"])}
 
@@ -43,8 +43,8 @@ class PrepareCanaryPrereviewBundleTests(unittest.TestCase):
                 kwargs["runtime_env_output"].write_text("PMX_ACTIVE_ACCOUNT_PROFILE=acct_b\n")
                 return {
                     "profile": "acct_b",
-                    "account_id": "acct-b",
-                    "active_profile_ref": "local-profile://acct-b",
+                    "account_id": "acct_b",
+                    "active_profile_ref": "local-profile://acct_b",
                     "runtime_env_output": str(kwargs["runtime_env_output"]),
                 }
 

@@ -83,7 +83,7 @@ class PrepareCanaryRuntimeBundleTests(unittest.TestCase):
                         "# Profile-scoped account id for acct_b.",
                         "PMX_PROFILE_ACCT_B_ACCOUNT_ID=acct-canary",
                         "# Local non-secret profile reference for acct_b.",
-                        "PMX_PROFILE_ACCT_B_PROFILE_REF=local-profile://acct-b",
+                        "PMX_PROFILE_ACCT_B_PROFILE_REF=local-profile://acct_b",
                         "# Profile-scoped L1 private key for acct_b.",
                         "PMX_PROFILE_ACCT_B_POLYMARKET_PRIVATE_KEY=0xabc123",
                         "# Profile-scoped L2 API key for acct_b.",
@@ -123,7 +123,7 @@ class PrepareCanaryRuntimeBundleTests(unittest.TestCase):
             request = json.loads(approval_request.read_text())
 
             self.assertEqual(request["account_id"], "acct-canary")
-            self.assertEqual(request["active_profile_ref"], "local-profile://acct-b")
+            self.assertEqual(request["active_profile_ref"], "local-profile://acct_b")
             self.assertEqual(result["profile"], "acct_b")
             self.assertIn("POLYMARKET_PRIVATE_KEY=0xabc123", runtime_env.read_text())
 

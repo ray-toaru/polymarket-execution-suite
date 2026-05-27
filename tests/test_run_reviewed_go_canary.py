@@ -36,7 +36,7 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                 [
                     "PMX_ACTIVE_ACCOUNT_PROFILE=acct_b",
                     "PMX_ACTIVE_ACCOUNT_ID=acct-canary",
-                    "PMX_ACTIVE_PROFILE_REF=local-profile://acct-b",
+                    "PMX_ACTIVE_PROFILE_REF=local-profile://acct_b",
                     "POLYMARKET_PRIVATE_KEY=0xabc123",
                     "POLY_API_KEY=123e4567-e89b-12d3-a456-426614174000",
                     "POLY_API_SECRET=api-secret",
@@ -175,7 +175,7 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
 
             self.assertEqual(plan["mode"], "preflight")
             self.assertEqual(plan["account_id"], "acct-canary")
-            self.assertEqual(plan["active_profile_ref"], "local-profile://acct-b")
+            self.assertEqual(plan["active_profile_ref"], "local-profile://acct_b")
             self.assertIn("--preflight-only", plan["command"])
             self.assertIn(str(package / "approval.json"), plan["command"])
             self.assertIn(str(package / "runtime-truth.json"), plan["command"])

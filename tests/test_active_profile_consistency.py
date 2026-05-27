@@ -31,9 +31,9 @@ class ActiveProfileConsistencyTests(unittest.TestCase):
                 "# Active local account profile label.",
                 "PMX_ACTIVE_ACCOUNT_PROFILE=acct_b",
                 "# Active local account id bound to the selected profile.",
-                "PMX_ACTIVE_ACCOUNT_ID=acct-b",
+                "PMX_ACTIVE_ACCOUNT_ID=acct_b",
                 "# Local non-secret profile reference.",
-                "PMX_ACTIVE_PROFILE_REF=local-profile://acct-b",
+                "PMX_ACTIVE_PROFILE_REF=local-profile://acct_b",
                 "# Generic runtime signer material.",
                 "POLYMARKET_PRIVATE_KEY=0xabc123",
                 "# Generic runtime L2 API key.",
@@ -54,16 +54,16 @@ class ActiveProfileConsistencyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_name:
             env_file = Path(tmp_name) / ".env.runtime"
             env_file.write_text(self.valid_env())
-            report = self.module.evaluate_env_file(env_file, expected_account_id="acct-b")
+            report = self.module.evaluate_env_file(env_file, expected_account_id="acct_b")
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["active_account_profile"], "acct_b")
-        self.assertEqual(report["active_account_id"], "acct-b")
+        self.assertEqual(report["active_account_id"], "acct_b")
 
     def test_check_normalizes_deposit_wallet_numeric_alias(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             env_file = Path(tmp_name) / ".env.runtime"
             env_file.write_text(self.valid_env().replace("PMX_CLOB_SIGNATURE_TYPE=POLY_1271", "PMX_CLOB_SIGNATURE_TYPE=3"))
-            report = self.module.evaluate_env_file(env_file, expected_account_id="acct-b")
+            report = self.module.evaluate_env_file(env_file, expected_account_id="acct_b")
         self.assertEqual(report["signature_type"], "POLY_1271")
 
     def test_check_rejects_runtime_file_with_profile_source_inventory(self):
@@ -75,7 +75,7 @@ class ActiveProfileConsistencyTests(unittest.TestCase):
                 + "PMX_PROFILE_ACCT_B_POLY_API_SECRET=secret\n"
             )
             with self.assertRaisesRegex(SystemExit, "must not contain profile source variables"):
-                self.module.evaluate_env_file(env_file, expected_account_id="acct-b")
+                self.module.evaluate_env_file(env_file, expected_account_id="acct_b")
 
     def test_check_rejects_account_mismatch(self):
         with tempfile.TemporaryDirectory() as tmp_name:
@@ -93,7 +93,7 @@ class ActiveProfileConsistencyTests(unittest.TestCase):
             env_file = Path(tmp_name) / ".env.runtime"
             env_file.write_text(text)
             with self.assertRaisesRegex(SystemExit, "PMX_CLOB_FUNDER is required"):
-                self.module.evaluate_env_file(env_file, expected_account_id="acct-b")
+                self.module.evaluate_env_file(env_file, expected_account_id="acct_b")
 
 
 if __name__ == "__main__":

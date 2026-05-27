@@ -60,7 +60,7 @@ class PrepareCanaryReviewedGoBundleTests(unittest.TestCase):
             "approval_hash": "d" * 64,
             "scope": "REAL_FUNDS_CANARY",
             "account_id": "acct-canary",
-            "active_profile_ref": "local-profile://acct-b",
+            "active_profile_ref": "local-profile://acct_b",
             "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
             "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
             "operator_identity_ref": "operator://primary",
@@ -199,7 +199,7 @@ class PrepareCanaryReviewedGoBundleTests(unittest.TestCase):
             )
 
             self.assertEqual(result["package_status"], "reviewed_go_package_ready_single_attempt")
-            self.assertEqual(result["active_profile_ref"], "local-profile://acct-b")
+            self.assertEqual(result["active_profile_ref"], "local-profile://acct_b")
             self.assertTrue((tmp / "reviewed-go" / "release-decision.json").exists())
             self.assertTrue((tmp / "reviewed-go" / "approval.json").exists())
 

@@ -27,7 +27,7 @@ class PrepareOperatorApprovalRequestTests(unittest.TestCase):
             "approval_hash": "x" * 64,
             "artifact_sha256": "a" * 64,
             "account_id": "acct-canary",
-            "active_profile_ref": "local-profile://acct-b",
+            "active_profile_ref": "local-profile://acct_b",
         }
         first = self.module.compute_approval_hash(request)
         request["approval_hash"] = "y" * 64
@@ -48,7 +48,7 @@ class PrepareOperatorApprovalRequestTests(unittest.TestCase):
                         "# Active local account id bound to the selected profile.",
                         "PMX_ACTIVE_ACCOUNT_ID=acct-canary",
                         "# Local non-secret profile reference.",
-                        "PMX_ACTIVE_PROFILE_REF=local-profile://acct-b",
+                        "PMX_ACTIVE_PROFILE_REF=local-profile://acct_b",
                         "# Generic runtime signer material.",
                         "POLYMARKET_PRIVATE_KEY=0xabc123",
                         "# Generic runtime L2 API key.",
@@ -71,7 +71,7 @@ class PrepareOperatorApprovalRequestTests(unittest.TestCase):
                 active_profile_ref=None,
             )
         self.assertEqual(account_id, "acct-canary")
-        self.assertEqual(profile_ref, "local-profile://acct-b")
+        self.assertEqual(profile_ref, "local-profile://acct_b")
 
     def test_candidate_notional_must_match_limit_times_size(self):
         candidate = {

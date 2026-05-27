@@ -85,7 +85,7 @@ class PrepareCanaryReviewBundleTests(unittest.TestCase):
                         "# Profile-scoped account id for acct_b.",
                         "PMX_PROFILE_ACCT_B_ACCOUNT_ID=acct-canary",
                         "# Local non-secret profile reference for acct_b.",
-                        "PMX_PROFILE_ACCT_B_PROFILE_REF=local-profile://acct-b",
+                        "PMX_PROFILE_ACCT_B_PROFILE_REF=local-profile://acct_b",
                         "# Profile-scoped L1 private key for acct_b.",
                         "PMX_PROFILE_ACCT_B_POLYMARKET_PRIVATE_KEY=0xabc123",
                         "# Profile-scoped L2 API key for acct_b.",
@@ -136,8 +136,8 @@ class PrepareCanaryReviewBundleTests(unittest.TestCase):
             approval_doc = json.loads(approval_request.read_text())
             packet = json.loads((review_packet_dir / "packet.json").read_text())
             self.assertEqual(approval_doc["account_id"], "acct-canary")
-            self.assertEqual(approval_doc["active_profile_ref"], "local-profile://acct-b")
-            self.assertEqual(packet["active_profile_ref"], "local-profile://acct-b")
+            self.assertEqual(approval_doc["active_profile_ref"], "local-profile://acct_b")
+            self.assertEqual(packet["active_profile_ref"], "local-profile://acct_b")
             self.assertEqual(packet["status"], "dual_control_review_packet_not_authorization")
 
 

@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Activate one local Polymarket account profile into generic runtime env vars."""
+"""Activate one local Polymarket account profile into generic runtime env vars.
+
+The profile label is a local selector such as ``acct_b``. The source inventory
+also provides opaque ``ACCOUNT_ID`` and ``PROFILE_REF`` values. Those runtime
+identity fields are copied through as-is and are not normalized by this script.
+"""
 from __future__ import annotations
 
 import argparse
