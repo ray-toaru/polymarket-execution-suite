@@ -412,6 +412,31 @@ cd polymarket-execution-engine
 ./validation/run_current_gates.sh
 ```
 
+For the production-control evidence subset, the root suite below plans or runs
+the local fail-closed drills as one bundle:
+
+```bash
+python scripts/run_production_control_suite.py \
+  --release-zip dist/polymarket-execution-suite-v0.28.0.zip
+```
+
+With `--run`, it executes the current local suite for:
+
+1. production operations inventory
+2. authorization block
+3. deployment preflight
+4. secret custody
+5. monitoring and SLO
+6. incident response
+7. rollback and downgrade
+8. risk limits
+9. dependency breakage
+10. audit export
+
+It never enables live submit, live cancel, or production-ready claims. If
+`--output-dir` is supplied, each drill's JSON result is written there for later
+review.
+
 ## Safety boundary
 
 Still intentionally blocked:

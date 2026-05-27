@@ -66,7 +66,6 @@ cancel, a second real-funds canary, or a real-funds fill target.
 ## Still pending for later releases
 
 - Live submit/cancel promotion evidence.
-- Production deployment evidence and operational controls.
 - A future reviewed `go` release decision, operator approval, secret-custody
   review, alert/rollback/runbook review, runtime/reconcile review, account and
   market whitelist review, and cap review before any second real-funds canary
@@ -88,3 +87,7 @@ cancel, a second real-funds canary, or a real-funds fill target.
   reviewed-go path can be executed from one root entry point through preflight,
   armed post/cancel, readback capture, and local closeout generation while
   remaining fail-closed unless `--run` is supplied.
+- Added `scripts/run_production_control_suite.py` so production operations,
+  deployment preflight, secret custody, monitoring/SLO, incident response,
+  rollback, risk-limit, dependency-breakage, authorization-block, and
+  audit-export drills can be planned or executed from one root entry point.

@@ -239,6 +239,10 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [x] Production release-decision guard included in current gates
 - [x] Current release decision does not claim production-ready, live-ready, or
   validated-release status
+- [x] Add a single production-control suite wrapper that plans or runs the
+  current local operations, deployment, custody, monitoring, incident,
+  rollback, risk-limit, dependency-breakage, authorization-block, and
+  audit-export drills from the repository root
 - [x] Controlled live canary prep drill included in current gates
 - [x] Canary prep gates are represented locally while live submit, live cancel,
   posting, cancelling, and remote side effects remain blocked
