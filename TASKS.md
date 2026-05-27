@@ -243,6 +243,10 @@ is under `polymarket-execution-engine/evidence/current/`.
   current local operations, deployment, custody, monitoring, incident,
   rollback, risk-limit, dependency-breakage, authorization-block, and
   audit-export drills from the repository root
+- [x] Add a single live-submit promotion suite wrapper that plans or runs the
+  current live-submit static guard, canary readiness/preflight/blocked/
+  rehearsal/prep drills, and real-funds canary promotion-evidence drills from
+  the repository root
 - [x] Controlled live canary prep drill included in current gates
 - [x] Canary prep gates are represented locally while live submit, live cancel,
   posting, cancelling, and remote side effects remain blocked

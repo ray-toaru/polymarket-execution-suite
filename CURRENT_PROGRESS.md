@@ -65,7 +65,6 @@ cancel, a second real-funds canary, or a real-funds fill target.
 
 ## Still pending for later releases
 
-- Live submit/cancel promotion evidence.
 - A future reviewed `go` release decision, operator approval, secret-custody
   review, alert/rollback/runbook review, runtime/reconcile review, account and
   market whitelist review, and cap review before any second real-funds canary
@@ -91,3 +90,7 @@ cancel, a second real-funds canary, or a real-funds fill target.
   deployment preflight, secret custody, monitoring/SLO, incident response,
   rollback, risk-limit, dependency-breakage, authorization-block, and
   audit-export drills can be planned or executed from one root entry point.
+- Added `scripts/run_live_submit_promotion_suite.py` so live-submit static
+  guard, readiness/preflight/blocked/rehearsal/prep drills, and real-funds
+  canary promotion-evidence drills can be planned or executed from one root
+  entry point.

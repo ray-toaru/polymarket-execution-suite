@@ -437,6 +437,30 @@ It never enables live submit, live cancel, or production-ready claims. If
 `--output-dir` is supplied, each drill's JSON result is written there for later
 review.
 
+For the live-submit / live-cancel promotion-evidence subset, the root suite
+below plans or runs the local fail-closed promotion drills as one bundle:
+
+```bash
+python scripts/run_live_submit_promotion_suite.py
+```
+
+With `--run`, it executes the current local suite for:
+
+1. live-submit static guard
+2. live canary readiness drill
+3. live canary preflight drill
+4. live canary blocked drill
+5. live canary rehearsal drill
+6. controlled live canary prep drill
+7. real-funds canary preflight drill
+8. real-funds canary ready drill
+9. real-funds canary lifecycle drill
+10. real-funds canary review-package drill
+
+This suite still proves fail-closed promotion evidence only. It does not
+authorize live submit, live cancel, production deployment, a second canary, or
+generalized order posting.
+
 ## Safety boundary
 
 Still intentionally blocked:
