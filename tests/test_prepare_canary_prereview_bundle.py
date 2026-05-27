@@ -34,8 +34,19 @@ class PrepareCanaryPrereviewBundleTests(unittest.TestCase):
 
             def fake_prepare_runtime_truth(**kwargs):
                 calls.append(("runtime_truth", kwargs))
+                self.assertEqual(kwargs["account_id"], "acct-b")
                 kwargs["runtime_truth_output"].write_text("{}\n")
                 return {"runtime_truth_output": str(kwargs["runtime_truth_output"])}
+
+            def fake_activate_runtime_profile_env(**kwargs):
+                calls.append(("activate_runtime_profile", kwargs))
+                kwargs["runtime_env_output"].write_text("PMX_ACTIVE_ACCOUNT_PROFILE=acct_b\n")
+                return {
+                    "profile": "acct_b",
+                    "account_id": "acct-b",
+                    "active_profile_ref": "local-profile://acct-b",
+                    "runtime_env_output": str(kwargs["runtime_env_output"]),
+                }
 
             review_results = {
                 "status": "pass",
@@ -56,6 +67,7 @@ class PrepareCanaryPrereviewBundleTests(unittest.TestCase):
 
             self.module.prepare_candidate = fake_prepare_candidate
             self.module.prepare_runtime_truth = fake_prepare_runtime_truth
+            self.module.activate_runtime_profile_env = fake_activate_runtime_profile_env
             self.module.load_module = fake_load_module
 
             result = self.module.prepare_prereview_bundle(
@@ -90,15 +102,18 @@ class PrepareCanaryPrereviewBundleTests(unittest.TestCase):
                 valid_for_minutes=15,
             )
 
-            self.assertEqual([entry[0] for entry in calls], ["candidate", "runtime_truth", "review_bundle"])
+            self.assertEqual(
+                [entry[0] for entry in calls],
+                ["candidate", "activate_runtime_profile", "runtime_truth", "review_bundle"],
+            )
             self.assertEqual(result["profile"], "acct_b")
             self.assertEqual(result["review_packet_status"], "dual_control_review_packet_not_authorization")
             self.assertEqual(
-                calls[2][1]["candidate_market_file"],
+                calls[3][1]["candidate_market_file"],
                 tmp / "candidate-market.json",
             )
             self.assertEqual(
-                calls[2][1]["runtime_truth_file"],
+                calls[3][1]["runtime_truth_file"],
                 tmp / "runtime-truth.json",
             )
 

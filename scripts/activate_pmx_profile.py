@@ -9,7 +9,14 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-VALID_SIGNATURE_TYPES = {"EOA", "POLY_1271"}
+SIGNATURE_TYPE_ALIASES = {
+    "EOA": "EOA",
+    "0": "EOA",
+    "POLY_1271": "POLY_1271",
+    "POLY1271": "POLY_1271",
+    "DEPOSIT_WALLET": "POLY_1271",
+    "3": "POLY_1271",
+}
 
 
 def parse_env_file(path: Path) -> dict[str, str]:
@@ -43,6 +50,16 @@ def profile_prefix(profile: str) -> str:
     return f"PMX_PROFILE_{profile.upper()}_"
 
 
+def normalize_signature_type(raw: str) -> str:
+    normalized = raw.strip().upper()
+    try:
+        return SIGNATURE_TYPE_ALIASES[normalized]
+    except KeyError as exc:
+        raise SystemExit(
+            "PMX_CLOB_SIGNATURE_TYPE must be EOA or POLY_1271; numeric aliases 0 and 3 are accepted"
+        ) from exc
+
+
 def activate_profile(profile: str, source_values: dict[str, str]) -> dict[str, str]:
     normalized = normalize_profile_name(profile)
     prefix = profile_prefix(normalized)
@@ -67,12 +84,8 @@ def activate_profile(profile: str, source_values: dict[str, str]) -> dict[str, s
     activated = {"PMX_ACTIVE_ACCOUNT_PROFILE": normalized}
     for source_suffix, target_key in required_fields.items():
         activated[target_key] = source_values[f"{prefix}{source_suffix}"].strip()
-    signature_type = activated["PMX_CLOB_SIGNATURE_TYPE"]
-    if signature_type not in VALID_SIGNATURE_TYPES:
-        raise SystemExit(
-            "PMX_CLOB_SIGNATURE_TYPE must be one of "
-            + ", ".join(sorted(VALID_SIGNATURE_TYPES))
-        )
+    signature_type = normalize_signature_type(activated["PMX_CLOB_SIGNATURE_TYPE"])
+    activated["PMX_CLOB_SIGNATURE_TYPE"] = signature_type
     funder = source_values.get(f"{prefix}CLOB_FUNDER", "").strip()
     if signature_type == "POLY_1271":
         if not funder:

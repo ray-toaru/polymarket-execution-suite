@@ -6,6 +6,7 @@ import argparse
 import importlib.util
 import json
 import os
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -15,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PREPARE_CANDIDATE_SCRIPT = ROOT / "scripts" / "prepare_canary_candidate_market.py"
 REVIEW_BUNDLE_SCRIPT = ROOT / "scripts" / "prepare_canary_review_bundle.py"
 APPROVAL_REQUEST_SCRIPT = ROOT / "scripts" / "prepare_operator_approval_request.py"
+ACTIVATE_PROFILE_SCRIPT = ROOT / "scripts" / "activate_pmx_profile.py"
 STORE_TRUTH_SCRIPT = (
     ROOT
     / "polymarket-execution-engine"
@@ -27,6 +29,7 @@ def load_module(path: Path, name: str):
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
+    sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
 
@@ -118,6 +121,7 @@ def prepare_runtime_truth(
     runtime_truth_output: Path,
     candidate_market_file: Path,
     release_zip: Path | None,
+    account_id: str | None = None,
 ) -> dict[str, str]:
     approval_module = load_module(APPROVAL_REQUEST_SCRIPT, "prepare_operator_approval_request")
     store_truth = load_module(STORE_TRUTH_SCRIPT, "run_real_funds_canary_store_truth_cli_preflight")
@@ -134,7 +138,7 @@ def prepare_runtime_truth(
         store_truth.check_database_connectivity(url)
         store_truth.build_cli()
         suffix = str(time.time_ns())
-        account_id = f"acct-store-truth-{suffix}"
+        account_id = account_id or f"acct-store-truth-{suffix}"
         condition_id = f"cond-store-truth-{suffix}"
         store_truth.seed_runtime_truth(url, account_id, condition_id)
         with tempfile.TemporaryDirectory(prefix="pmx-store-truth-cli-") as tmp_dir:
@@ -179,6 +183,25 @@ def prepare_runtime_truth(
             os.environ.pop("PMX_STORE_TRUTH_CANDIDATE_MARKET_FILE", None)
         else:
             os.environ["PMX_STORE_TRUTH_CANDIDATE_MARKET_FILE"] = previous_candidate
+
+
+def activate_runtime_profile_env(
+    *,
+    profile: str,
+    source_env_file: Path,
+    runtime_env_output: Path,
+) -> dict[str, str]:
+    activate = load_module(ACTIVATE_PROFILE_SCRIPT, "activate_pmx_profile")
+    source_values = activate.load_profile_source(source_env_file)
+    activated = activate.activate_profile(profile, source_values)
+    activate.write_runtime_env(runtime_env_output, activated)
+    os.environ.update(activated)
+    return {
+        "profile": activated["PMX_ACTIVE_ACCOUNT_PROFILE"],
+        "account_id": activated["PMX_ACTIVE_ACCOUNT_ID"],
+        "active_profile_ref": activated["PMX_ACTIVE_PROFILE_REF"],
+        "runtime_env_output": str(runtime_env_output),
+    }
 
 
 def prepare_prereview_bundle(
@@ -228,10 +251,16 @@ def prepare_prereview_bundle(
         max_spread_bps=max_spread_bps,
         timeout_seconds=timeout_seconds,
     )
+    runtime_profile_result = activate_runtime_profile_env(
+        profile=profile,
+        source_env_file=source_env_file,
+        runtime_env_output=runtime_env_output,
+    )
     runtime_truth_result = prepare_runtime_truth(
         runtime_truth_output=runtime_truth_output,
         candidate_market_file=candidate_market_output,
         release_zip=release_zip,
+        account_id=runtime_profile_result["account_id"],
     )
     review_bundle = load_module(REVIEW_BUNDLE_SCRIPT, "prepare_canary_review_bundle")
     bundle = review_bundle.prepare_review_bundle(
@@ -254,7 +283,7 @@ def prepare_prereview_bundle(
         max_daily_notional_usd=max_daily_notional_usd,
         valid_for_minutes=valid_for_minutes,
     )
-    return {**candidate_result, **runtime_truth_result, **bundle}
+    return {**candidate_result, **runtime_profile_result, **runtime_truth_result, **bundle}
 
 
 def main() -> int:

@@ -7,13 +7,17 @@ It is not production-ready and not live-trading-ready until the v0.28 full
 current gates, package, detached sidecars, and release readiness audit are
 refreshed together.
 
-On 2026-05-23 UTC, one explicitly authorized BUY/GTC post-only controlled canary
-was posted and immediately cancelled against the reviewed market candidate. The
-saved readback evidence records `remote_status=CANCELED`, `size_matched=0`, and
-zero matching trades for the submitted order id. A broader public Data API
-readback for the same account/market/token also records zero activity, zero
-trades, zero open positions, zero closed positions, and value `0`. This
-validates the one-time canary exercise only; it is not evidence for general
+Two local controlled-canary closeout records now exist:
+
+- historical v0.26 controlled canary evidence retained for audit context;
+- one v0.28 reviewed-go single-attempt BUY/GTC post-only canary closed on
+  2026-05-27 UTC.
+
+For the v0.28 local attempt, the saved readback evidence records
+`remote_status=CANCELED`, `size_matched=0`, zero matching trades for the
+submitted order id, and a broader public Data API readback with zero activity,
+zero trades, zero open positions, zero closed positions, and value `0`. This
+validates that one-time canary exercise only; it is not evidence for general
 production/live readiness.
 
 Tracked closeout summary:
@@ -52,7 +56,9 @@ polymarket-execution-engine/evidence/current/manifest.json
 
 Latest local refresh:
 
-- date: 2026-05-23 UTC;
+- date: 2026-05-27 UTC for the local reviewed-go package and closeout refresh;
+  canonical current evidence manifest freshness remains whatever is bound in the
+  detached `.zip.evidence.json` sidecar after packaging;
 - gate source root commit: recorded in the detached `.zip.evidence.json`
   sidecar generated after the final root commit;
 - gate source execution-engine commit: recorded in the detached
@@ -60,9 +66,9 @@ Latest local refresh:
 - release artifact SHA-256: recorded in the detached `.zip.sha256` sidecar;
 - evidence manifest SHA-256: recorded in the detached `.zip.evidence.json`
   sidecar;
-- completed canary closeout package: the local
-  `dist/pmx-canary-reviewed-go-v0.26-20260523T022339Z-gtc-post-only-size5`
-  directory;
+- completed canary closeout packages:
+  `dist/pmx-canary-reviewed-go-v0.26-20260523T022339Z-gtc-post-only-size5` and
+  `dist/pmx-v028-reviewed-go-20260527T035142Z`;
 - next canary review package: must start from a fresh no-go review package and
   cannot reuse the consumed reviewed-go package;
 - next-phase local no-go pipeline evidence:
@@ -150,7 +156,7 @@ The controlled canary dry-run may report `dry_run_ready`, but that status still
 means no live submit, no live cancel, no posted order, and no remote side
 effects.
 
-The first user-selected reviewed-go package has been consumed and closed. Any
+The current user-selected reviewed-go package has been consumed and closed. Any
 future user-selected review package must start as `no_go` and not armed until a
 fresh reviewed decision changes only that package:
 

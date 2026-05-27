@@ -46,6 +46,20 @@ class ActivatePmxProfileTests(unittest.TestCase):
         )
         self.assertEqual(activated["PMX_CLOB_SIGNATURE_TYPE"], "POLY_1271")
 
+    def test_activate_profile_normalizes_deposit_wallet_numeric_alias(self):
+        source = {
+            "PMX_PROFILE_ACCT_B_ACCOUNT_ID": "acct-b",
+            "PMX_PROFILE_ACCT_B_PROFILE_REF": "local-profile://acct-b",
+            "PMX_PROFILE_ACCT_B_POLYMARKET_PRIVATE_KEY": "0xabc123",
+            "PMX_PROFILE_ACCT_B_POLY_API_KEY": "api-key",
+            "PMX_PROFILE_ACCT_B_POLY_API_SECRET": "api-secret",
+            "PMX_PROFILE_ACCT_B_POLY_API_PASSPHRASE": "api-pass",
+            "PMX_PROFILE_ACCT_B_CLOB_FUNDER": "0x00000000000000000000000000000000000000b0",
+            "PMX_PROFILE_ACCT_B_CLOB_SIGNATURE_TYPE": "3",
+        }
+        activated = self.module.activate_profile("acct_b", source)
+        self.assertEqual(activated["PMX_CLOB_SIGNATURE_TYPE"], "POLY_1271")
+
     def test_activate_profile_requires_complete_source_contract(self):
         source = {
             "PMX_PROFILE_ACCT_B_ACCOUNT_ID": "acct-b",

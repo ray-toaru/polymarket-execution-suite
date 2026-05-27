@@ -33,6 +33,20 @@ class PackageReleaseIndexTests(unittest.TestCase):
         self.assertEqual(entry["approval_reuse_allowed"], False)
         self.assertEqual(entry["remote_side_effects_authorized"], False)
 
+    def test_dist_index_classifies_v028_consumed_closed_go_package(self):
+        entry = self.package_release.classify_dist_entry(
+            "pmx-v028-reviewed-go-20260527T035142Z",
+            is_dir=True,
+            child_names={
+                "release-decision.json",
+                "approval-consumed-20260527T035521Z.json",
+                "closeout.json",
+            },
+        )
+        self.assertEqual(entry["status"], "consumed_closed")
+        self.assertEqual(entry["approval_reuse_allowed"], False)
+        self.assertEqual(entry["remote_side_effects_authorized"], False)
+
     def test_dist_index_classifies_no_go_review_package(self):
         entry = self.package_release.classify_dist_entry(
             "pmx-canary-review-v0.26-20260523T020943Z-gtc-post-only-current-no-go",

@@ -115,7 +115,8 @@ def validate_dual_control_template(path: Path) -> dict[str, Any]:
 
 def copy_into_packet(src: Path, output_dir: Path, *, target_name: str | None = None) -> dict[str, Any]:
     dest = output_dir / (target_name or src.name)
-    shutil.copy2(src, dest)
+    if src.resolve() != dest.resolve():
+        shutil.copy2(src, dest)
     return {"path": dest.name, "sha256": sha256(dest)}
 
 

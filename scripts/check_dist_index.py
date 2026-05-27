@@ -20,6 +20,12 @@ def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text())
 
 
+def is_reviewed_go_material(path: str) -> bool:
+    return path.startswith("pmx-canary-reviewed-go-") or (
+        path.startswith("pmx-") and "-reviewed-go-" in path
+    )
+
+
 def validate(dist: Path, expected_version: str) -> list[str]:
     failures: list[str] = []
     index_path = dist / "INDEX.json"
@@ -103,7 +109,7 @@ def validate(dist: Path, expected_version: str) -> list[str]:
         status = item.get("status")
         approval_reuse_allowed = item.get("approval_reuse_allowed")
         remote_side_effects_authorized = item.get("remote_side_effects_authorized")
-        if path.startswith("pmx-canary-reviewed-go-") and status in {"consumed_closed", "consumed_not_closed"}:
+        if is_reviewed_go_material(path) and status in {"consumed_closed", "consumed_not_closed"}:
             if approval_reuse_allowed is not False:
                 failures.append(f"{path}: consumed reviewed-go material must not be approval-reusable")
             if remote_side_effects_authorized is not False:

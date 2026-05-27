@@ -148,6 +148,21 @@ class PrepareDualControlReviewPacketTests(unittest.TestCase):
             self.assertTrue((out / "dual-control-review.template.json").exists())
             self.assertIn("not an authorization", self.module.packet_readme(packet))
 
+    def test_copy_into_packet_accepts_same_source_and_destination(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            src = tmp / "dual-control-review.template.json"
+            src.write_text("{}\n")
+
+            copied = self.module.copy_into_packet(
+                src,
+                tmp,
+                target_name="dual-control-review.template.json",
+            )
+
+            self.assertEqual(copied["path"], "dual-control-review.template.json")
+            self.assertEqual(copied["sha256"], self.module.sha256(src))
+
     def test_build_packet_rejects_binding_mismatch(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)

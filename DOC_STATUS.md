@@ -20,11 +20,12 @@
 - `DEVELOPMENT_HANDOFF.md`
 - `NO_LOCAL_ACTIONS_REMAINING.md`
 
-Canary decision-prep documents are active v0.28 governance material. The first
-authorized v0.26 controlled canary is closed and summarized in
-`CONTROLLED_CANARY_CLOSEOUT.md`. Future canary decision-prep material must
-continue to state `no_go` unless a fresh reviewed release decision explicitly
-changes the live/production boundary for that single attempt.
+Canary decision-prep documents are active v0.28 governance material. The
+historical v0.26 controlled canary is closed, and one local v0.28 reviewed-go
+single-attempt canary package is also consumed and closed. Future canary
+decision-prep material must continue to state `no_go` unless a fresh reviewed
+release decision explicitly changes the live/production boundary for that
+single attempt.
 
 ## Historical documents
 

@@ -143,12 +143,18 @@ def write_deterministic(zf: ZipFile, path: Path) -> None:
     zf.writestr(info, archive_bytes(path))
 
 
+def is_reviewed_go_material(name: str) -> bool:
+    return name.startswith("pmx-canary-reviewed-go-") or (
+        name.startswith("pmx-") and "-reviewed-go-" in name
+    )
+
+
 def classify_dist_entry(name: str, *, is_dir: bool, child_names: set[str] | None = None) -> dict[str, object]:
     child_names = child_names or set()
     status = "local_review_material_not_release_artifact"
     approval_reuse_allowed = False
     remote_side_effects_authorized = False
-    if name.startswith("pmx-canary-reviewed-go-"):
+    if is_reviewed_go_material(name):
         if "closeout.json" in child_names or "CLOSEOUT.md" in child_names:
             status = "consumed_closed"
         elif any(child.startswith("approval-consumed") for child in child_names):

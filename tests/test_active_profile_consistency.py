@@ -59,6 +59,13 @@ class ActiveProfileConsistencyTests(unittest.TestCase):
         self.assertEqual(report["active_account_profile"], "acct_b")
         self.assertEqual(report["active_account_id"], "acct-b")
 
+    def test_check_normalizes_deposit_wallet_numeric_alias(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            env_file = Path(tmp_name) / ".env.runtime"
+            env_file.write_text(self.valid_env().replace("PMX_CLOB_SIGNATURE_TYPE=POLY_1271", "PMX_CLOB_SIGNATURE_TYPE=3"))
+            report = self.module.evaluate_env_file(env_file, expected_account_id="acct-b")
+        self.assertEqual(report["signature_type"], "POLY_1271")
+
     def test_check_rejects_runtime_file_with_profile_source_inventory(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             env_file = Path(tmp_name) / ".env.runtime"

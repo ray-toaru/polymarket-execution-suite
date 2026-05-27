@@ -31,10 +31,12 @@ def load_json(path: Path) -> dict[str, Any]:
 
 def load_module(path: Path, name: str):
     import importlib.util
+    import sys
 
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
+    sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
 

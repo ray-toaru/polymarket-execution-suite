@@ -96,7 +96,7 @@ class DistIndexGuardTests(unittest.TestCase):
         self.write_index(
             local_material=[
                 {
-                    "path": "pmx-canary-reviewed-go-v0.26-closed",
+                    "path": "pmx-v028-reviewed-go-20260527T035142Z",
                     "status": "consumed_closed",
                     "approval_reuse_allowed": True,
                     "remote_side_effects_authorized": False,

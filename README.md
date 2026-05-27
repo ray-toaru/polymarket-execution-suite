@@ -1,6 +1,6 @@
 # Polymarket execution suite v0.28.0
 
-v0.28.0 is a **production-live-candidate**, not a production-ready or live-trading release. It preserves the closed v0.26 BUY/GTC post-only canary evidence and adds executor-side safety and release-governance hardening. Further live execution still requires current gates plus a fresh reviewed `go` decision and operator approval.
+v0.28.0 is a **production-live-candidate**, not a production-ready or live-trading release. It preserves the historical closed v0.26 BUY/GTC post-only canary evidence, records one local v0.28 reviewed-go single-attempt canary as consumed and closed, and adds executor-side safety and release-governance hardening. The source artifact remains non-live; any future live execution still requires current gates plus a fresh reviewed `go` decision and operator approval.
 
 This repository is the integration repository. It pins two independent implementation repositories as
 submodules:
@@ -34,7 +34,7 @@ Use these current documents first:
 - `DEPENDENCY_POLICY.md` — pinned runtime/toolchain/dependency policy.
 - `DESIGN_DECISION_RECORD.md` — accepted architectural decisions.
 - `IMPLEMENTATION_STATUS.md` — implemented, blocked, and intentionally disabled areas.
-- `CONTROLLED_CANARY_CLOSEOUT.md` — tracked summary for the completed one-time v0.26 controlled canary.
+- `CONTROLLED_CANARY_CLOSEOUT.md` — tracked summary for the controlled canary closeout boundary and evidence requirements.
 - `VALIDATION_REPORT.md` — what is locally verified versus externally required.
 - `REVIEW_AUDIT.md` — known risks and audit judgment.
 - `DOC_STATUS.md` — document/evidence governance map.
@@ -157,7 +157,7 @@ python scripts/prepare_canary_reviewed_go_bundle.py \
   --review-packet-dir <review-packet-dir> \
   --approved-dual-control-review-file <approved-dual-control-review.json> \
   --external-references-file <external-references.json> \
-  --output-dir dist/pmx-canary-reviewed-go-<timestamp> \
+  --output-dir dist/pmx-v028-reviewed-go-<timestamp> \
   --decision-reason "approved by independent reviewer"
 ```
 
@@ -169,7 +169,7 @@ If you need the lower-level file-by-file entry, it remains available:
 
 ```bash
 python scripts/prepare_reviewed_go_package.py \
-  --output-dir dist/pmx-canary-reviewed-go-<timestamp> \
+  --output-dir dist/pmx-v028-reviewed-go-<timestamp> \
   --release-zip dist/polymarket-execution-suite-v0.28.0.zip \
   --candidate-market-file <candidate-market.json> \
   --runtime-truth-file <runtime-truth.json> \
