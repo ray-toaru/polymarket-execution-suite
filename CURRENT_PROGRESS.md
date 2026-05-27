@@ -67,8 +67,6 @@ cancel, a second real-funds canary, or a real-funds fill target.
 
 - Live submit/cancel promotion evidence.
 - Production deployment evidence and operational controls.
-- Repeatable canary pipeline automation that replaces the current manual
-  package/preflight/armed/readback/closeout sequence.
 - A future reviewed `go` release decision, operator approval, secret-custody
   review, alert/rollback/runbook review, runtime/reconcile review, account and
   market whitelist review, and cap review before any second real-funds canary
@@ -86,3 +84,7 @@ cancel, a second real-funds canary, or a real-funds fill target.
   `dist/pmx-canary-pipeline-next-phase-no-go-local/` during the v0.26-to-v0.28
   transition. The report records `remote_side_effects=false`,
   `armed_live_attempted=false`, and `operator_runbook.status=blocked`.
+- Added `scripts/run_reviewed_go_canary_closeout.py` so the approved
+  reviewed-go path can be executed from one root entry point through preflight,
+  armed post/cancel, readback capture, and local closeout generation while
+  remaining fail-closed unless `--run` is supplied.

@@ -375,6 +375,29 @@ This wrapper deliberately does not auto-set those gate env vars. They remain
 explicit operator assertions, and the script will report any that are missing in
 its invocation plan output.
 
+For the full reviewed-go single-attempt path, including local readback capture
+and `closeout.json` / `CLOSEOUT.md` generation, use the workflow wrapper below.
+It still fails closed by default and only executes with `--run`:
+
+```bash
+python scripts/run_reviewed_go_canary_closeout.py \
+  --package-dir <reviewed-go-package-dir> \
+  --env-file polymarket-execution-engine/.env.runtime
+```
+
+When `--run` is supplied, the wrapper executes:
+
+1. reviewed-go preflight
+2. reviewed-go armed post/cancel
+3. order-status readback
+4. trade readback
+5. account-activity readback
+6. local closeout generation
+
+It does not invent account identity. Data API readback uses `--account-address`
+if supplied; otherwise it requires `PMX_CLOB_FUNDER` in the runtime env and
+fails closed when that address is unavailable.
+
 Release packaging writes `dist/INDEX.json` and `dist/README.md`. Only the
 indexed `polymarket-execution-suite-v0.28.0.zip` plus its detached sidecars are
 the current source artifact after v0.28 packaging; any other `dist/pmx-*`

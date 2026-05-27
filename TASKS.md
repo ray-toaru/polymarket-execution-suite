@@ -77,6 +77,9 @@ second canary, or an actual real-funds fill target.
   package, one order, immediate cancel, readback, closeout, then consumed.
 - [x] Preserve the default no-go state for any second canary or production/live
   trading claim until fresh gates and a new decision exist.
+- [x] Add a single reviewed-go workflow wrapper that chains preflight, armed
+  post/cancel, order/trade/account readback, and local closeout generation
+  without requiring operators to manually rebuild each command.
 
 ## Historical controlled canary decision-prep
 
