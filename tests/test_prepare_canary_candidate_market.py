@@ -1,8 +1,10 @@
 import importlib.util
 import sys
+import argparse
 import unittest
 from decimal import Decimal
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -46,6 +48,84 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
         )
         self.assertEqual(candidate.to_engine_json()["outcome"], "Yes")
         self.assertEqual(candidate.to_engine_json()["estimated_order_notional_usd"], "0.1")
+
+    def test_load_market_by_slug_requires_outcome_disambiguation(self):
+        args = argparse.Namespace(gamma_url="https://gamma", timeout_seconds=1.0)
+        markets = [
+            {"slug": "shared-slug", "outcomes": ["Yes", "No"], "clobTokenIds": ["1", "2"]},
+            {"slug": "shared-slug", "outcomes": ["Yes", "No"], "clobTokenIds": ["3", "4"]},
+        ]
+        with patch.object(self.module, "fetch_json", side_effect=[markets]):
+            with self.assertRaisesRegex(self.module.CandidateError, "multiple markets"):
+                self.module.load_market_by_slug(args, "shared-slug", "Yes")
+
+    def test_scan_uses_deterministic_tie_break_for_equal_liquidity(self):
+        args = argparse.Namespace(
+            gamma_url="https://gamma",
+            clob_url="https://clob",
+            timeout_seconds=1.0,
+            max_order_notional_usd="1.00",
+            target_size="5",
+            max_markets=10,
+            max_spread_bps=100,
+            human_review_ref="ticket://review",
+            market_url=None,
+            market_slug=None,
+            outcome=None,
+        )
+        markets = [
+            {
+                "id": "condition-b",
+                "slug": "slug-b",
+                "active": True,
+                "acceptingOrders": True,
+                "closed": False,
+                "archived": False,
+                "outcomes": ["Yes"],
+                "clobTokenIds": ["200"],
+            },
+            {
+                "id": "condition-a",
+                "slug": "slug-a",
+                "active": True,
+                "acceptingOrders": True,
+                "closed": False,
+                "archived": False,
+                "outcomes": ["Yes"],
+                "clobTokenIds": ["100"],
+            },
+        ]
+        book = {"asks": [{"price": "0.03", "size": "10"}], "min_order_size": "5", "min_tick_size": "0.01"}
+        spread = {"spread": "0.01"}
+        with patch.object(self.module, "fetch_json", side_effect=[markets, book, spread, book, spread]):
+            candidate, _audit = self.module.scan(args)
+        self.assertEqual(candidate.market_id, "condition-a")
+        self.assertEqual(candidate.token_id, "100")
+
+    def test_fetch_json_retries_before_succeeding(self):
+        calls = []
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def read(self):
+                return b"{\"status\": \"ok\"}"
+
+        def fake_urlopen(request, timeout):
+            calls.append((request.full_url, timeout))
+            if len(calls) < 3:
+                raise self.module.urllib.error.URLError("temporary")
+            return FakeResponse()
+
+        with patch.object(self.module.urllib.request, "urlopen", side_effect=fake_urlopen):
+            with patch.object(self.module.time, "sleep"):
+                data = self.module.fetch_json("https://gamma", "/markets", {}, 1.0)
+        self.assertEqual(data["status"], "ok")
+        self.assertEqual(len(calls), 3)
 
 
 if __name__ == "__main__":

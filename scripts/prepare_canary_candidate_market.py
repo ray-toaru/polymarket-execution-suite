@@ -14,7 +14,9 @@ import datetime as dt
 import hashlib
 import json
 import sys
+import time
 import urllib.parse
+import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation, ROUND_CEILING, ROUND_FLOOR
@@ -24,7 +26,8 @@ from typing import Any
 
 DEFAULT_GAMMA_URL = "https://gamma-api.polymarket.com"
 DEFAULT_CLOB_URL = "https://clob.polymarket.com"
-USER_AGENT = "pmx-canary-candidate-prep/0.1"
+VERSION = (Path(__file__).resolve().parents[1] / "VERSION").read_text().strip()
+USER_AGENT = f"pmx-canary-candidate-prep/{VERSION}"
 MAX_PRICE = Decimal("1")
 
 
@@ -153,8 +156,18 @@ def fetch_json(base_url: str, path: str, query: dict[str, str], timeout_seconds:
         headers={"Accept": "application/json", "User-Agent": USER_AGENT},
         method="GET",
     )
-    with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
-        return json.loads(response.read().decode("utf-8"))
+    last_error: Exception | None = None
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
+            last_error = exc
+            if attempt == 2:
+                break
+            time.sleep(0.2 * (attempt + 1))
+    assert last_error is not None
+    raise last_error
 
 
 def as_bool(value: Any) -> bool:
@@ -294,6 +307,60 @@ def normalized_outcome(value: str) -> str:
     return value.strip().casefold()
 
 
+def candidate_sort_key(candidate: Candidate) -> tuple[int, int, str, str]:
+    return (-candidate.liquidity_score, candidate.spread_bps, candidate.market_id, candidate.token_id)
+
+
+def fetch_json_or_error(
+    *,
+    base_url: str,
+    path: str,
+    query: dict[str, str],
+    timeout_seconds: float,
+    failure_message: str,
+    audit: dict[str, Any],
+) -> Any:
+    try:
+        return fetch_json(base_url, path, query, timeout_seconds)
+    except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
+        audit.setdefault("fetch_errors", []).append(
+            {
+                "path": path,
+                "query": query,
+                "error": f"{type(exc).__name__}: {exc}",
+            }
+        )
+        raise CandidateError(failure_message, audit) from exc
+
+
+def select_market_for_outcome(
+    markets: list[dict[str, Any]],
+    *,
+    requested_outcome: str,
+    slug: str,
+) -> dict[str, Any]:
+    wanted = normalized_outcome(requested_outcome)
+    matches = []
+    for market in markets:
+        if not isinstance(market, dict):
+            continue
+        outcomes = parse_outcomes(market)
+        if any(normalized_outcome(outcome) == wanted for outcome in outcomes):
+            matches.append(market)
+    if not matches:
+        raise CandidateError(
+            f"Gamma API did not return any market for slug {slug!r} with outcome {requested_outcome!r}"
+        )
+    exact_slug_matches = [market for market in matches if str(market.get("slug") or "") == slug]
+    if len(exact_slug_matches) == 1:
+        return exact_slug_matches[0]
+    if len(matches) == 1:
+        return matches[0]
+    raise CandidateError(
+        f"Gamma API returned multiple markets for slug {slug!r} and outcome {requested_outcome!r}; explicit market disambiguation is required"
+    )
+
+
 def candidate_from_market(
     args: argparse.Namespace,
     market: dict[str, Any],
@@ -343,14 +410,28 @@ def candidate_from_market(
             audit,
         )
     outcome, token_id = matched[0]
-    book = fetch_json(args.clob_url, "/book", {"token_id": token_id}, args.timeout_seconds)
+    book = fetch_json_or_error(
+        base_url=args.clob_url,
+        path="/book",
+        query={"token_id": token_id},
+        timeout_seconds=args.timeout_seconds,
+        failure_message="selected market book request failed",
+        audit=audit,
+    )
     if not isinstance(book, dict):
         raise CandidateError("selected market book response was not an object", audit)
     top_ask = best_ask(book)
     if top_ask is None:
         raise CandidateError("selected market has no usable top ask", audit)
     price, size = top_ask
-    spread = fetch_json(args.clob_url, "/spread", {"token_id": token_id}, args.timeout_seconds)
+    spread = fetch_json_or_error(
+        base_url=args.clob_url,
+        path="/spread",
+        query={"token_id": token_id},
+        timeout_seconds=args.timeout_seconds,
+        failure_message="selected market spread request failed",
+        audit=audit,
+    )
     if not isinstance(spread, dict):
         raise CandidateError("selected market spread response was not an object", audit)
     bps = spread_bps(spread)
@@ -414,23 +495,26 @@ def candidate_from_market(
     )
 
 
-def load_market_by_slug(args: argparse.Namespace, slug: str) -> dict[str, Any]:
+def load_market_by_slug(args: argparse.Namespace, slug: str, requested_outcome: str) -> dict[str, Any]:
     markets = fetch_json(args.gamma_url, "/markets", {"slug": slug}, args.timeout_seconds)
     if isinstance(markets, list) and markets:
-        market = markets[0]
-        if isinstance(market, dict):
-            return market
+        return select_market_for_outcome(markets, requested_outcome=requested_outcome, slug=slug)
     events = fetch_json(args.gamma_url, "/events", {"slug": slug}, args.timeout_seconds)
     if isinstance(events, list) and events:
         event = events[0]
         if isinstance(event, dict):
             event_markets = event.get("markets")
             if isinstance(event_markets, list) and event_markets:
-                market = event_markets[0]
-                if isinstance(market, dict):
-                    market.setdefault("slug", slug)
-                    return market
-    raise CandidateError(f"Gamma API did not return a market for slug {slug!r}")
+                market = select_market_for_outcome(
+                    event_markets,
+                    requested_outcome=requested_outcome,
+                    slug=slug,
+                )
+                market.setdefault("slug", slug)
+                return market
+    raise CandidateError(
+        f"Gamma API did not return a market for slug {slug!r} and outcome {requested_outcome!r}"
+    )
 
 
 def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
@@ -493,7 +577,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
     }
 
     if requested_slug:
-        market = load_market_by_slug(args, requested_slug)
+        market = load_market_by_slug(args, requested_slug, args.outcome)
         candidate = candidate_from_market(
             args,
             market,
@@ -562,7 +646,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
             audit["inspected_tokens"] += 1
             try:
                 book = fetch_json(args.clob_url, "/book", {"token_id": token_id}, args.timeout_seconds)
-            except Exception:
+            except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError):
                 audit["rejections"]["book_unavailable"] += 1
                 continue
             if not isinstance(book, dict):
@@ -581,7 +665,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
                 continue
             try:
                 spread = fetch_json(args.clob_url, "/spread", {"token_id": token_id}, args.timeout_seconds)
-            except Exception:
+            except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError):
                 audit["rejections"]["spread_unavailable"] += 1
                 continue
             if not isinstance(spread, dict):
@@ -633,7 +717,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
 
     if not candidates:
         raise CandidateError("no candidate satisfied the configured canary market constraints", audit)
-    selected = max(candidates, key=lambda item: item.liquidity_score)
+    selected = sorted(candidates, key=candidate_sort_key)[0]
     audit["candidate_count"] = len(candidates)
     audit["selected"] = {
         "market_id": selected.market_id,

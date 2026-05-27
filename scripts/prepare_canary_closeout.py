@@ -395,6 +395,10 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
         "account_activity_zero_matching_trades": lget(account_activity, "matching_trade_count") == 0,
         "account_activity_zero_open_positions": lget(account_activity, "matching_open_position_count") == 0,
         "account_activity_zero_closed_positions": lget(account_activity, "matching_closed_position_count") == 0,
+        "account_activity_value_records_consistent": (
+            lget(account_activity, "matching_value_record_count", default=0)
+            == len([item for item in account_activity.get("values", []) if isinstance(item, dict)])
+        ),
         "account_activity_value_zero": all(
             decimal_text(item.get("value", "0")) == "0"
             for item in account_activity.get("values", [])
@@ -454,6 +458,11 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
                 stage_history_summary["operator_required_stages"] == []
                 and len(stage_history_summary["remote_order_ids"]) <= 1
             )
+        ),
+        "release_sidecar_matches_zip_hash": (
+            not isinstance(sidecar, dict)
+            or lget(sidecar, "artifact", "sha256") is None
+            or lget(sidecar, "artifact", "sha256") == sha256(release_zip)
         ),
     }
     failed = [name for name, ok in checks.items() if not ok]
@@ -596,7 +605,7 @@ def markdown(closeout: dict[str, Any]) -> str:
             "",
         ]
     )
-    return "\n".join(lines)
+    return "\n".join(lines) + "\n"
 
 
 def main() -> int:

@@ -30,10 +30,12 @@ ALLOWLIST = {
 
 def main() -> int:
     failures: list[str] = []
-    for path in sorted((CONTROL / "src").rglob("*")):
+    for path in sorted(CONTROL.rglob("*")):
         if not path.is_file():
             continue
         rel = path.relative_to(CONTROL)
+        if rel in ALLOWLIST:
+            continue
         if any(part.startswith(".") or part == "__pycache__" for part in rel.parts):
             continue
         if path.suffix not in {".py", ".md", ".toml", ".txt"}:
