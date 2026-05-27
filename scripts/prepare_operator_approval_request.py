@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Prepare a non-authorizing operator approval request for controlled canary."""
+"""Prepare a non-authorizing operator approval request for controlled canary.
+
+`account_id` and `active_profile_ref` are opaque runtime identity fields. They
+may differ in spelling from the local `--profile` selector and are validated by
+presence/exact equality, not by normalization.
+"""
 from __future__ import annotations
 
 import argparse
@@ -242,15 +247,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--release-zip", default=DEFAULT_RELEASE_ZIP, type=Path)
     parser.add_argument("--candidate-market-file", required=True, type=Path)
     parser.add_argument("--runtime-truth-file", required=True, type=Path)
-    parser.add_argument("--runtime-env-file", type=Path)
-    parser.add_argument("--account-id")
+    parser.add_argument(
+        "--runtime-env-file",
+        type=Path,
+        help="runtime-facing env file containing PMX_ACTIVE_ACCOUNT_ID and PMX_ACTIVE_PROFILE_REF",
+    )
+    parser.add_argument(
+        "--account-id",
+        help="opaque runtime account id; if --runtime-env-file is also provided this must match it exactly",
+    )
     parser.add_argument("--root-ci-run-id", required=True)
     parser.add_argument("--hermes-ci-run-id", required=True)
     parser.add_argument("--execution-engine-ci-run-id", required=True)
     parser.add_argument("--credentialed-sdk-run-id", default="local-current-gates-20260523")
     parser.add_argument("--operator-identity-ref", required=True)
     parser.add_argument("--approval-ticket-ref", required=True)
-    parser.add_argument("--active-profile-ref")
+    parser.add_argument(
+        "--active-profile-ref",
+        help="opaque runtime profile reference; if --runtime-env-file is also provided this must match it exactly",
+    )
     parser.add_argument("--max-order-notional-usd", default="0.20")
     parser.add_argument("--max-daily-notional-usd", default="0.20")
     parser.add_argument("--valid-for-minutes", type=int, default=15)

@@ -275,6 +275,20 @@ This high-level helper prepares:
 - `dual-control-review.template.json`
 - a non-authorizing dual-control review packet directory
 
+Identity contract for these helpers:
+
+- `--profile` is only the local selector used to choose one `PMX_PROFILE_<...>_*`
+  source inventory block.
+- `PMX_ACTIVE_ACCOUNT_ID` is an opaque runtime identity string copied from that
+  source inventory. It does not need to match the profile label spelling.
+- `PMX_ACTIVE_PROFILE_REF` is an opaque reference string copied from that source
+  inventory. It is compared for exact equality only.
+
+In other words, `acct_b`, `acct-b`, and `local-profile://acct_b` are different
+fields with different roles. The tooling does not normalize them into one
+canonical spelling; it only enforces that later steps use the same reviewed
+runtime identity that was activated into `.env.runtime`.
+
 If you only need the runtime env plus approval request, the narrower bundle
 script remains available:
 
