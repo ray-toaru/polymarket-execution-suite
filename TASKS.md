@@ -253,6 +253,9 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [x] Add a single deployment-validation suite wrapper that plans or runs the
   production deployment preflight, single-host limited deployment, canary
   candidate, and temporary go-candidate drills from the repository root
+- [x] Add a single release-phase orchestrator that aggregates production
+  control, deployment validation, live-submit promotion, and optional
+  reviewed-go decision-chain workflows without bypassing approval boundaries
 - [x] Controlled live canary prep drill included in current gates
 - [x] Canary prep gates are represented locally while live submit, live cancel,
   posting, cancelling, and remote side effects remain blocked

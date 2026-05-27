@@ -519,6 +519,30 @@ candidate packaging checks, and temporary go-candidate governance checks. It
 still does not authorize production deployment, generalized live submit/cancel,
 or a second armed canary.
 
+At the highest level, the root orchestrator below combines the current release
+phase workflows without flattening their approval boundaries:
+
+```bash
+python scripts/run_release_phase_orchestrator.py
+```
+
+Without `--run`, it prints the planned stages. With `--run`, it executes the
+currently available root workflows:
+
+1. production control evidence
+2. deployment validation evidence
+3. live-submit promotion evidence
+4. reviewed-go decision chain, but only when its prereview inputs are supplied
+
+If the reviewed-go inputs are incomplete, that stage remains explicitly
+blocked. If the approved dual-control review and external references are also
+missing, the reviewed-go decision chain stops at
+`review_packet_ready_requires_independent_review`.
+
+This orchestrator improves release-phase operability, but it is still only a
+workflow aggregator. It does not authorize production deployment, live submit,
+live cancel, or any new armed canary by itself.
+
 ## Safety boundary
 
 Still intentionally blocked:

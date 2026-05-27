@@ -101,3 +101,7 @@ cancel, a second real-funds canary, or a real-funds fill target.
   preflight, single-host limited deployment, single-host canary candidate, and
   single-host temporary go-candidate drills can be planned or executed from one
   root entry point.
+- Added `scripts/run_release_phase_orchestrator.py` so production-control,
+  deployment-validation, live-submit-promotion, and optionally reviewed-go
+  decision-chain workflows can be planned or executed from one root entry
+  point while preserving approval boundaries.
