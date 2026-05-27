@@ -11,6 +11,12 @@ from pathlib import Path
 
 import yaml
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from release_policy import EXCLUDED_PREFIXES
+
 ROOT = Path(__file__).resolve().parents[1]
 EXECUTOR = ROOT / "polymarket-execution-engine"
 CONTROL = ROOT / "hermes-polymarket-executor-adapter"
@@ -878,14 +884,17 @@ def validate_current_evidence_manifest_guard() -> None:
 
 
 def validate_current_docs_and_release_governance() -> None:
-    package_text = (ROOT / "scripts/package_release.py").read_text()
-    artifact_text = (ROOT / "scripts/check_release_artifact.py").read_text()
     release = json.loads((EXECUTOR / "release/manifest.json").read_text())
-    for needle in ["docs/archive", "evidence/archive", "validation/archive", "external_reviews"]:
-        if needle not in package_text:
-            fail(f"package_release.py missing archive exclusion token: {needle}")
-        if needle not in artifact_text:
-            fail(f"check_release_artifact.py missing archive rejection token: {needle}")
+    expected_archive_prefixes = {
+        "docs/archive",
+        "external_reviews",
+        "validation/archive",
+        "polymarket-execution-engine/validation/archive",
+        "polymarket-execution-engine/evidence/archive",
+        "polymarket-execution-engine/docs/archive",
+    }
+    if not expected_archive_prefixes.issubset(EXCLUDED_PREFIXES):
+        fail("release policy missing expected archive exclusion prefixes")
     canonical = release.get("canonical_evidence", {})
     if canonical.get("manifest_path") != "polymarket-execution-engine/evidence/current/manifest.json":
         fail("release manifest must bind canonical evidence manifest")

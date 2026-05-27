@@ -44,6 +44,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             book_snapshot_timestamp="2026-05-23T00:00:00+00:00",
             human_review_ref="ticket://review",
         )
+        self.assertEqual(candidate.to_engine_json()["outcome"], "Yes")
         self.assertEqual(candidate.to_engine_json()["estimated_order_notional_usd"], "0.1")
 
 

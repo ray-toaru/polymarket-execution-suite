@@ -8,19 +8,12 @@ import sys
 import zipfile
 from pathlib import Path
 
-from check_dist_index import validate as validate_dist_index
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
-FORBIDDEN_PARTS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", "target", "dist"}
-FORBIDDEN_SUFFIXES = {".pyc", ".pyo", ".db", ".sqlite", ".sqlite3"}
-FORBIDDEN_FILENAMES = {".env"}
-FORBIDDEN_PREFIX_SUFFIXES = (
-    "docs/archive/",
-    "external_reviews/",
-    "validation/archive/",
-    "polymarket-execution-engine/validation/archive/",
-    "polymarket-execution-engine/evidence/archive/",
-    "polymarket-execution-engine/docs/archive/",
-)
+from check_dist_index import validate as validate_dist_index
+from release_policy import is_forbidden_release_member
 STALE_ROOT_DOCS = [
     re.compile(r"^V0_.*\.md$"),
     re.compile(r"^VALIDATION_V0_.*\.md$"),
@@ -36,19 +29,7 @@ VERSION_SPECIFIC_AGENT_PATTERN = re.compile(
 
 
 def forbidden(member: str, expected_root: str | None = None) -> bool:
-    path = Path(member)
-    parts = path.parts
-    name = parts[-1] if parts else member
-    rel = member
-    if expected_root and member.startswith(expected_root + "/"):
-        rel = member[len(expected_root) + 1 :]
-    return (
-        any(part in FORBIDDEN_PARTS for part in parts)
-        or any(part.endswith(".egg-info") for part in parts)
-        or Path(name).suffix in FORBIDDEN_SUFFIXES
-        or name in FORBIDDEN_FILENAMES
-        or any(rel == prefix[:-1] or rel.startswith(prefix) for prefix in FORBIDDEN_PREFIX_SUFFIXES)
-    )
+    return is_forbidden_release_member(member, expected_root=expected_root)
 
 
 def sha256(path: Path) -> str:

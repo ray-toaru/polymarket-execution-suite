@@ -9,23 +9,18 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from release_policy import is_forbidden_release_member
+
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "VERSION").read_text().strip()
 ARCHIVE_ROOT = f"polymarket_execution_suite_v{VERSION.replace('.', '_')}"
 DIST = ROOT / "dist"
 OUT = DIST / f"polymarket-execution-suite-v{VERSION}.zip"
-FORBIDDEN_PARTS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", "target", "dist"}
-FORBIDDEN_SUFFIXES = {".pyc", ".pyo", ".db", ".sqlite", ".sqlite3"}
-FORBIDDEN_FILENAMES = {".env"}
 DETERMINISTIC_MTIME = (1980, 1, 1, 0, 0, 0)
-EXCLUDED_PREFIXES = {
-    "docs/archive",
-    "external_reviews",
-    "validation/archive",
-    "polymarket-execution-engine/validation/archive",
-    "polymarket-execution-engine/evidence/archive",
-    "polymarket-execution-engine/docs/archive",
-}
 
 
 def sha256(path: Path) -> str:
@@ -80,19 +75,7 @@ def submodule_records() -> list[dict[str, str]]:
 
 
 def allowed(path: Path) -> bool:
-    rel = path.relative_to(ROOT)
-    rel_posix = rel.as_posix()
-    if any(part in FORBIDDEN_PARTS for part in rel.parts):
-        return False
-    if any(part.endswith(".egg-info") for part in rel.parts):
-        return False
-    if path.suffix in FORBIDDEN_SUFFIXES:
-        return False
-    if path.name in FORBIDDEN_FILENAMES:
-        return False
-    if any(rel_posix == prefix or rel_posix.startswith(prefix + "/") for prefix in EXCLUDED_PREFIXES):
-        return False
-    return True
+    return not is_forbidden_release_member(path.relative_to(ROOT))
 
 
 def executable_in_archive(path: Path) -> bool:

@@ -36,6 +36,7 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         data = {
             "market_id": "condition-1",
             "token_id": "123",
+            "outcome": "Yes",
             "side": "BUY",
             "order_type": "GTC",
             "post_only": True,
@@ -122,6 +123,47 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
     def test_supplied_candidate_requires_bound_notional(self):
         candidate = self.candidate(estimated_order_notional_usd="0.2")
         with self.assertRaisesRegex(SystemExit, "estimated_order_notional_usd"):
+            self.pipeline.validate_candidate_file(self.write_candidate(candidate))
+
+    def test_supplied_candidate_rejects_notional_above_cap(self):
+        candidate = self.candidate(limit_price="0.50", best_ask="0.60", estimated_order_notional_usd="2.5")
+        with self.assertRaisesRegex(SystemExit, "exceeds max_order_notional_usd"):
+            self.pipeline.validate_candidate_file(
+                self.write_candidate(candidate),
+                max_order_notional_usd=self.pipeline.Decimal("1.00"),
+            )
+
+    def test_supplied_candidate_requires_outcome(self):
+        candidate = self.candidate()
+        candidate.pop("outcome")
+        with self.assertRaisesRegex(SystemExit, "candidate outcome is required"):
+            self.pipeline.validate_candidate_file(self.write_candidate(candidate))
+
+    def test_supplied_candidate_rejects_price_out_of_bounds(self):
+        candidate = self.candidate(best_ask="1.20", limit_price="1.10", estimated_order_notional_usd="5.5")
+        with self.assertRaisesRegex(SystemExit, "price bounds"):
+            self.pipeline.validate_candidate_file(self.write_candidate(candidate))
+
+    def test_supplied_candidate_rejects_spread_over_cap(self):
+        candidate = self.candidate(spread_bps=101)
+        with self.assertRaisesRegex(SystemExit, "spread_bps exceeds max_spread_bps"):
+            self.pipeline.validate_candidate_file(
+                self.write_candidate(candidate),
+                max_spread_bps=100,
+            )
+
+    def test_supplied_candidate_rejects_future_captured_at(self):
+        candidate = self.candidate()
+        candidate["exchange_rule_snapshot"]["captured_at"] = "2099-01-01T00:00:00+00:00"
+        candidate["exchange_rule_snapshot"]["expires_at"] = "2099-01-02T00:00:00+00:00"
+        with self.assertRaisesRegex(SystemExit, "captured_at must not be in the future"):
+            self.pipeline.validate_candidate_file(self.write_candidate(candidate))
+
+    def test_supplied_candidate_rejects_expires_at_before_captured_at(self):
+        candidate = self.candidate()
+        candidate["exchange_rule_snapshot"]["captured_at"] = "2026-05-23T01:00:00+00:00"
+        candidate["exchange_rule_snapshot"]["expires_at"] = "2026-05-23T00:00:00+00:00"
+        with self.assertRaisesRegex(SystemExit, "expires_at must be after captured_at"):
             self.pipeline.validate_candidate_file(self.write_candidate(candidate))
 
     def test_stage_plan_is_no_go_by_default_and_blocks_live_phases(self):
@@ -374,7 +416,7 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         )
         stage = self.pipeline.run_closeout_stage(
             package,
-            ROOT / "dist" / "polymarket-execution-suite-v0.27.3.zip",
+            ROOT / "dist" / "polymarket-execution-suite-v0.28.0.zip",
         )
         self.assertEqual(stage["status"], "pass")
         self.assertFalse(stage["remote_side_effects"])

@@ -1,9 +1,10 @@
-# Controlled Canary Closeout — v0.26.0
+# Historical Controlled Canary Closeout — v0.26.0
 
 This document records the tracked closeout summary for the first authorized
-v0.26 controlled real-funds canary. It summarizes local package evidence under
-`dist/`; it does not replace the original JSON evidence and does not authorize
-another live attempt.
+historical v0.26 controlled real-funds canary. It remains in the repository as
+audit context for the later v0.28 line. It summarizes local package evidence
+under `dist/`; it does not replace the original JSON evidence and does not
+authorize another live attempt.
 
 ## Result
 

@@ -17,7 +17,7 @@ import sys
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation, ROUND_FLOOR
+from decimal import Decimal, InvalidOperation, ROUND_CEILING, ROUND_FLOOR
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +25,7 @@ from typing import Any
 DEFAULT_GAMMA_URL = "https://gamma-api.polymarket.com"
 DEFAULT_CLOB_URL = "https://clob.polymarket.com"
 USER_AGENT = "pmx-canary-candidate-prep/0.1"
+MAX_PRICE = Decimal("1")
 
 
 @dataclass(frozen=True)
@@ -53,6 +54,7 @@ class Candidate:
         return {
             "market_id": self.market_id,
             "token_id": self.token_id,
+            "outcome": self.outcome,
             "side": "BUY",
             "order_type": "GTC",
             "post_only": True,
@@ -263,7 +265,7 @@ def spread_bps(spread: dict[str, Any]) -> int | None:
     value = as_decimal(raw)
     if value is None or value < 0:
         return None
-    return int((value * Decimal("10000")).to_integral_value())
+    return int((value * Decimal("10000")).to_integral_value(rounding=ROUND_CEILING))
 
 
 def liquidity_score(ask_size: Decimal) -> int:
@@ -552,7 +554,11 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
         if not token_ids:
             audit["rejections"]["missing_token_id"] += 1
             continue
-        for token_id in token_ids:
+        outcomes = parse_outcomes(market)
+        if len(outcomes) != len(token_ids):
+            audit["rejections"]["missing_token_id"] += 1
+            continue
+        for outcome, token_id in zip(outcomes, token_ids, strict=True):
             audit["inspected_tokens"] += 1
             try:
                 book = fetch_json(args.clob_url, "/book", {"token_id": token_id}, args.timeout_seconds)
@@ -605,7 +611,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
                 Candidate(
                     market_id=condition_id,
                     token_id=token_id,
-                    outcome="UNKNOWN",
+                    outcome=outcome,
                     market_slug=str(market.get("slug") or ""),
                     active=True,
                     accepting_orders=True,

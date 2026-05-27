@@ -27,6 +27,7 @@ BLOCKED_REHEARSAL = ENGINE / "validation" / "run_real_funds_canary_blocked_rehea
 PREPARE_CANDIDATE = ROOT / "scripts" / "prepare_canary_candidate_market.py"
 PREPARE_CLOSEOUT = ROOT / "scripts" / "prepare_canary_closeout.py"
 VALIDATE_RUNTIME_TRUTH = ENGINE / "validation" / "validate_controlled_canary_runtime_truth.py"
+MAX_PRICE = Decimal("1")
 
 
 def parse_decimal(value: Any, field: str) -> Decimal:
@@ -51,10 +52,16 @@ def require_bool(data: dict[str, Any], field: str, expected: bool) -> None:
         raise SystemExit(f"candidate {field} must be {str(expected).lower()}")
 
 
-def validate_candidate_file(path: Path) -> dict[str, Any]:
+def validate_candidate_file(
+    path: Path,
+    *,
+    max_order_notional_usd: Decimal | None = None,
+    max_spread_bps: int | None = None,
+) -> dict[str, Any]:
     candidate = load_json(path)
     require_text(candidate, "market_id")
     require_text(candidate, "token_id")
+    require_text(candidate, "outcome")
     require_text(candidate, "human_review_ref")
     if candidate.get("side") != "BUY":
         raise SystemExit("candidate side must be BUY")
@@ -71,20 +78,29 @@ def validate_candidate_file(path: Path) -> dict[str, Any]:
     ask_size = parse_decimal(candidate.get("ask_size"), "ask_size")
     target_size = parse_decimal(candidate.get("target_size"), "target_size")
     min_order_size = parse_decimal(candidate.get("min_order_size"), "min_order_size")
+    spread_bps = candidate.get("spread_bps")
     estimated_notional = parse_decimal(
         candidate.get("estimated_order_notional_usd"),
         "estimated_order_notional_usd",
     )
     if best_ask <= 0 or limit_price <= 0 or ask_size <= 0 or target_size <= 0:
         raise SystemExit("candidate best_ask, limit_price, ask_size, and target_size must be positive")
+    if best_ask > MAX_PRICE or limit_price > MAX_PRICE:
+        raise SystemExit("candidate best_ask and limit_price must be within Polymarket price bounds")
     if estimated_notional != limit_price * target_size:
         raise SystemExit("candidate estimated_order_notional_usd must equal limit_price * target_size")
+    if max_order_notional_usd is not None and estimated_notional > max_order_notional_usd:
+        raise SystemExit("candidate estimated_order_notional_usd exceeds max_order_notional_usd")
     if limit_price >= best_ask:
         raise SystemExit("candidate post-only BUY limit_price must be below best_ask")
     if ask_size < target_size:
         raise SystemExit("candidate ask_size must cover target_size")
     if min_order_size > target_size:
         raise SystemExit("candidate min_order_size must not exceed target_size")
+    if not isinstance(spread_bps, int) or spread_bps < 0:
+        raise SystemExit("candidate spread_bps must be a non-negative integer")
+    if max_spread_bps is not None and spread_bps > max_spread_bps:
+        raise SystemExit("candidate spread_bps exceeds max_spread_bps")
 
     snapshot = candidate.get("exchange_rule_snapshot")
     if not isinstance(snapshot, dict):
@@ -110,14 +126,22 @@ def validate_candidate_file(path: Path) -> dict[str, Any]:
         raise SystemExit("candidate exchange_rule_snapshot.min_share_size must not exceed target_size")
     if (limit_price / min_tick_size) % 1 != 0:
         raise SystemExit("candidate limit_price must align with exchange_rule_snapshot.min_tick_size")
+    parsed_times: dict[str, datetime] = {}
     for field in ("captured_at", "expires_at"):
         value = require_text(snapshot, field)
         try:
-            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            parsed_times[field] = datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
         except ValueError:
             raise SystemExit(f"candidate exchange_rule_snapshot.{field} must be RFC3339")
-        if field == "expires_at" and parsed.astimezone(timezone.utc) <= datetime.now(timezone.utc):
-            raise SystemExit("candidate exchange_rule_snapshot.expires_at must be in the future")
+    captured_at = parsed_times["captured_at"]
+    expires_at = parsed_times["expires_at"]
+    now = datetime.now(timezone.utc)
+    if captured_at > now:
+        raise SystemExit("candidate exchange_rule_snapshot.captured_at must not be in the future")
+    if expires_at <= captured_at:
+        raise SystemExit("candidate exchange_rule_snapshot.expires_at must be after captured_at")
+    if expires_at <= now:
+        raise SystemExit("candidate exchange_rule_snapshot.expires_at must be in the future")
     return candidate
 
 
@@ -424,7 +448,10 @@ def sha256(path: Path) -> str:
 
 
 def load_json(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text())
+    data = json.loads(path.read_text())
+    if not isinstance(data, dict):
+        raise SystemExit(f"JSON document must be an object: {path}")
+    return data
 
 
 def run(command: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -471,7 +498,11 @@ def prepare_candidate(args: argparse.Namespace, output_dir: Path) -> tuple[Path 
     if args.candidate_market_file:
         path = args.candidate_market_file
         path = path if path.is_absolute() else ROOT / path
-        validate_candidate_file(path)
+        validate_candidate_file(
+            path,
+            max_order_notional_usd=parse_decimal(args.max_order_notional_usd, "max_order_notional_usd"),
+            max_spread_bps=100,
+        )
         stages.append(
             {
                 "stage": "candidate_supplied",
@@ -554,6 +585,11 @@ def main() -> int:
         runtime_truth_path = (
             args.runtime_truth_file if args.runtime_truth_file.is_absolute() else ROOT / args.runtime_truth_file
         )
+    external_references_file = (
+        args.external_references_file
+        if args.external_references_file.is_absolute()
+        else ROOT / args.external_references_file
+    )
     release_zip = args.release_zip if args.release_zip.is_absolute() else ROOT / args.release_zip
     manifest = args.manifest if args.manifest.is_absolute() else ROOT / args.manifest
     if not release_zip.exists():
@@ -591,7 +627,7 @@ def main() -> int:
         "--output-dir",
         str(rehearsal_dir),
         "--external-references-file",
-        str(args.external_references_file),
+        str(external_references_file),
         "--artifact-sha256",
         artifact_sha,
         "--evidence-manifest-sha256",
