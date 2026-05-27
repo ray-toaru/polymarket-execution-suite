@@ -250,6 +250,9 @@ is under `polymarket-execution-engine/evidence/current/`.
 - [x] Add a single reviewed-go decision workflow wrapper that plans or runs the
   fresh prereview packet path and only promotes to reviewed-go when explicit
   approved dual-control review and external references are provided
+- [x] Add a single deployment-validation suite wrapper that plans or runs the
+  production deployment preflight, single-host limited deployment, canary
+  candidate, and temporary go-candidate drills from the repository root
 - [x] Controlled live canary prep drill included in current gates
 - [x] Canary prep gates are represented locally while live submit, live cancel,
   posting, cancelling, and remote side effects remain blocked

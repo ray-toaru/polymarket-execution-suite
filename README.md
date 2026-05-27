@@ -499,6 +499,26 @@ This suite still proves fail-closed promotion evidence only. It does not
 authorize live submit, live cancel, production deployment, a second canary, or
 generalized order posting.
 
+For deployment-oriented validation, the root suite below plans or runs the
+current local deployment evidence drills as one bundle:
+
+```bash
+python scripts/run_deployment_validation_suite.py
+```
+
+With `--run`, it executes:
+
+1. production deployment preflight drill
+2. single-host limited deployment drill
+3. single-host canary candidate drill
+4. single-host temporary go-candidate drill
+
+This suite improves deployability verification because it combines artifact
+binding checks, single-host template validation, local API bind smoke, canary
+candidate packaging checks, and temporary go-candidate governance checks. It
+still does not authorize production deployment, generalized live submit/cancel,
+or a second armed canary.
+
 ## Safety boundary
 
 Still intentionally blocked:

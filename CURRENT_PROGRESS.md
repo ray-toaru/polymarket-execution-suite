@@ -97,3 +97,7 @@ cancel, a second real-funds canary, or a real-funds fill target.
 - Added `scripts/run_reviewed_go_decision_workflow.py` so the fresh prereview
   packet path and optional reviewed-go promotion path can be planned or
   executed from one root entry point without bypassing independent review.
+- Added `scripts/run_deployment_validation_suite.py` so production-deployment
+  preflight, single-host limited deployment, single-host canary candidate, and
+  single-host temporary go-candidate drills can be planned or executed from one
+  root entry point.
