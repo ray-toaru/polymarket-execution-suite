@@ -2,6 +2,7 @@ import importlib.util
 import unittest
 from pathlib import Path
 import tempfile
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -78,6 +79,22 @@ class PackageReleaseIndexTests(unittest.TestCase):
         for path in forbidden:
             self.assertFalse(self.package_release.allowed(ROOT / path))
 
+    def test_release_policy_allows_examples_and_canonical_evidence_logs(self):
+        allowed = [
+            ROOT / ".env.example",
+            ROOT / "polymarket-execution-engine" / ".env.example",
+            ROOT
+            / "polymarket-execution-engine"
+            / "evidence"
+            / "current"
+            / "logs"
+            / "01-cargo-fmt.log",
+        ]
+        for path in allowed:
+            self.assertTrue(self.package_release.allowed(path))
+
+        self.assertFalse(self.package_release.allowed(ROOT / "logs" / "scratch.log"))
+
     def test_artifact_checker_forbidden_matches_packager_policy(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
@@ -91,6 +108,32 @@ class PackageReleaseIndexTests(unittest.TestCase):
             ]
             for name in names:
                 self.assertTrue(self.checker.forbidden(name, expected_root))
+
+    def test_release_source_files_uses_tracked_files_not_workspace_rglob(self):
+        tracked_root = ROOT / "README.md"
+        tracked_submodule = ROOT / "polymarket-execution-engine" / "Cargo.toml"
+
+        def fake_tracked_git_files(repo_root: Path):
+            if repo_root == ROOT:
+                return [tracked_root]
+            if repo_root == ROOT / "polymarket-execution-engine":
+                return [tracked_submodule]
+            return []
+
+        def fail_rglob(*args, **kwargs):
+            raise AssertionError("release_source_files must not use workspace rglob")
+
+        with mock.patch.object(self.package_release, "tracked_git_files", side_effect=fake_tracked_git_files):
+            with mock.patch.object(
+                self.package_release,
+                "submodule_records",
+                return_value=[{"path": "polymarket-execution-engine", "commit": "x", "checkout_status": "clean", "checkout_ref": "HEAD"}],
+            ):
+                with mock.patch.object(Path, "rglob", side_effect=fail_rglob):
+                    files = self.package_release.release_source_files()
+
+        self.assertIn(tracked_root, files)
+        self.assertIn(tracked_submodule, files)
 
 
 if __name__ == "__main__":

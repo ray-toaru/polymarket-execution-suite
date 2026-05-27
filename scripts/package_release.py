@@ -45,6 +45,19 @@ def command_output(command: list[str]) -> str | None:
     return completed.stdout.rstrip("\n")
 
 
+def command_output_bytes(command: list[str], *, cwd: Path = ROOT) -> bytes | None:
+    completed = subprocess.run(
+        command,
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    if completed.returncode != 0:
+        return None
+    return completed.stdout
+
+
 def git_branch(path: Path = ROOT) -> str | None:
     return command_output(["git", "-C", str(path), "branch", "--show-current"])
 
@@ -72,6 +85,39 @@ def submodule_records() -> list[dict[str, str]]:
             }
         )
     return records
+
+
+def tracked_git_files(repo_root: Path) -> list[Path]:
+    raw = command_output_bytes(["git", "ls-files", "-z"], cwd=repo_root)
+    if raw is None:
+        raise SystemExit(f"git ls-files failed for release packaging: {repo_root}")
+    paths = []
+    for item in raw.split(b"\0"):
+        if not item:
+            continue
+        rel = Path(item.decode())
+        paths.append(repo_root / rel)
+    return paths
+
+
+def release_source_files() -> list[Path]:
+    seen: set[Path] = set()
+    files: list[Path] = []
+    for path in tracked_git_files(ROOT):
+        if not path.is_file():
+            continue
+        if allowed(path) and path not in seen:
+            seen.add(path)
+            files.append(path)
+    for record in submodule_records():
+        submodule_root = ROOT / record["path"]
+        for path in tracked_git_files(submodule_root):
+            if not path.is_file():
+                continue
+            if allowed(path) and path not in seen:
+                seen.add(path)
+                files.append(path)
+    return sorted(files)
 
 
 def allowed(path: Path) -> bool:
@@ -254,9 +300,8 @@ def main() -> int:
     if OUT.exists():
         OUT.unlink()
     with ZipFile(OUT, "w", ZIP_DEFLATED) as zf:
-        for path in sorted(ROOT.rglob("*")):
-            if path.is_file() and allowed(path):
-                write_deterministic(zf, path)
+        for path in release_source_files():
+            write_deterministic(zf, path)
     sidecar = OUT.with_suffix(OUT.suffix + ".sha256")
     artifact_sha256 = sha256(OUT)
     evidence_manifest = ROOT / "polymarket-execution-engine" / "evidence" / "current" / "manifest.json"
