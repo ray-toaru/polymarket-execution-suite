@@ -6,6 +6,15 @@ The v0.26 controlled canary remains historical evidence; v0.28 focuses on
 release-governance hardening, independent component versioning, and safer
 canary closeout/recovery evidence.
 
+Current freeze point:
+
+- git tag `v0.28.1` marks the first post-closeout governance freeze for the
+  v0.28 line;
+- it captures the local reviewed-go canary closeout, `dist/INDEX.json`
+  classification updates, and active-profile identity-contract clarification;
+- it does not change the underlying source artifact version string, which
+  remains `v0.28.0`.
+
 ## Done in this cleanup pass
 
 - Reduced root document ambiguity by moving old gate/validation notes to `docs/archive/`.

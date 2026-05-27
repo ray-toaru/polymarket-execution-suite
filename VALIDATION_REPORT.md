@@ -46,6 +46,13 @@ directories in the developer `dist/` workspace. The index is valid only when
 `scripts/check_release_artifact.py` confirms the same artifact and sidecar
 hashes.
 
+Git governance freeze:
+
+- git tag `v0.28.1` marks the first post-closeout freeze point for the current
+  v0.28 branch state;
+- the source artifact version string remains `v0.28.0`, so `v0.28.1` is a
+  repository governance tag, not a renamed zip artifact.
+
 ## Local Evidence Status
 
 Canonical manifest:
@@ -101,10 +108,14 @@ Current evidence policy:
   recorded in `CONTROLLED_CANARY_CLOSEOUT.md`; it is not reusable authorization
   for a later canary.
 
-Full current gates for v0.28 are required before tagging or promotion. Until
+Full current gates for v0.28 are required before promotion to validated/final
+release evidence. Git tag `v0.28.1` freezes the current governance state, but
+it does not by itself upgrade this package to validated release, production
+readiness, or live-trading readiness. Until
 `polymarket-execution-engine/validation/run_current_gates.sh` has refreshed the
 canonical evidence manifest for v0.28.0 and the v0.28 artifact sidecars exist,
-this report is a development-state report rather than final release evidence.
+this report remains a development-state report rather than final release
+evidence.
 
 ## Local Validation Commands
 
