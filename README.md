@@ -245,6 +245,44 @@ This highest-level helper prepares:
 - `dual-control-review.template.json`
 - a non-authorizing dual-control review packet directory
 
+To keep the full governance chain on one root entry point, the wrapper below
+plans or runs the two-stage reviewed-go decision workflow:
+
+```bash
+python scripts/run_reviewed_go_decision_workflow.py \
+  --profile <profile> \
+  --source-env-file polymarket-execution-engine/.env.profiles \
+  --runtime-env-output polymarket-execution-engine/.env.runtime \
+  --candidate-market-output <candidate-market.json> \
+  --candidate-audit-output <candidate-market.audit.json> \
+  --runtime-truth-output <runtime-truth.json> \
+  --approval-request-output <operator-approval-request.json> \
+  --dual-control-template-output <dual-control-review.template.json> \
+  --review-packet-output-dir <review-packet-dir> \
+  --release-zip dist/polymarket-execution-suite-v0.28.0.zip \
+  --market-url <polymarket-event-or-market-url> \
+  --outcome Yes \
+  --human-review-ref <market-review-ref> \
+  --root-ci-run-id <root-ci-run-id> \
+  --hermes-ci-run-id <hermes-ci-run-id> \
+  --execution-engine-ci-run-id <execution-engine-ci-run-id> \
+  --operator-identity-ref <operator-ref> \
+  --approval-ticket-ref <ticket-ref>
+```
+
+Without `--run`, it prints the plan only. With `--run`, it executes the
+prereview stage and stops at
+`review_packet_ready_requires_independent_review` unless all three promotion
+inputs are also supplied:
+
+- `--approved-dual-control-review-file`
+- `--external-references-file`
+- `--reviewed-go-output-dir`
+
+Only when those inputs are present does the same wrapper continue into
+reviewed-go package promotion. It does not synthesize reviewer approval or
+weaken dual-control boundaries.
+
 If you already have a fresh candidate and runtime-truth, the narrower review
 bundle helper remains available. It still binds the same runtime env so
 `account_id` and `active_profile_ref` are derived from the activated profile

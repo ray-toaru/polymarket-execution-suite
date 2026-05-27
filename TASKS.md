@@ -247,6 +247,9 @@ is under `polymarket-execution-engine/evidence/current/`.
   current live-submit static guard, canary readiness/preflight/blocked/
   rehearsal/prep drills, and real-funds canary promotion-evidence drills from
   the repository root
+- [x] Add a single reviewed-go decision workflow wrapper that plans or runs the
+  fresh prereview packet path and only promotes to reviewed-go when explicit
+  approved dual-control review and external references are provided
 - [x] Controlled live canary prep drill included in current gates
 - [x] Canary prep gates are represented locally while live submit, live cancel,
   posting, cancelling, and remote side effects remain blocked

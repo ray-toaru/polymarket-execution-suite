@@ -94,3 +94,6 @@ cancel, a second real-funds canary, or a real-funds fill target.
   guard, readiness/preflight/blocked/rehearsal/prep drills, and real-funds
   canary promotion-evidence drills can be planned or executed from one root
   entry point.
+- Added `scripts/run_reviewed_go_decision_workflow.py` so the fresh prereview
+  packet path and optional reviewed-go promotion path can be planned or
+  executed from one root entry point without bypassing independent review.
