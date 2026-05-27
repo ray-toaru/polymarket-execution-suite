@@ -93,6 +93,7 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
             {
                 "market_id": "condition-1",
                 "token_id": "123",
+                "outcome": "Yes",
                 "side": "BUY",
                 "order_type": "GTC",
                 "post_only": True,

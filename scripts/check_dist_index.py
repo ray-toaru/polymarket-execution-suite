@@ -17,7 +17,10 @@ def sha256(path: Path) -> str:
 
 
 def load_json(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text())
+    data = json.loads(path.read_text())
+    if not isinstance(data, dict):
+        raise ValueError(f"{path} must contain a JSON object")
+    return data
 
 
 def is_reviewed_go_material(path: str) -> bool:
@@ -90,12 +93,23 @@ def validate(dist: Path, expected_version: str) -> list[str]:
         if not evidence_path.exists():
             failures.append(f"evidence sidecar missing: {evidence_path}")
         elif artifact_sha is not None:
-            evidence = load_json(evidence_path)
+            try:
+                evidence = load_json(evidence_path)
+            except ValueError as exc:
+                failures.append(str(exc))
+                evidence = {}
             evidence_artifact = evidence.get("artifact", {})
+            if evidence.get("schema_version") != 1:
+                failures.append("evidence sidecar schema_version must be 1")
             if evidence_artifact.get("name") != artifact_path.name:
                 failures.append("evidence sidecar artifact.name does not match INDEX artifact")
             if evidence_artifact.get("sha256") != artifact_sha:
                 failures.append("evidence sidecar artifact.sha256 does not match artifact")
+            canonical = evidence.get("canonical_evidence", {})
+            if canonical.get("manifest_path") != "polymarket-execution-engine/evidence/current/manifest.json":
+                failures.append("evidence sidecar canonical_evidence.manifest_path is not canonical")
+            if not isinstance(canonical.get("manifest_sha256"), str) or len(canonical["manifest_sha256"]) != 64:
+                failures.append("evidence sidecar canonical_evidence.manifest_sha256 must be a sha256 hex string")
 
     local_material = index.get("local_material")
     if not isinstance(local_material, list):
@@ -106,9 +120,15 @@ def validate(dist: Path, expected_version: str) -> list[str]:
             failures.append("INDEX.json local_material entries must be objects")
             continue
         path = str(item.get("path", ""))
+        material_path = Path(path)
         status = item.get("status")
         approval_reuse_allowed = item.get("approval_reuse_allowed")
         remote_side_effects_authorized = item.get("remote_side_effects_authorized")
+        if not path or material_path.is_absolute() or ".." in material_path.parts:
+            failures.append(f"{path or '<empty>'}: local_material.path must be a safe relative path")
+            continue
+        if (dist / material_path).exists() is False:
+            failures.append(f"{path}: local_material path is missing from dist/")
         if is_reviewed_go_material(path) and status in {"consumed_closed", "consumed_not_closed"}:
             if approval_reuse_allowed is not False:
                 failures.append(f"{path}: consumed reviewed-go material must not be approval-reusable")

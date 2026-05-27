@@ -15,6 +15,15 @@ ROOT = Path(__file__).resolve().parents[1]
 DIR_NAMES = {"target", "__pycache__", ".pytest_cache", ".mypy_cache"}
 VENV_DIR_NAMES = {".venv", "venv"}
 FILE_SUFFIXES = {".pyc", ".pyo"}
+SKIP_DIR_NAMES = {".git"}
+
+
+def is_under_skipped_tree(path: Path) -> bool:
+    try:
+        rel = path.relative_to(ROOT)
+    except ValueError:
+        return False
+    return any(part in SKIP_DIR_NAMES for part in rel.parts)
 
 
 def is_under_venv(path: Path) -> bool:
@@ -28,6 +37,11 @@ def main() -> int:
         "--include-venv",
         action="store_true",
         help="Also remove virtual environment directories. By default they are preserved for local validation.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print what would be removed without deleting anything.",
     )
     args = parser.parse_args()
     removed: list[str] = []
@@ -43,20 +57,26 @@ def main() -> int:
         if path.is_dir()
         and (path.name in dir_names or path.name.endswith(".egg-info"))
         and (args.include_venv or not is_under_venv(path))
+        and not is_under_skipped_tree(path)
     ]
     for path in sorted(dirs, key=lambda p: len(p.parts), reverse=True):
         if path.exists():
-            shutil.rmtree(path)
+            if not args.dry_run:
+                shutil.rmtree(path)
             removed.append(str(path.relative_to(ROOT)))
 
     for path in ROOT.rglob("*"):
+        if is_under_skipped_tree(path):
+            continue
         if not args.include_venv and is_under_venv(path):
             continue
         if path.is_file() and path.suffix in FILE_SUFFIXES:
-            path.unlink()
+            if not args.dry_run:
+                path.unlink()
             removed.append(str(path.relative_to(ROOT)))
 
-    print(f"local artifact cleanup complete: removed={len(removed)}")
+    action = "would remove" if args.dry_run else "removed"
+    print(f"local artifact cleanup complete: {action}={len(removed)}")
     for rel in removed[:50]:
         print(f" - {rel}")
     if len(removed) > 50:

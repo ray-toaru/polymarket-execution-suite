@@ -64,24 +64,35 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   HERMES_PROFILE: hm-pdp-test
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -euo pipefail {0}
 
 jobs:
   integration-static:
     name: integration static checks
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout repository and submodules
         uses: actions/checkout@v6
         with:
           token: ${{ secrets.CI_SUBMODULE_TOKEN }}
           submodules: recursive
+          persist-credentials: false
 
       - name: Install Python
         uses: actions/setup-python@v6
         with:
           python-version: "3.13"
+          cache: pip
 
       - name: Install Hermes test dependencies
         run: |

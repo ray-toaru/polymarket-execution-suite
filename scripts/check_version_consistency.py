@@ -7,6 +7,12 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from active_docs import ACTIVE_DOCS
+
 EXPECTED_RE = re.compile(r"^\d+\.\d+\.\d+$")
 LOCAL_RUST_PACKAGES = {
     "pmx-api",
@@ -20,26 +26,6 @@ LOCAL_RUST_PACKAGES = {
     "pmx-store",
     "pmx-official-sdk-adapter",
 }
-ACTIVE_DOCS = [
-    "README.md",
-    "PROJECT_ARCHITECTURE.md",
-    "DEPENDENCY_POLICY.md",
-    "DESIGN_DECISION_RECORD.md",
-    "CURRENT_PROGRESS.md",
-    "DEVELOPMENT_HANDOFF.md",
-    "TASKS.md",
-    "VALIDATION_REPORT.md",
-    "REVIEW_AUDIT.md",
-    "DOC_STATUS.md",
-    "IMPLEMENTATION_STATUS.md",
-    "ROADMAP.md",
-    "docs/future/CANARY_DECISION_PREP_AUDIT.md",
-    "docs/future/CANARY_GO_NO_GO_REVIEW.md",
-    "docs/future/CANARY_PRODUCTION_ROADMAP.md",
-    "NO_LOCAL_ACTIONS_REMAINING.md",
-]
-
-
 def read(path: str) -> str:
     return (ROOT / path).read_text()
 
@@ -184,18 +170,28 @@ def validate_versions(root: Path = ROOT) -> list[str]:
                 continue
             expect_equal(failures, f"{lock_rel} package {name}", version, workspace_version)
 
-    expected_minor_marker = "v" + ".".join(suite_version.split(".")[:2])
-    missing_doc_refs = []
+    exact_version_marker = "v" + suite_version
+    missing_docs = []
+    bad_doc_markers = []
     for doc in ACTIVE_DOCS:
         path = root / doc
-        if path.exists():
-            text = path.read_text()
-            if expected_minor_marker not in text and "validation-promotion" not in text:
-                missing_doc_refs.append(doc)
-    if missing_doc_refs:
+        if not path.exists():
+            missing_docs.append(doc)
+            continue
+        text = path.read_text()
+        first_line = text.splitlines()[:1]
+        historical_ok = bool(
+            first_line
+            and re.search(r"\bHistorical\b", first_line[0], re.IGNORECASE)
+        )
+        if exact_version_marker not in text and not historical_ok:
+            bad_doc_markers.append(doc)
+    if missing_docs:
+        failures.append("active docs missing from workspace: " + ", ".join(missing_docs))
+    if bad_doc_markers:
         failures.append(
-            f"active docs missing {expected_minor_marker} marker: "
-            + ", ".join(missing_doc_refs)
+            f"active docs must contain exact marker {exact_version_marker} or an explicit Historical title: "
+            + ", ".join(bad_doc_markers)
         )
     return failures
 

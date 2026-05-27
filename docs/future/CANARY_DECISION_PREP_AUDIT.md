@@ -1,13 +1,13 @@
-# Canary decision-prep audit — v0.28
+# Canary decision-prep audit — v0.28.0
 
-Status: active v0.28 production-live-candidate governance material. Older
+Status: active v0.28.0 production-live-candidate governance material. Older
 v0.25/v0.26/v0.27 references below are historical evidence pointers only and
 do not authorize live submit, live cancel, production deployment, or another
 real-funds canary.
 
 ## Current conclusion
 
-The current v0.27 phase is controlled canary source preparation only. The
+The current v0.28.0 phase is controlled canary source preparation only. The
 project is not production-ready, live-trading-ready, or approved for a
 real-funds canary fill.
 
@@ -26,7 +26,7 @@ artifact sha256: recorded in the external .zip.sha256 sidecar for the generated 
 current evidence manifest sha256: 80b4b7fa8ef325ffb3cff6d839176a9af1ce28ce226c4d3ebef826c6c2b981d1
 ```
 
-Current v0.26 decision-prep source refresh:
+Historical v0.26 decision-prep source refresh:
 
 ```text
 source refresh root commit: final root commit recorded in .zip.evidence.json sidecar
@@ -76,7 +76,7 @@ The package correctly preserves the safety boundary:
   `blocked_at=release_decision_gate`, `posted=false`, `cancelled=false`, and
   `remote_side_effects=false`.
 
-The current local v0.26 decision-prep package has been regenerated under
+The current local historical v0.26 decision-prep package has been regenerated under
 `dist/pmx-canary-review-v0.26-current/`. The directory is intentionally ignored
 by Git because release packages and local review bundles are not source files.
 It was generated through

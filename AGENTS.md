@@ -61,7 +61,7 @@ Run the relevant subset for the files changed:
 python scripts/check_version_consistency.py
 python scripts/validate_contracts.py
 python -m unittest discover -s tests -p "test_*.py"
-PYTHONPATH=hermes-polymarket-executor-adapter/src python -m pytest -q hermes-polymarket-executor-adapter/tests
+HERMES_PROFILE=<local-profile> PYTHONPATH=hermes-polymarket-executor-adapter/src python -m pytest -q hermes-polymarket-executor-adapter/tests
 python -m compileall -q hermes-polymarket-executor-adapter/src scripts tests polymarket-execution-engine/validation
 python polymarket-execution-engine/validation/check_docs_evidence_governance.py
 python scripts/clean_local_artifacts.py

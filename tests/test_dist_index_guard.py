@@ -30,8 +30,19 @@ class DistIndexGuardTests(unittest.TestCase):
             f"{self.sha}  {self.artifact.name}\n"
         )
         (self.dist / "polymarket-execution-suite-v0.26.0.zip.evidence.json").write_text(
-            json.dumps({"artifact": {"name": self.artifact.name, "sha256": self.sha}})
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "artifact": {"name": self.artifact.name, "sha256": self.sha},
+                    "canonical_evidence": {
+                        "manifest_path": "polymarket-execution-engine/evidence/current/manifest.json",
+                        "manifest_sha256": "a" * 64,
+                    },
+                }
+            )
         )
+        (self.dist / "pmx-canary-review-v0.26-current-no-go").mkdir()
+        (self.dist / "pmx-canary-reviewed-go-v0.26-closed").mkdir()
 
     def write_index(self, **overrides):
         index = {
@@ -119,6 +130,43 @@ class DistIndexGuardTests(unittest.TestCase):
         )
         failures = self.guard.validate(self.dist, "0.26.0")
         self.assertTrue(any("must not authorize remote side effects" in failure for failure in failures))
+
+    def test_rejects_unsafe_or_missing_local_material_path(self):
+        self.write_index(
+            local_material=[
+                {
+                    "path": "../escape",
+                    "status": "review_material_not_release_artifact",
+                    "approval_reuse_allowed": False,
+                    "remote_side_effects_authorized": False,
+                },
+                {
+                    "path": "missing-material",
+                    "status": "review_material_not_release_artifact",
+                    "approval_reuse_allowed": False,
+                    "remote_side_effects_authorized": False,
+                },
+            ]
+        )
+        failures = self.guard.validate(self.dist, "0.26.0")
+        self.assertTrue(any("safe relative path" in failure for failure in failures))
+        self.assertTrue(any("missing from dist/" in failure for failure in failures))
+
+    def test_rejects_evidence_sidecar_without_canonical_binding(self):
+        (self.dist / "polymarket-execution-suite-v0.26.0.zip.evidence.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 0,
+                    "artifact": {"name": self.artifact.name, "sha256": self.sha},
+                    "canonical_evidence": {"manifest_path": "wrong", "manifest_sha256": "bad"},
+                }
+            )
+        )
+        self.write_index()
+        failures = self.guard.validate(self.dist, "0.26.0")
+        self.assertTrue(any("schema_version must be 1" in failure for failure in failures))
+        self.assertTrue(any("manifest_path is not canonical" in failure for failure in failures))
+        self.assertTrue(any("manifest_sha256 must be a sha256 hex string" in failure for failure in failures))
 
 
 if __name__ == "__main__":

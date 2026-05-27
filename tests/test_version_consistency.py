@@ -41,11 +41,13 @@ class VersionConsistencyTests(unittest.TestCase):
             "COMPONENT_COMPATIBILITY.md",
             f"""# Component compatibility and ownership
 
+## Current v{suite_version} composition
+
 | Component | Current repository name | Current version | Pinned commit | Role |
 |---|---|---:|---|---|
-| Integration suite | `polymarket-execution-suite` | `{suite_version}` | root branch `v0.27-development` | Pins component commits. |
-| Execution engine | `polymarket-execution-engine` | `{engine_version}` | submodule commit | Rust executor. |
-| Hermes adapter | `hermes-polymarket-executor-adapter` | `{adapter_version}` | submodule commit | Python adapter. |
+| integration suite | `polymarket-execution-suite` | `{suite_version}` | root branch `v0.27-development` | Pins component commits. |
+| execution engine | `polymarket-execution-engine` | `{engine_version}` | submodule commit | Rust executor. |
+| hermes adapter | `hermes-polymarket-executor-adapter` | `{adapter_version}` | submodule commit | Python adapter. |
 
 The three repositories may evolve independently after the current shared release.
 """,
@@ -85,7 +87,9 @@ The three repositories may evolve independently after the current shared release
                 f'[[package]]\nname = "pmx-core"\nversion = "{engine_version}"\n',
             )
         for doc in self.module.ACTIVE_DOCS:
-            self.write(doc, "v0.27 development marker\n")
+            if (self.root / doc).exists():
+                continue
+            self.write(doc, f"v{suite_version}\n")
 
     def test_independent_component_versions_are_valid_when_matrix_matches_sources(self):
         self.write_minimal_tree()
@@ -100,6 +104,13 @@ The three repositories may evolve independently after the current shared release
         )
         failures = self.module.validate_versions(self.root)
         self.assertIn("component matrix Hermes adapter version", "\n".join(failures))
+
+    def test_missing_active_doc_fails(self):
+        self.write_minimal_tree()
+        missing = self.module.ACTIVE_DOCS[0]
+        (self.root / missing).unlink()
+        failures = self.module.validate_versions(self.root)
+        self.assertIn(f"active docs missing from workspace: {missing}", "\n".join(failures))
 
 
 if __name__ == "__main__":

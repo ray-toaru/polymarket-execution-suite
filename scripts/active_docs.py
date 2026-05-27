@@ -1,0 +1,23 @@
+from __future__ import annotations
+
+ACTIVE_DOCS = [
+    "README.md",
+    "PROJECT_ARCHITECTURE.md",
+    "COMPONENT_COMPATIBILITY.md",
+    "DEPENDENCY_POLICY.md",
+    "DESIGN_DECISION_RECORD.md",
+    "IMPLEMENTATION_STATUS.md",
+    "CONTROLLED_CANARY_CLOSEOUT.md",
+    "CURRENT_PROGRESS.md",
+    "ROADMAP.md",
+    "TASKS.md",
+    "VALIDATION_REPORT.md",
+    "REVIEW_AUDIT.md",
+    "RELEASE_DECISION.md",
+    "DEVELOPMENT_HANDOFF.md",
+    "DOC_STATUS.md",
+    "NO_LOCAL_ACTIONS_REMAINING.md",
+    "docs/future/CANARY_DECISION_PREP_AUDIT.md",
+    "docs/future/CANARY_GO_NO_GO_REVIEW.md",
+    "docs/future/CANARY_PRODUCTION_ROADMAP.md",
+]

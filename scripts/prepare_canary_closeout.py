@@ -21,6 +21,13 @@ VERSION = (ROOT / "VERSION").read_text().strip()
 DEFAULT_RELEASE_ZIP = ROOT / "dist" / f"polymarket-execution-suite-v{VERSION}.zip"
 
 
+def display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Prepare machine-readable and human closeout reports for a controlled canary package."
@@ -161,7 +168,7 @@ def summarize_stage_history(
     expected_order_text = str(expected_order_id) if expected_order_id else ""
     order_matches = bool(expected_order_text) and remote_order_ids == [expected_order_text]
     return {
-        "path": str(stage_history_path.relative_to(ROOT)),
+        "path": display_path(stage_history_path),
         "sha256": sha256(stage_history_path),
         "stage_count": len(stages),
         "stages": names,
@@ -241,7 +248,7 @@ def validate_operator_recovery(
         raise SystemExit("operator recovery evidence checks failed: " + ", ".join(failed))
     return {
         "status": "recovered",
-        "path": str(path.relative_to(ROOT)),
+        "path": display_path(path),
         "sha256": sha256(path),
         "operator_review_ref": recovery["operator_review_ref"],
         "stage_history_sha256": recovery["stage_history_sha256"],
@@ -322,7 +329,7 @@ def validate_incident_recovery(
         raise SystemExit("incident recovery evidence checks failed: " + ", ".join(failed))
     return {
         "status": "incident_recovered_no_remote_order_found",
-        "path": str(path.relative_to(ROOT)),
+        "path": display_path(path),
         "sha256": sha256(path),
         "operator_review_ref": recovery["operator_review_ref"],
         "stage_history_sha256": recovery["stage_history_sha256"],
@@ -481,9 +488,9 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
             )
 
     release_binding: dict[str, Any] = {
-        "release_zip_path": str(release_zip.relative_to(ROOT)) if release_zip.exists() else str(release_zip),
+        "release_zip_path": display_path(release_zip) if release_zip.exists() else str(release_zip),
         "release_zip_sha256": sha256(release_zip) if release_zip.exists() else None,
-        "release_evidence_sidecar_path": str(release_zip.with_suffix(release_zip.suffix + ".evidence.json").relative_to(ROOT))
+        "release_evidence_sidecar_path": display_path(release_zip.with_suffix(release_zip.suffix + ".evidence.json"))
         if release_zip.with_suffix(release_zip.suffix + ".evidence.json").exists()
         else None,
     }
@@ -502,7 +509,7 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
     return {
         "schema_version": 1,
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-        "package": str(package_dir.relative_to(ROOT)),
+        "package": display_path(package_dir),
         "decision": "controlled_real_funds_canary_incident_closed_no_remote_order_found"
         if incident_closeout
         else "controlled_real_funds_canary_closed",

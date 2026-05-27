@@ -28,16 +28,24 @@ In this local workspace the submodules point at sibling repositories:
 Use these current documents first:
 
 - `AGENTS.md` — repository-level agent instructions, safety boundaries, and validation rules.
-
 - `PROJECT_ARCHITECTURE.md` — current architecture baseline from the v0.3 design split.
 - `COMPONENT_COMPATIBILITY.md` — component ownership, compatibility matrix, and independent versioning policy.
 - `DEPENDENCY_POLICY.md` — pinned runtime/toolchain/dependency policy.
 - `DESIGN_DECISION_RECORD.md` — accepted architectural decisions.
 - `IMPLEMENTATION_STATUS.md` — implemented, blocked, and intentionally disabled areas.
 - `CONTROLLED_CANARY_CLOSEOUT.md` — tracked summary for the controlled canary closeout boundary and evidence requirements.
+- `CURRENT_PROGRESS.md` — current branch-state and governance-freeze summary.
+- `ROADMAP.md` — current integration roadmap and remaining scope.
+- `TASKS.md` — current task ledger and completed governance/workflow work.
 - `VALIDATION_REPORT.md` — what is locally verified versus externally required.
 - `REVIEW_AUDIT.md` — known risks and audit judgment.
+- `RELEASE_DECISION.md` — current release truth and explicit non-live decision.
+- `DEVELOPMENT_HANDOFF.md` — current handoff state and operating assumptions.
 - `DOC_STATUS.md` — document/evidence governance map.
+- `NO_LOCAL_ACTIONS_REMAINING.md` — local validation limit boundary for the current line.
+- `docs/future/CANARY_DECISION_PREP_AUDIT.md`
+- `docs/future/CANARY_GO_NO_GO_REVIEW.md`
+- `docs/future/CANARY_PRODUCTION_ROADMAP.md`
 
 Historical root documents and previous gate notes have been moved to `docs/archive/` and are excluded from normal release packaging.
 
@@ -46,7 +54,7 @@ Historical root documents and previous gate notes have been moved to `docs/archi
 Integration-level local/static validation entry points:
 
 ```bash
-python -m pip install -r requirements-ci.txt
+python -m pip install -c constraints-ci.txt -r requirements-ci.txt
 python scripts/check_version_consistency.py
 python scripts/validate_contracts.py
 python scripts/check_v28_production_live_candidate.py
