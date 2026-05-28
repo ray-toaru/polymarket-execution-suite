@@ -27,6 +27,7 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
             "approval_id": "approval-request-1",
             "approval_hash": "a" * 64,
             "scope": "REAL_FUNDS_CANARY",
+            "account_id": "acct-canary",
             "active_profile_ref": "local-profile://acct-b",
             "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
             "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
@@ -47,6 +48,7 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
             "risk_limits": {
                 "max_order_notional_usd": "0.2",
                 "max_daily_notional_usd": "0.2",
+                "candidate_estimated_order_notional_usd": "0.1",
             },
             "live_submit_authorized": False,
             "remote_side_effects_authorized": False,
@@ -91,6 +93,7 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
             "risk_limits": {
                 "max_order_notional_usd": request["risk_limits"]["max_order_notional_usd"],
                 "max_daily_notional_usd": request["risk_limits"]["max_daily_notional_usd"],
+                "candidate_estimated_order_notional_usd": request["risk_limits"]["candidate_estimated_order_notional_usd"],
             },
             "required_reviewer_checks": {
                 "artifact_hash_reviewed": True,
@@ -194,6 +197,8 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
         self.assertFalse(decision["production_deployment_authorized"])
         self.assertEqual(decision["external_references"]["operator_dual_control_review_ref"], "dual://review")
         self.assertEqual(decision["external_references"]["operator_dual_control_review_sha256"], "9" * 64)
+        self.assertEqual(decision["external_references"]["approval_request_sha256"], "8" * 64)
+        self.assertEqual(decision["external_references"]["runtime_truth_sha256"], "f" * 64)
 
 
 if __name__ == "__main__":
