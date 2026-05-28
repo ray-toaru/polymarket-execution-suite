@@ -20,6 +20,40 @@ class PrepareOperatorApprovalRequestTests(unittest.TestCase):
     def setUp(self):
         self.module = load_module()
 
+    def candidate_fixture(self):
+        return {
+            "market_id": "condition-1",
+            "token_id": "123",
+            "human_review_ref": "ticket://candidate-review",
+            "side": "BUY",
+            "order_type": "GTC",
+            "post_only": True,
+            "active": True,
+            "accepting_orders": True,
+            "closed": False,
+            "archived": False,
+            "best_ask": "0.03",
+            "limit_price": "0.02",
+            "ask_size": "20",
+            "target_size": "5",
+            "min_order_size": "5",
+            "estimated_order_notional_usd": "0.1",
+            "exchange_rule_snapshot": {
+                "schema_version": 1,
+                "venue": "polymarket_clob",
+                "order_mode": "post_only_limit",
+                "order_type": "GTC",
+                "side": "BUY",
+                "target_size_semantics": "outcome_shares",
+                "min_share_size": "5",
+                "min_tick_size": "0.01",
+                "source": "public_clob_book_plus_reviewed_remote_rule",
+                "captured_at": "2026-05-23T00:00:00+00:00",
+                "expires_at": "2099-01-01T00:00:00+00:00",
+                "evidence_ref": "ticket://reviewed-rule",
+            },
+        }
+
     def test_approval_hash_excludes_approval_hash_field(self):
         request = {
             "schema_version": 1,
@@ -35,7 +69,7 @@ class PrepareOperatorApprovalRequestTests(unittest.TestCase):
 
     def test_active_profile_ref_must_not_be_placeholder(self):
         with self.assertRaisesRegex(SystemExit, "active_profile_ref"):
-            self.module.require_nonempty_text("REPLACE_WITH_PROFILE_REF", "active_profile_ref")
+            self.module.require_nonempty_text("ticket://TODO-profile", "active_profile_ref")
 
     def test_runtime_env_file_can_supply_account_and_profile_ref(self):
         with tempfile.TemporaryDirectory() as tmp_name:
@@ -43,23 +77,14 @@ class PrepareOperatorApprovalRequestTests(unittest.TestCase):
             env_file.write_text(
                 "\n".join(
                     [
-                        "# Active local account profile label.",
                         "PMX_ACTIVE_ACCOUNT_PROFILE=acct_b",
-                        "# Active local account id bound to the selected profile.",
                         "PMX_ACTIVE_ACCOUNT_ID=acct-canary",
-                        "# Local non-secret profile reference.",
                         "PMX_ACTIVE_PROFILE_REF=local-profile://acct-b",
-                        "# Generic runtime signer material.",
                         "POLYMARKET_PRIVATE_KEY=0xabc123",
-                        "# Generic runtime L2 API key.",
                         "POLY_API_KEY=123e4567-e89b-12d3-a456-426614174000",
-                        "# Generic runtime L2 API secret.",
                         "POLY_API_SECRET=api-secret",
-                        "# Generic runtime L2 API passphrase.",
                         "POLY_API_PASSPHRASE=api-pass",
-                        "# Generic runtime CLOB funder for deposit-wallet / Poly1271 auth.",
                         "PMX_CLOB_FUNDER=0x00000000000000000000000000000000000000b0",
-                        "# Generic runtime signature type for the active account.",
                         "PMX_CLOB_SIGNATURE_TYPE=POLY_1271",
                         "",
                     ]
@@ -74,30 +99,43 @@ class PrepareOperatorApprovalRequestTests(unittest.TestCase):
         self.assertEqual(profile_ref, "local-profile://acct-b")
 
     def test_candidate_notional_must_match_limit_times_size(self):
-        candidate = {
-            "side": "BUY",
-            "order_type": "GTC",
-            "post_only": True,
-            "target_size": "5",
-            "limit_price": "0.02",
-            "estimated_order_notional_usd": "0.11",
-            "exchange_rule_snapshot": {"expires_at": "2099-01-01T00:00:00Z"},
-        }
+        candidate = self.candidate_fixture()
+        candidate["estimated_order_notional_usd"] = "0.11"
         with self.assertRaisesRegex(SystemExit, "estimated_order_notional_usd"):
             self.module.validate_candidate(candidate, self.module.Decimal("0.20"))
 
     def test_candidate_notional_must_fit_requested_cap(self):
-        candidate = {
-            "side": "BUY",
-            "order_type": "GTC",
-            "post_only": True,
-            "target_size": "5",
-            "limit_price": "0.05",
-            "estimated_order_notional_usd": "0.25",
-            "exchange_rule_snapshot": {"expires_at": "2099-01-01T00:00:00Z"},
-        }
+        candidate = self.candidate_fixture()
+        candidate["limit_price"] = "0.05"
+        candidate["best_ask"] = "0.06"
+        candidate["estimated_order_notional_usd"] = "0.25"
         with self.assertRaisesRegex(SystemExit, "exceeds"):
             self.module.validate_candidate(candidate, self.module.Decimal("0.20"))
+
+    def test_candidate_must_be_live_and_accepting(self):
+        candidate = self.candidate_fixture()
+        candidate["accepting_orders"] = False
+        with self.assertRaisesRegex(SystemExit, "accepting_orders"):
+            self.module.validate_candidate(candidate, self.module.Decimal("0.20"))
+
+    def test_runtime_truth_requires_all_v28_dependencies(self):
+        sidecar = {
+            "artifact_sha256": "a" * 64,
+            "workspace_manifest_sha256": "b" * 64,
+            "archived_manifest_sha256": "c" * 64,
+            "evidence_manifest_sha256": "c" * 64,
+        }
+        runtime_truth = {
+            "artifact_sha256": "a" * 64,
+            "workspace_manifest_sha256": "b" * 64,
+            "archived_manifest_sha256": "c" * 64,
+            "remote_side_effects": False,
+            "dependencies": [
+                {"name": "kill_switch", "status": "durable_runtime_truth", "evidence_ref": "pg://kill_switch"}
+            ],
+        }
+        with self.assertRaisesRegex(SystemExit, "missing durable dependencies"):
+            self.module.validate_runtime_truth(runtime_truth, sidecar)
 
 
 if __name__ == "__main__":
