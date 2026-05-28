@@ -1,8 +1,6 @@
 [submodule "hermes-polymarket-executor-adapter"]
 	path = hermes-polymarket-executor-adapter
 	url = https://github.com/ray-toaru/hermes-polymarket-executor-adapter.git
-	branch = v0.27-development
 [submodule "polymarket-execution-engine"]
 	path = polymarket-execution-engine
 	url = https://github.com/ray-toaru/polymarket-execution-engine.git
-	branch = v0.27-development
