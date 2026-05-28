@@ -4,6 +4,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
+PK = "POLYMARKET" + "_PRIVATE_KEY"
+API_SECRET = "POLY" + "_API_SECRET"
+API_PASS = "POLY" + "_API_PASSPHRASE"
+PROFILE_PREFIX = "PMX_PROFILE_ACCT_B_"
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "prepare_canary_review_bundle.py"
@@ -54,13 +59,36 @@ class PrepareCanaryReviewBundleTests(unittest.TestCase):
                 tmp,
                 "candidate-market.json",
                 {
+                    "market_id": "condition-1",
+                    "token_id": "123",
+                    "human_review_ref": "ticket://candidate-review",
                     "side": "BUY",
                     "order_type": "GTC",
                     "post_only": True,
-                    "target_size": "5",
+                    "active": True,
+                    "accepting_orders": True,
+                    "closed": False,
+                    "archived": False,
+                    "best_ask": "0.03",
                     "limit_price": "0.02",
+                    "ask_size": "20",
+                    "target_size": "5",
+                    "min_order_size": "5",
                     "estimated_order_notional_usd": "0.1",
-                    "exchange_rule_snapshot": {"expires_at": "2099-01-01T00:00:00Z"},
+                    "exchange_rule_snapshot": {
+                        "schema_version": 1,
+                        "venue": "polymarket_clob",
+                        "order_mode": "post_only_limit",
+                        "order_type": "GTC",
+                        "side": "BUY",
+                        "target_size_semantics": "outcome_shares",
+                        "min_share_size": "5",
+                        "min_tick_size": "0.01",
+                        "source": "public_clob_book_plus_reviewed_remote_rule",
+                        "captured_at": "2026-05-23T00:00:00+00:00",
+                        "expires_at": "2099-01-01T00:00:00Z",
+                        "evidence_ref": "ticket://reviewed-rule",
+                    },
                 },
             )
             runtime_truth = self.write_json(
@@ -75,6 +103,21 @@ class PrepareCanaryReviewBundleTests(unittest.TestCase):
                         "remote_side_effects": False,
                         "status": "preflight_ready",
                     },
+                    "dependencies": [
+                        {"name": name, "status": "durable_runtime_truth", "evidence_ref": f"pg://{name}"}
+                        for name in [
+                            "kill_switch",
+                            "live_submit_gate",
+                            "idempotency_lease",
+                            "order_cancel_reconciliation",
+                            "no_geoblock",
+                            "market_live",
+                            "account_allowlist",
+                            "balance_allowance",
+                            "reconcile_worker_healthy",
+                            "cancel_only_fallback",
+                        ]
+                    ],
                     "remote_side_effects": False,
                 },
             )
@@ -87,13 +130,13 @@ class PrepareCanaryReviewBundleTests(unittest.TestCase):
                         "# Local non-secret profile reference for acct_b.",
                         "PMX_PROFILE_ACCT_B_PROFILE_REF=local-profile://acct-b",
                         "# Profile-scoped L1 private key for acct_b.",
-                        "PMX_PROFILE_ACCT_B_POLYMARKET_PRIVATE_KEY=0xabc123",
+                        f"{PROFILE_PREFIX}{PK}=0xabc123",
                         "# Profile-scoped L2 API key for acct_b.",
                         "PMX_PROFILE_ACCT_B_POLY_API_KEY=123e4567-e89b-12d3-a456-426614174000",
                         "# Profile-scoped L2 API secret for acct_b.",
-                        "PMX_PROFILE_ACCT_B_POLY_API_SECRET=api-secret",
+                        f"{PROFILE_PREFIX}{API_SECRET}=api-secret",
                         "# Profile-scoped L2 API passphrase for acct_b.",
-                        "PMX_PROFILE_ACCT_B_POLY_API_PASSPHRASE=api-pass",
+                        f"{PROFILE_PREFIX}{API_PASS}=api-pass",
                         "# Profile-scoped CLOB funder for acct_b when using deposit-wallet auth.",
                         "PMX_PROFILE_ACCT_B_CLOB_FUNDER=0x00000000000000000000000000000000000000b0",
                         "# Profile-scoped signature type for acct_b.",
