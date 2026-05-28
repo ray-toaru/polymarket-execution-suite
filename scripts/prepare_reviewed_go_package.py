@@ -15,6 +15,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 REVIEWED_GO_DECISION = ROOT / "scripts" / "prepare_reviewed_go_decision.py"
 REVIEW_PACKET = ROOT / "scripts" / "prepare_dual_control_review_packet.py"
+PIPELINE = ROOT / "scripts" / "run_controlled_canary_pipeline.py"
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -53,17 +54,28 @@ def copy_into_package(src: Path, output_dir: Path, *, target_name: str | None = 
     return {"path": dest.name, "sha256": sha256(dest)}
 
 
-def build_cli_approval(approval_request: dict[str, Any]) -> dict[str, Any]:
+def build_cli_approval(
+    approval_request: dict[str, Any],
+    *,
+    runtime_truth_sha256: str,
+    approval_request_sha256: str,
+    dual_control_review_sha256: str,
+) -> dict[str, Any]:
     account_id = approval_request.get("account_id")
     if not isinstance(account_id, str) or not account_id.strip():
         raise SystemExit("approval request account_id is required to build canonical approval.json")
+    active_profile_ref = approval_request.get("active_profile_ref")
+    if not isinstance(active_profile_ref, str) or not active_profile_ref.strip():
+        raise SystemExit("approval request active_profile_ref is required to build canonical approval.json")
     risk_limits = approval_request.get("risk_limits")
     if not isinstance(risk_limits, dict):
         raise SystemExit("approval request risk_limits must be an object")
-    return {
+    cli = {
+        "schema_version": 1,
         "approval_id": approval_request["approval_id"],
         "approval_hash": approval_request["approval_hash"],
         "account_id": account_id.strip(),
+        "active_profile_ref": active_profile_ref.strip(),
         "scope": approval_request["scope"],
         "expires_at": approval_request["expires_at"],
         "artifact_sha256": approval_request["artifact_sha256"],
@@ -71,11 +83,21 @@ def build_cli_approval(approval_request: dict[str, Any]) -> dict[str, Any]:
         "workspace_manifest_sha256": approval_request["workspace_manifest_sha256"],
         "archived_manifest_sha256": approval_request["archived_manifest_sha256"],
         "market_candidate_sha256": approval_request["market_candidate_sha256"],
+        "runtime_truth_sha256": runtime_truth_sha256,
+        "approval_request_sha256": approval_request_sha256,
+        "dual_control_review_sha256": dual_control_review_sha256,
         "max_order_notional_usd": risk_limits["max_order_notional_usd"],
         "max_daily_notional_usd": risk_limits["max_daily_notional_usd"],
+        "candidate_estimated_order_notional_usd": risk_limits.get("candidate_estimated_order_notional_usd"),
         "execution_style": approval_request["execution_style"],
         "operator_identity_ref": approval_request["operator_identity_ref"],
+        "approval_ticket_ref": approval_request.get("approval_ticket_ref"),
     }
+    if approval_request.get("signature_type"):
+        cli["signature_type"] = approval_request["signature_type"]
+    if approval_request.get("funder_ref"):
+        cli["funder_ref"] = approval_request["funder_ref"]
+    return cli
 
 
 def build_package(
@@ -94,17 +116,28 @@ def build_package(
 ) -> dict[str, Any]:
     reviewed_go = load_module(REVIEWED_GO_DECISION, "prepare_reviewed_go_decision")
     review_packet = load_module(REVIEW_PACKET, "prepare_dual_control_review_packet")
+    pipeline = load_module(PIPELINE, "run_controlled_canary_pipeline")
 
     sidecar = review_packet.validate_release_sidecar(release_evidence)
-    review_packet.validate_candidate(candidate_market)
-    runtime_doc = review_packet.validate_runtime_truth(runtime_truth)
+    pipeline.validate_candidate_file(candidate_market)
+    runtime_doc = pipeline.validate_runtime_truth_file(
+        runtime_truth,
+        expected_artifact_sha256=sidecar["artifact_sha256"],
+        expected_workspace_manifest_sha256=sidecar["workspace_manifest_sha256"],
+        expected_archived_manifest_sha256=sidecar["archived_manifest_sha256"],
+    )
     approval_doc = review_packet.validate_approval_request(approval_request)
-    cli_approval = build_cli_approval(approval_doc)
 
     candidate_sha = sha256(candidate_market)
     runtime_sha = sha256(runtime_truth)
     approval_sha = reviewed_go.require_sha256(sha256(approval_request), "approval request file sha256")
     review_sha = reviewed_go.require_sha256(sha256(dual_control_review), "dual-control review file sha256")
+    cli_approval = build_cli_approval(
+        approval_doc,
+        runtime_truth_sha256=runtime_sha,
+        approval_request_sha256=approval_sha,
+        dual_control_review_sha256=review_sha,
+    )
 
     expected_pairs = [
         ("artifact_sha256", sidecar["artifact_sha256"], approval_doc.get("artifact_sha256")),
@@ -137,16 +170,12 @@ def build_package(
 
     output_dir.mkdir(parents=True, exist_ok=True)
     copied = {
-        "release_zip": copy_into_package(release_zip, output_dir),
+        "release_zip": {"path": str(release_zip), "sha256": sha256(release_zip), "copied": False},
         "release_sha256": copy_into_package(release_sha, output_dir),
         "release_evidence": copy_into_package(release_evidence, output_dir),
         "candidate_market": copy_into_package(candidate_market, output_dir),
         "runtime_truth": copy_into_package(runtime_truth, output_dir),
-        "approval_request": copy_into_package(
-            approval_request,
-            output_dir,
-            target_name="approval-request.json",
-        ),
+        "approval_request": copy_into_package(approval_request, output_dir, target_name="approval-request.json"),
         "dual_control_review": copy_into_package(dual_control_review, output_dir, target_name="dual-control-review.json"),
         "external_references": copy_into_package(external_references, output_dir),
     }
@@ -193,6 +222,8 @@ def package_readme(review: dict[str, Any]) -> str:
             "",
             "This directory is a reviewed-go package for one controlled canary attempt.",
             "It is authorization-bearing local material and must be marked consumed and then closed after use.",
+            "Do not commit, upload, email, or re-package this directory or its authorization material unless it is encrypted and separately approved.",
+            "The release zip is hash-referenced; do not copy extra release artifacts into this package.",
             "",
             f"- Package status: `{review['status']}`",
             f"- Artifact SHA-256: `{review['artifact_sha256']}`",
@@ -212,7 +243,7 @@ def package_readme(review: dict[str, Any]) -> str:
             "- `external-references.json`",
             "- `candidate-market.json`",
             "- `runtime-truth.json`",
-            "- release zip and detached sidecars",
+            "- release sidecars; release zip is referenced by hash/path and is not copied",
             "",
             "Operator constraints:",
             "",
@@ -244,10 +275,7 @@ def main() -> int:
     output_dir = resolve(args.output_dir)
     release_zip = require_file(resolve(args.release_zip), "release zip")
     release_sha = require_file(release_zip.with_suffix(release_zip.suffix + ".sha256"), "release sha sidecar")
-    release_evidence = require_file(
-        release_zip.with_suffix(release_zip.suffix + ".evidence.json"),
-        "release evidence sidecar",
-    )
+    release_evidence = require_file(release_zip.with_suffix(release_zip.suffix + ".evidence.json"), "release evidence sidecar")
     review = build_package(
         output_dir=output_dir,
         release_zip=release_zip,
