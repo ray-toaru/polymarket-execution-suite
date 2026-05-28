@@ -33,7 +33,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--root-ci-run-id", required=True)
     parser.add_argument("--hermes-ci-run-id", required=True)
     parser.add_argument("--execution-engine-ci-run-id", required=True)
-    parser.add_argument("--credentialed-sdk-run-id", default="local-current-gates-20260523")
+    parser.add_argument("--credentialed-sdk-run-id", required=True)
     parser.add_argument("--operator-identity-ref", required=True)
     parser.add_argument("--approval-ticket-ref", required=True)
     parser.add_argument("--max-order-notional-usd", default="0.20")
@@ -72,13 +72,13 @@ def prepare_bundle(
     runtime_truth = approval.load_json(runtime_truth_file)
     max_order_notional = approval.decimal_value(max_order_notional_usd, "max_order_notional_usd")
     max_daily_notional = approval.decimal_value(max_daily_notional_usd, "max_daily_notional_usd")
+    if max_daily_notional < max_order_notional:
+        raise SystemExit("max_daily_notional_usd must be >= max_order_notional_usd")
     candidate_limits = approval.validate_candidate(candidate, max_order_notional)
-    runtime_artifact = approval.require_sha256(
-        runtime_truth.get("artifact_sha256"),
-        "runtime truth artifact_sha256",
-    )
-    if runtime_artifact != sidecar["artifact_sha256"]:
-        raise SystemExit("runtime truth artifact hash does not match release sidecar")
+    candidate_notional = approval.decimal_value(candidate_limits["estimated_order_notional_usd"], "candidate estimated_order_notional_usd")
+    if max_order_notional < candidate_notional or max_daily_notional < candidate_notional:
+        raise SystemExit("risk limits must cover candidate notional")
+    approval.validate_runtime_truth(runtime_truth, sidecar)
 
     account_id = activated["PMX_ACTIVE_ACCOUNT_ID"]
     active_profile_ref = activated["PMX_ACTIVE_PROFILE_REF"]
@@ -115,19 +115,9 @@ def prepare_bundle(
 
 def main() -> int:
     args = parse_args()
-    source_env = (
-        args.source_env_file if args.source_env_file.is_absolute() else ROOT / args.source_env_file
-    )
-    runtime_env_output = (
-        args.runtime_env_output
-        if args.runtime_env_output.is_absolute()
-        else ROOT / args.runtime_env_output
-    )
-    approval_request_output = (
-        args.approval_request_output
-        if args.approval_request_output.is_absolute()
-        else ROOT / args.approval_request_output
-    )
+    source_env = args.source_env_file if args.source_env_file.is_absolute() else ROOT / args.source_env_file
+    runtime_env_output = args.runtime_env_output if args.runtime_env_output.is_absolute() else ROOT / args.runtime_env_output
+    approval_request_output = args.approval_request_output if args.approval_request_output.is_absolute() else ROOT / args.approval_request_output
     result = prepare_bundle(
         profile=args.profile,
         source_env_file=source_env,
