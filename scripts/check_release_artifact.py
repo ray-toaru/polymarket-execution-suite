@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import fnmatch
 import json
 import re
 import hashlib
@@ -10,9 +11,16 @@ from pathlib import Path
 
 from check_dist_index import validate as validate_dist_index
 
-FORBIDDEN_PARTS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", "target", "dist"}
-FORBIDDEN_SUFFIXES = {".pyc", ".pyo", ".db", ".sqlite", ".sqlite3"}
+FORBIDDEN_PARTS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", "target", "dist", "secrets", ".secrets", "runtime-secrets"}
+FORBIDDEN_SUFFIXES = {".pyc", ".pyo", ".db", ".sqlite", ".sqlite3", ".pem", ".key", ".p12", ".pfx"}
 FORBIDDEN_FILENAMES = {".env"}
+FORBIDDEN_GLOBS = [".env*", "*.local.json", "*secret*", "*credential*"]
+SECRET_CONTENT_PATTERNS = [
+    re.compile(rb"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+    re.compile(rb"(?i)POLYMARKET_PRIVATE_KEY\s*="),
+    re.compile(rb"(?i)POLY_API_SECRET\s*="),
+    re.compile(rb"(?i)POLY_API_PASSPHRASE\s*="),
+]
 FORBIDDEN_PREFIX_SUFFIXES = (
     "docs/archive/",
     "external_reviews/",
@@ -35,6 +43,13 @@ VERSION_SPECIFIC_AGENT_PATTERN = re.compile(
 )
 
 
+def path_has_forbidden_glob(rel: str, name: str) -> bool:
+    return any(
+        fnmatch.fnmatch(name, pattern) or fnmatch.fnmatch(rel, pattern)
+        for pattern in FORBIDDEN_GLOBS
+    )
+
+
 def forbidden(member: str, expected_root: str | None = None) -> bool:
     path = Path(member)
     parts = path.parts
@@ -45,10 +60,15 @@ def forbidden(member: str, expected_root: str | None = None) -> bool:
     return (
         any(part in FORBIDDEN_PARTS for part in parts)
         or any(part.endswith(".egg-info") for part in parts)
-        or Path(name).suffix in FORBIDDEN_SUFFIXES
+        or Path(name).suffix.lower() in FORBIDDEN_SUFFIXES
         or name in FORBIDDEN_FILENAMES
+        or path_has_forbidden_glob(rel, name)
         or any(rel == prefix[:-1] or rel.startswith(prefix) for prefix in FORBIDDEN_PREFIX_SUFFIXES)
     )
+
+
+def contains_forbidden_content(data: bytes) -> bool:
+    return any(pattern.search(data) for pattern in SECRET_CONTENT_PATTERNS)
 
 
 def sha256(path: Path) -> str:
@@ -89,6 +109,7 @@ def stale_engine_doc(member: str, expected_root: str) -> bool:
     if "/" in rel:
         return False
     return rel.startswith("V0_") and rel.endswith(".md")
+
 
 def main() -> int:
     if len(sys.argv) != 3:
@@ -165,6 +186,15 @@ def main() -> int:
         bad = sorted({name for name in names if forbidden(name, expected_root)})
         if bad:
             failures.append("forbidden archive members: " + ", ".join(bad[:20]))
+        content_hits = sorted(
+            {
+                name
+                for name in names
+                if not name.endswith("/") and contains_forbidden_content(zf.read(name))
+            }
+        )
+        if content_hits:
+            failures.append("forbidden secret-like content in archive members: " + ", ".join(content_hits[:20]))
         stale_docs = sorted({name for name in names if stale_root_doc(name, expected_root)})
         if stale_docs:
             failures.append("stale root docs in archive: " + ", ".join(stale_docs[:20]))
