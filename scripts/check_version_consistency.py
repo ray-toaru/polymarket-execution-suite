@@ -20,6 +20,14 @@ LOCAL_RUST_PACKAGES = {
     "pmx-store",
     "pmx-official-sdk-adapter",
 }
+REQUIRED_SUBMODULE_FILES = [
+    "hermes-polymarket-executor-adapter/pyproject.toml",
+    "hermes-polymarket-executor-adapter/src/hermes_polymarket_executor_adapter/__init__.py",
+    "polymarket-execution-engine/Cargo.toml",
+    "polymarket-execution-engine/release/manifest.json",
+    "polymarket-execution-engine/.github/workflows/ci.yml",
+    "polymarket-execution-engine/validation/run_current_gates.sh",
+]
 ACTIVE_DOCS = [
     "README.md",
     "PROJECT_ARCHITECTURE.md",
@@ -59,6 +67,17 @@ def regex_extract(failures: list[str], label: str, text: str, pattern: str) -> s
         failures.append(f"{label}: pattern not found: {pattern}")
         return ""
     return match.group(1)
+
+
+def require_submodules_initialized(root: Path, failures: list[str]) -> bool:
+    missing = [rel for rel in REQUIRED_SUBMODULE_FILES if not (root / rel).is_file()]
+    if missing:
+        failures.append(
+            "required submodule files are missing; run `git submodule update --init --recursive`: "
+            + ", ".join(missing)
+        )
+        return False
+    return True
 
 
 def cargo_lock_versions(path: Path) -> dict[str, str]:
@@ -111,52 +130,31 @@ def validate_versions(root: Path = ROOT) -> list[str]:
     if not EXPECTED_RE.match(suite_version):
         failures.append(f"VERSION is not semver x.y.z: {suite_version!r}")
 
+    submodules_ready = require_submodules_initialized(root, failures)
     matrix_versions = component_versions(root, failures)
     matrix_suite_version = matrix_versions.get("suite", "")
     matrix_engine_version = matrix_versions.get("engine", "")
     matrix_adapter_version = matrix_versions.get("adapter", "")
     expect_equal(failures, "component matrix suite version", matrix_suite_version, suite_version)
+    if not submodules_ready:
+        return failures
 
-    pyproject_version = regex_extract(
-        failures,
-        "hermes pyproject version",
-        read_from(root, "hermes-polymarket-executor-adapter/pyproject.toml"),
-        r'^version = "([^"]+)"',
-    )
+    pyproject_version = regex_extract(failures, "hermes pyproject version", read_from(root, "hermes-polymarket-executor-adapter/pyproject.toml"), r'^version = "([^"]+)"')
     expect_equal(failures, "component matrix Hermes adapter version", matrix_adapter_version, pyproject_version)
 
-    init_version = regex_extract(
-        failures,
-        "hermes package __version__",
-        read_from(root, "hermes-polymarket-executor-adapter/src/hermes_polymarket_executor_adapter/__init__.py"),
-        r'^__version__ = "([^"]+)"',
-    )
+    init_version = regex_extract(failures, "hermes package __version__", read_from(root, "hermes-polymarket-executor-adapter/src/hermes_polymarket_executor_adapter/__init__.py"), r'^__version__ = "([^"]+)"')
     expect_equal(failures, "hermes package __version__", init_version, pyproject_version)
 
-    workspace_version = regex_extract(
-        failures,
-        "execution workspace version",
-        read_from(root, "polymarket-execution-engine/Cargo.toml"),
-        r'^version = "([^"]+)"',
-    )
+    workspace_version = regex_extract(failures, "execution workspace version", read_from(root, "polymarket-execution-engine/Cargo.toml"), r'^version = "([^"]+)"')
     expect_equal(failures, "component matrix execution engine version", matrix_engine_version, workspace_version)
 
-    adapter_version = regex_extract(
-        failures,
-        "official sdk adapter version",
-        read_from(root, "polymarket-execution-engine/adapters/pmx-official-sdk-adapter/Cargo.toml"),
-        r'^version = "([^"]+)"',
-    )
+    adapter_version = regex_extract(failures, "official sdk adapter version", read_from(root, "polymarket-execution-engine/adapters/pmx-official-sdk-adapter/Cargo.toml"), r'^version = "([^"]+)"')
     expect_equal(failures, "official sdk adapter version", adapter_version, workspace_version)
 
     manifest = json.loads(read_from(root, "polymarket-execution-engine/release/manifest.json"))
     expect_equal(failures, "release manifest version", manifest.get("version", ""), suite_version)
     status = manifest.get("status", "")
-    if (
-        "source-candidate" not in status
-        and "shadow-ready-candidate" not in status
-        and "production-live-candidate" not in status
-    ):
+    if "source-candidate" not in status and "shadow-ready-candidate" not in status and "production-live-candidate" not in status:
         failures.append("release manifest status must explicitly say source-candidate, shadow-ready-candidate, or production-live-candidate")
     if "not-production" not in manifest.get("status", ""):
         failures.append("release manifest status must explicitly say not-production")
@@ -193,10 +191,7 @@ def validate_versions(root: Path = ROOT) -> list[str]:
             if expected_minor_marker not in text and "validation-promotion" not in text:
                 missing_doc_refs.append(doc)
     if missing_doc_refs:
-        failures.append(
-            f"active docs missing {expected_minor_marker} marker: "
-            + ", ".join(missing_doc_refs)
-        )
+        failures.append(f"active docs missing {expected_minor_marker} marker: " + ", ".join(missing_doc_refs))
     return failures
 
 
