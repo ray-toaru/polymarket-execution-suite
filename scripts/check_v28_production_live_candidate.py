@@ -8,6 +8,7 @@ all been refreshed together for the exact v0.28 source.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import re
 from pathlib import Path
@@ -56,6 +57,14 @@ def load_json(path: Path) -> dict[str, Any]:
     return data
 
 
+def load_script(path: Path, name: str):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
 def component_matrix_versions(text: str) -> dict[str, str]:
     versions: dict[str, str] = {}
     for line in text.splitlines():
@@ -85,7 +94,24 @@ def require_false(blockers: list[str], data: dict[str, Any], key: str, label: st
         blockers.append(f"{label}.{key} must remain false for v0.28 production-live-candidate")
 
 
-def evaluate(root: Path = ROOT, target_version: str = TARGET_VERSION) -> dict[str, Any]:
+def validate_artifact(root: Path, artifact: Path, target_version: str) -> list[str]:
+    checker_path = root / "scripts" / "check_release_artifact.py"
+    if not checker_path.exists() or not artifact.exists():
+        return []
+    checker = load_script(checker_path, "check_release_artifact_for_v28")
+    import sys
+    old_argv = sys.argv[:]
+    try:
+        sys.argv = [str(checker_path), str(artifact), target_version]
+        rc = checker.main()
+    finally:
+        sys.argv = old_argv
+    if rc != 0:
+        return ["release artifact failed check_release_artifact.py"]
+    return []
+
+
+def evaluate(root: Path = ROOT, target_version: str = TARGET_VERSION, *, require_artifact_validation: bool = False) -> dict[str, Any]:
     blockers: list[str] = []
     warnings: list[str] = []
 
@@ -157,6 +183,9 @@ def evaluate(root: Path = ROOT, target_version: str = TARGET_VERSION) -> dict[st
     elif dist_index:
         blockers.append("dist INDEX.json current_release_artifact must be an object")
 
+    if require_artifact_validation:
+        blockers.extend(validate_artifact(root, artifact, target_version))
+
     return {
         "status": "ready" if not blockers else "not_ready",
         "target_version": target_version,
@@ -170,8 +199,9 @@ def evaluate(root: Path = ROOT, target_version: str = TARGET_VERSION) -> dict[st
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--require-ready", action="store_true")
+    parser.add_argument("--target-version", default=TARGET_VERSION)
     args = parser.parse_args(argv)
-    report = evaluate(ROOT)
+    report = evaluate(ROOT, args.target_version, require_artifact_validation=args.require_ready)
     print(json.dumps(report, indent=2, sort_keys=True))
     if args.require_ready and report["status"] != "ready":
         return 1
