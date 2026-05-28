@@ -20,6 +20,22 @@ def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text())
 
 
+def version_tuple(version: str) -> tuple[int, ...]:
+    try:
+        return tuple(int(part) for part in version.split("."))
+    except ValueError:
+        return ()
+
+
+def allowed_artifact_classes(expected_version: str) -> set[str]:
+    if version_tuple(expected_version) >= (0, 28, 0):
+        return {"production_live_candidate_non_live_by_default"}
+    return {
+        "controlled_real_funds_canary_source_candidate_non_live",
+        "production_live_candidate_non_live_by_default",
+    }
+
+
 def validate(dist: Path, expected_version: str) -> list[str]:
     failures: list[str] = []
     index_path = dist / "INDEX.json"
@@ -51,12 +67,9 @@ def validate(dist: Path, expected_version: str) -> list[str]:
         failures.append("dist must contain exactly one current versioned release artifact")
 
     artifact_class = artifact.get("artifact_class")
-    allowed_classes = {
-        "controlled_real_funds_canary_source_candidate_non_live",
-        "production_live_candidate_non_live_by_default",
-    }
+    allowed_classes = allowed_artifact_classes(expected_version)
     if artifact_class not in allowed_classes:
-        failures.append("INDEX.json current_release_artifact.artifact_class is not recognized")
+        failures.append("INDEX.json current_release_artifact.artifact_class is not valid for expected version")
     if artifact.get("validated_release") is not False:
         failures.append("INDEX.json must keep validated_release=false for this non-live candidate")
     if artifact.get("production_ready") is not False:
