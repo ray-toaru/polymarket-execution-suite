@@ -10,22 +10,15 @@ import os
 import re
 import subprocess
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
 PIPELINE_SCRIPT = ROOT / "scripts" / "run_controlled_canary_pipeline.py"
-ENV_CHECK_SCRIPT = (
-    ROOT / "polymarket-execution-engine" / "validation" / "check_active_profile_consistency.py"
-)
-ADAPTER_MANIFEST = (
-    ROOT
-    / "polymarket-execution-engine"
-    / "adapters"
-    / "pmx-official-sdk-adapter"
-    / "Cargo.toml"
-)
+ENV_CHECK_SCRIPT = ROOT / "polymarket-execution-engine" / "validation" / "check_active_profile_consistency.py"
+ADAPTER_MANIFEST = ROOT / "polymarket-execution-engine" / "adapters" / "pmx-official-sdk-adapter" / "Cargo.toml"
 PREFLIGHT_GATE_ENV_VARS = [
     "PMX_KILL_SWITCH_OPEN",
     "PMX_RUNTIME_WORKER_HEALTHY",
@@ -36,11 +29,7 @@ PREFLIGHT_GATE_ENV_VARS = [
     "PMX_CANCEL_ONLY_FALLBACK_READY",
     "PMX_BALANCE_ALLOWANCE_CHECKED",
 ]
-ARMED_GATE_ENV_VARS = [
-    "PMX_ALLOW_LIVE_SUBMIT",
-    "PMX_ALLOW_REAL_FUNDS_CANARY",
-    *PREFLIGHT_GATE_ENV_VARS,
-]
+ARMED_GATE_ENV_VARS = ["PMX_ALLOW_LIVE_SUBMIT", "PMX_ALLOW_REAL_FUNDS_CANARY", *PREFLIGHT_GATE_ENV_VARS]
 REQUIRED_GATE_ENV_VARS = ARMED_GATE_ENV_VARS
 HEX64_RE = re.compile(r"^[0-9a-f]{64}$")
 SAFE_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{8,128}$")
@@ -76,6 +65,14 @@ def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text())
 
 
+def sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def resolve(path: Path) -> Path:
     return path if path.is_absolute() else ROOT / path
 
@@ -98,6 +95,16 @@ def require_hex64(data: dict[str, Any], field: str) -> str:
     if not HEX64_RE.fullmatch(value):
         raise SystemExit(f"{field} must be lowercase 64-hex")
     return value
+
+
+def parse_decimal(value: object, field: str) -> Decimal:
+    try:
+        parsed = Decimal(str(value))
+    except (InvalidOperation, ValueError) as exc:
+        raise SystemExit(f"{field} must be decimal") from exc
+    if not parsed.is_finite() or parsed < 0:
+        raise SystemExit(f"{field} must be finite and non-negative")
+    return parsed
 
 
 def parse_rfc3339_utc(value: str, field: str) -> datetime:
@@ -126,13 +133,53 @@ def validate_approval(path: Path) -> dict[str, Any]:
         "workspace_manifest_sha256",
         "archived_manifest_sha256",
         "market_candidate_sha256",
+        "runtime_truth_sha256",
+        "approval_request_sha256",
+        "dual_control_review_sha256",
     ]:
         require_hex64(data, field)
     require_text(data, "account_id")
+    require_text(data, "active_profile_ref")
     expires_at = require_text(data, "expires_at")
     if parse_rfc3339_utc(expires_at, "expires_at") <= datetime.now(timezone.utc):
         raise SystemExit("approval is expired")
+    max_order = parse_decimal(data.get("max_order_notional_usd"), "max_order_notional_usd")
+    max_daily = parse_decimal(data.get("max_daily_notional_usd"), "max_daily_notional_usd")
+    candidate_notional = parse_decimal(data.get("candidate_estimated_order_notional_usd", "0"), "candidate_estimated_order_notional_usd")
+    if max_daily < max_order:
+        raise SystemExit("approval max_daily_notional_usd must be >= max_order_notional_usd")
+    if candidate_notional and (candidate_notional > max_order or candidate_notional > max_daily):
+        raise SystemExit("approval risk limits do not cover candidate notional")
     return data
+
+
+def validate_package_review(path: Path, approval: dict[str, Any], runtime_truth_summary: dict[str, Any], decision_summary: dict[str, Any]) -> dict[str, Any]:
+    review = load_json(path)
+    if review.get("status") != "reviewed_go_package_ready_single_attempt":
+        raise SystemExit("review.json status must be reviewed_go_package_ready_single_attempt")
+    for field, approval_field in [
+        ("artifact_sha256", "artifact_sha256"),
+        ("workspace_manifest_sha256", "workspace_manifest_sha256"),
+        ("archived_manifest_sha256", "archived_manifest_sha256"),
+        ("candidate_market_sha256", "market_candidate_sha256"),
+        ("runtime_truth_sha256", "runtime_truth_sha256"),
+        ("approval_hash", "approval_hash"),
+        ("approval_request_sha256", "approval_request_sha256"),
+        ("dual_control_review_sha256", "dual_control_review_sha256"),
+    ]:
+        value = review.get(field)
+        expected = approval.get(approval_field)
+        if value != expected:
+            raise SystemExit(f"review.json {field} does not match approval.{approval_field}")
+    if review.get("runtime_truth_sha256") != runtime_truth_summary["sha256"]:
+        raise SystemExit("review.json runtime_truth_sha256 does not match runtime truth file")
+    if review.get("decision_id") != decision_summary["decision_id"]:
+        raise SystemExit("review.json decision_id does not match release decision")
+    if review.get("single_attempt_only") is not True:
+        raise SystemExit("review.json must enforce single_attempt_only")
+    if review.get("operator_reuse_after_consumption_allowed") is not False:
+        raise SystemExit("review.json must forbid approval reuse after consumption")
+    return review
 
 
 def plan_hash_from_package(approval: dict[str, Any]) -> str:
@@ -142,6 +189,9 @@ def plan_hash_from_package(approval: dict[str, Any]) -> str:
             approval["artifact_sha256"],
             approval["evidence_manifest_sha256"],
             approval["market_candidate_sha256"],
+            approval["runtime_truth_sha256"],
+            approval["approval_request_sha256"],
+            approval["dual_control_review_sha256"],
         ]
     )
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
@@ -164,11 +214,7 @@ def gate_env_vars_for_mode(mode: str) -> list[str]:
 
 
 def missing_gate_env(mode: str) -> list[str]:
-    missing: list[str] = []
-    for key in gate_env_vars_for_mode(mode):
-        if str(os.environ.get(key, "")).strip() != "1":
-            missing.append(key)
-    return missing
+    return [key for key in gate_env_vars_for_mode(mode) if str(os.environ.get(key, "")).strip() != "1"]
 
 
 def parse_env_file(path: Path) -> dict[str, str]:
@@ -232,24 +278,27 @@ def build_invocation(
     approval_file = require_file(package_dir / "approval.json", "approval")
     market_file = require_file(package_dir / "candidate-market.json", "candidate market")
     runtime_truth_file = require_file(package_dir / "runtime-truth.json", "runtime truth")
+    review_file = require_file(package_dir / "review.json", "package review")
 
     decision_summary = pipeline.validate_reviewed_go_decision_file(release_decision_file)
     runtime_truth_summary = pipeline.validate_runtime_truth_file(runtime_truth_file)
     pipeline.validate_candidate_file(market_file)
     approval = validate_approval(approval_file)
     env_summary = env_check.evaluate_env_file(env_file, expected_account_id=approval["account_id"])
+    validate_package_review(review_file, approval, runtime_truth_summary, decision_summary)
 
+    if approval["active_profile_ref"] != env_summary["active_profile_ref"]:
+        raise SystemExit("approval active_profile_ref does not match runtime env")
     if approval["artifact_sha256"] != runtime_truth_summary["artifact_sha256"]:
         raise SystemExit("approval artifact_sha256 does not match runtime truth artifact_sha256")
     if approval["workspace_manifest_sha256"] != runtime_truth_summary["workspace_manifest_sha256"]:
         raise SystemExit("approval workspace_manifest_sha256 does not match runtime truth")
     if approval["archived_manifest_sha256"] != runtime_truth_summary["archived_manifest_sha256"]:
         raise SystemExit("approval archived_manifest_sha256 does not match runtime truth")
+    if approval["runtime_truth_sha256"] != runtime_truth_summary["sha256"]:
+        raise SystemExit("approval runtime_truth_sha256 does not match runtime truth file")
 
-    mode_flag = {
-        "preflight": "--preflight-only",
-        "armed": "--armed",
-    }.get(mode)
+    mode_flag = {"preflight": "--preflight-only", "armed": "--armed"}.get(mode)
     if mode_flag is None:
         raise SystemExit(f"unsupported mode: {mode}")
 
@@ -303,14 +352,7 @@ def build_invocation(
         "--allow-real-funds-canary-config",
     ]
     if mode == "armed":
-        command.extend(
-            [
-                "--approval-consumed-marker",
-                str(marker),
-                "--report-file",
-                str(report),
-            ]
-        )
+        command.extend(["--approval-consumed-marker", str(marker), "--report-file", str(report)])
 
     return {
         "status": "ready",
@@ -341,11 +383,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--plan-hash")
     parser.add_argument("--report-file", type=Path)
     parser.add_argument("--approval-consumed-marker", type=Path)
-    parser.add_argument(
-        "--run",
-        action="store_true",
-        help="Execute the resolved cargo command. Without this flag the script only prints the invocation plan.",
-    )
+    parser.add_argument("--run", action="store_true", help="Execute the resolved cargo command. Without this flag the script only prints the invocation plan.")
     return parser.parse_args()
 
 
@@ -362,9 +400,7 @@ def main() -> int:
         execution_id=args.execution_id,
         plan_hash=args.plan_hash,
         report_file=resolve(args.report_file) if args.report_file else None,
-        approval_consumed_marker=resolve(args.approval_consumed_marker)
-        if args.approval_consumed_marker
-        else None,
+        approval_consumed_marker=resolve(args.approval_consumed_marker) if args.approval_consumed_marker else None,
     )
     if not args.run:
         print(json.dumps(invocation, indent=2, sort_keys=True))
@@ -372,18 +408,9 @@ def main() -> int:
 
     missing = invocation["missing_gate_env_vars"]
     if missing:
-        raise SystemExit(
-            "cannot execute reviewed-go canary; missing required gate env vars: "
-            + ", ".join(missing)
-        )
+        raise SystemExit("cannot execute reviewed-go canary; missing required gate env vars: " + ", ".join(missing))
 
-    completed = subprocess.run(
-        invocation["command"],
-        cwd=ROOT,
-        env=build_subprocess_env(env_file, args.mode),
-        text=True,
-        check=False,
-    )
+    completed = subprocess.run(invocation["command"], cwd=ROOT, env=build_subprocess_env(env_file, args.mode), text=True, check=False)
     return completed.returncode
 
 
