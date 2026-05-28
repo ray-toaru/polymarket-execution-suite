@@ -65,13 +65,7 @@ def prepare_bundle(
     approval = load_module(APPROVAL_SCRIPT, "prepare_operator_approval_request")
     source_values = activate.load_profile_source(source_env_file)
     activated = activate.activate_profile(profile, source_values)
-    activate.write_runtime_env(runtime_env_output, activated)
 
-    account_id, active_profile_ref = approval.resolve_runtime_identity(
-        runtime_env_file=runtime_env_output,
-        account_id=None,
-        active_profile_ref=None,
-    )
     release_zip_path = release_zip or approval.DEFAULT_RELEASE_ZIP
     sidecar = approval.load_release_sidecar(release_zip_path)
     candidate = approval.load_json(candidate_market_file)
@@ -85,6 +79,9 @@ def prepare_bundle(
     )
     if runtime_artifact != sidecar["artifact_sha256"]:
         raise SystemExit("runtime truth artifact hash does not match release sidecar")
+
+    account_id = activated["PMX_ACTIVE_ACCOUNT_ID"]
+    active_profile_ref = activated["PMX_ACTIVE_PROFILE_REF"]
     request = approval.build_request(
         account_id=account_id,
         active_profile_ref=active_profile_ref,
@@ -104,6 +101,7 @@ def prepare_bundle(
     )
     approval_request_output.parent.mkdir(parents=True, exist_ok=True)
     approval_request_output.write_text(json.dumps(request, indent=2, sort_keys=True) + "\n")
+    activate.write_runtime_env(runtime_env_output, activated, write_secrets=True)
     return {
         "status": "pass",
         "profile": activated["PMX_ACTIVE_ACCOUNT_PROFILE"],
@@ -130,27 +128,14 @@ def main() -> int:
         if args.approval_request_output.is_absolute()
         else ROOT / args.approval_request_output
     )
-    candidate_market_file = (
-        args.candidate_market_file
-        if args.candidate_market_file.is_absolute()
-        else ROOT / args.candidate_market_file
-    )
-    runtime_truth_file = (
-        args.runtime_truth_file
-        if args.runtime_truth_file.is_absolute()
-        else ROOT / args.runtime_truth_file
-    )
-    release_zip = None
-    if args.release_zip is not None:
-        release_zip = args.release_zip if args.release_zip.is_absolute() else ROOT / args.release_zip
     result = prepare_bundle(
         profile=args.profile,
         source_env_file=source_env,
         runtime_env_output=runtime_env_output,
         approval_request_output=approval_request_output,
-        candidate_market_file=candidate_market_file,
-        runtime_truth_file=runtime_truth_file,
-        release_zip=release_zip,
+        candidate_market_file=args.candidate_market_file if args.candidate_market_file.is_absolute() else ROOT / args.candidate_market_file,
+        runtime_truth_file=args.runtime_truth_file if args.runtime_truth_file.is_absolute() else ROOT / args.runtime_truth_file,
+        release_zip=args.release_zip if args.release_zip is None or args.release_zip.is_absolute() else ROOT / args.release_zip,
         root_ci_run_id=args.root_ci_run_id,
         hermes_ci_run_id=args.hermes_ci_run_id,
         execution_engine_ci_run_id=args.execution_engine_ci_run_id,
@@ -161,7 +146,7 @@ def main() -> int:
         max_daily_notional_usd=args.max_daily_notional_usd,
         valid_for_minutes=args.valid_for_minutes,
     )
-    print(json.dumps(result, sort_keys=True))
+    print(json.dumps(result, indent=2, sort_keys=True))
     return 0
 
 
