@@ -141,7 +141,14 @@ def validate_approval_request(request: dict[str, Any]) -> None:
         raise SystemExit("approval request archived/evidence manifest hashes must match")
 
 
-def external_refs(external: dict[str, Any], *, dual_control_review_ref: str, dual_control_review_sha256: str | None = None) -> dict[str, str]:
+def external_refs(
+    external: dict[str, Any],
+    *,
+    dual_control_review_ref: str,
+    dual_control_review_sha256: str | None = None,
+    approval_request_sha256: str | None = None,
+    runtime_truth_sha256: str | None = None,
+) -> dict[str, str]:
     if has_placeholder(external):
         raise SystemExit("external references must not contain placeholders")
     refs: dict[str, str] = {}
@@ -156,6 +163,10 @@ def external_refs(external: dict[str, Any], *, dual_control_review_ref: str, dua
     refs["operator_dual_control_review_ref"] = dual_control_review_ref
     if dual_control_review_sha256 is not None:
         refs["operator_dual_control_review_sha256"] = dual_control_review_sha256
+    if approval_request_sha256 is not None:
+        refs["approval_request_sha256"] = approval_request_sha256
+    if runtime_truth_sha256 is not None:
+        refs["runtime_truth_sha256"] = runtime_truth_sha256
     return refs
 
 
@@ -222,7 +233,13 @@ def build_decision(request: dict[str, Any], external: dict[str, Any], *, decisio
     decision_reason = require_text(decision_reason, "decision_reason")
     validate_approval_request(request)
     dual_control_review_ref = validate_dual_control_review(dual_control_review, request, approval_request_sha256=approval_request_sha256)
-    refs = external_refs(external, dual_control_review_ref=dual_control_review_ref, dual_control_review_sha256=dual_control_review_sha256)
+    refs = external_refs(
+        external,
+        dual_control_review_ref=dual_control_review_ref,
+        dual_control_review_sha256=dual_control_review_sha256,
+        approval_request_sha256=approval_request_sha256,
+        runtime_truth_sha256=request["runtime_truth_sha256"],
+    )
     decision = {
         "schema_version": 1,
         "decision_id": decision_id,
@@ -238,8 +255,6 @@ def build_decision(request: dict[str, Any], external: dict[str, Any], *, decisio
         "workspace_manifest_sha256": request["workspace_manifest_sha256"],
         "archived_manifest_sha256": request["archived_manifest_sha256"],
         "market_candidate_sha256": request["market_candidate_sha256"],
-        "runtime_truth_sha256": request["runtime_truth_sha256"],
-        "approval_request_sha256": approval_request_sha256,
         "github_evidence": request["github_evidence"],
         "external_references": refs,
         "risk_limits": {
