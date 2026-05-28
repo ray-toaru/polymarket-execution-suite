@@ -15,12 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PREPARE_CANDIDATE_SCRIPT = ROOT / "scripts" / "prepare_canary_candidate_market.py"
 REVIEW_BUNDLE_SCRIPT = ROOT / "scripts" / "prepare_canary_review_bundle.py"
 APPROVAL_REQUEST_SCRIPT = ROOT / "scripts" / "prepare_operator_approval_request.py"
-STORE_TRUTH_SCRIPT = (
-    ROOT
-    / "polymarket-execution-engine"
-    / "validation"
-    / "run_real_funds_canary_store_truth_cli_preflight.py"
-)
+STORE_TRUTH_SCRIPT = ROOT / "polymarket-execution-engine" / "validation" / "run_real_funds_canary_store_truth_cli_preflight.py"
 
 
 def load_module(path: Path, name: str):
@@ -46,7 +41,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--root-ci-run-id", required=True)
     parser.add_argument("--hermes-ci-run-id", required=True)
     parser.add_argument("--execution-engine-ci-run-id", required=True)
-    parser.add_argument("--credentialed-sdk-run-id", default="local-current-gates-20260523")
+    parser.add_argument("--credentialed-sdk-run-id", required=True)
     parser.add_argument("--operator-identity-ref", required=True)
     parser.add_argument("--approval-ticket-ref", required=True)
     parser.add_argument("--human-review-ref", required=True)
