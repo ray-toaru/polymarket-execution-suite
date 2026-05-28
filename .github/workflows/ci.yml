@@ -95,6 +95,9 @@ jobs:
       - name: Validate root and API contracts
         run: python scripts/validate_contracts.py
 
+      - name: Audit v0.28 production-live-candidate readiness
+        run: python scripts/check_v28_production_live_candidate.py
+
       - name: Run integration Python tests
         run: python -m unittest discover -s tests -p "test_*.py"
 
@@ -111,3 +114,7 @@ jobs:
         run: |
           artifact="$(python scripts/package_release.py | tail -n 1)"
           python scripts/check_release_artifact.py "$artifact" "$(cat VERSION)"
+
+      - name: Enforce v0.28 release readiness on release tags
+        if: startsWith(github.ref, 'refs/tags/v0.28')
+        run: python scripts/check_v28_production_live_candidate.py --require-ready --target-version "$(cat VERSION)"
