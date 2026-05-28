@@ -7,6 +7,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,9 +26,7 @@ ADAPTER_MANIFEST = (
     / "pmx-official-sdk-adapter"
     / "Cargo.toml"
 )
-REQUIRED_GATE_ENV_VARS = [
-    "PMX_ALLOW_LIVE_SUBMIT",
-    "PMX_ALLOW_REAL_FUNDS_CANARY",
+PREFLIGHT_GATE_ENV_VARS = [
     "PMX_KILL_SWITCH_OPEN",
     "PMX_RUNTIME_WORKER_HEALTHY",
     "PMX_GEOBLOCK_ALLOWED",
@@ -37,6 +36,32 @@ REQUIRED_GATE_ENV_VARS = [
     "PMX_CANCEL_ONLY_FALLBACK_READY",
     "PMX_BALANCE_ALLOWANCE_CHECKED",
 ]
+ARMED_GATE_ENV_VARS = [
+    "PMX_ALLOW_LIVE_SUBMIT",
+    "PMX_ALLOW_REAL_FUNDS_CANARY",
+    *PREFLIGHT_GATE_ENV_VARS,
+]
+REQUIRED_GATE_ENV_VARS = ARMED_GATE_ENV_VARS
+HEX64_RE = re.compile(r"^[0-9a-f]{64}$")
+SAFE_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{8,128}$")
+ENV_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+PASSTHROUGH_ENV_KEYS = {
+    "PATH",
+    "HOME",
+    "USER",
+    "LOGNAME",
+    "TMPDIR",
+    "TEMP",
+    "TMP",
+    "CARGO_HOME",
+    "RUSTUP_HOME",
+    "RUST_BACKTRACE",
+    "SSL_CERT_FILE",
+    "SSL_CERT_DIR",
+    "HTTPS_PROXY",
+    "HTTP_PROXY",
+    "NO_PROXY",
+}
 
 
 def load_module(path: Path, name: str):
@@ -68,6 +93,26 @@ def require_text(data: dict[str, Any], field: str) -> str:
     return value.strip()
 
 
+def require_hex64(data: dict[str, Any], field: str) -> str:
+    value = require_text(data, field)
+    if not HEX64_RE.fullmatch(value):
+        raise SystemExit(f"{field} must be lowercase 64-hex")
+    return value
+
+
+def parse_rfc3339_utc(value: str, field: str) -> datetime:
+    text = value.strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError as exc:
+        raise SystemExit(f"{field} must be RFC3339 datetime") from exc
+    if parsed.tzinfo is None:
+        raise SystemExit(f"{field} must include timezone")
+    return parsed.astimezone(timezone.utc)
+
+
 def validate_approval(path: Path) -> dict[str, Any]:
     data = load_json(path)
     if data.get("scope") != "REAL_FUNDS_CANARY":
@@ -82,8 +127,11 @@ def validate_approval(path: Path) -> dict[str, Any]:
         "archived_manifest_sha256",
         "market_candidate_sha256",
     ]:
-        require_text(data, field)
+        require_hex64(data, field)
     require_text(data, "account_id")
+    expires_at = require_text(data, "expires_at")
+    if parse_rfc3339_utc(expires_at, "expires_at") <= datetime.now(timezone.utc):
+        raise SystemExit("approval is expired")
     return data
 
 
@@ -103,16 +151,65 @@ def timestamp_tag() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
-def default_marker_path(package_dir: Path) -> Path:
-    return package_dir / f"approval-consumed-{timestamp_tag()}.json"
+def default_marker_path(package_dir: Path, approval_hash: str, execution_id: str) -> Path:
+    return package_dir / f"approval-consumed-{approval_hash[:12]}-{execution_id}-{timestamp_tag()}.json"
 
 
-def missing_gate_env() -> list[str]:
+def gate_env_vars_for_mode(mode: str) -> list[str]:
+    if mode == "preflight":
+        return PREFLIGHT_GATE_ENV_VARS
+    if mode == "armed":
+        return ARMED_GATE_ENV_VARS
+    raise SystemExit(f"unsupported mode: {mode}")
+
+
+def missing_gate_env(mode: str) -> list[str]:
     missing: list[str] = []
-    for key in REQUIRED_GATE_ENV_VARS:
+    for key in gate_env_vars_for_mode(mode):
         if str(os.environ.get(key, "")).strip() != "1":
             missing.append(key)
     return missing
+
+
+def parse_env_file(path: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for line_number, raw_line in enumerate(path.read_text().splitlines(), start=1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            raise SystemExit(f"invalid env assignment in {path}:{line_number}")
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if not ENV_KEY_RE.fullmatch(key):
+            raise SystemExit(f"invalid env key in {path}:{line_number}: {key}")
+        if key.startswith("PMX_PROFILE_"):
+            raise SystemExit(f"runtime env file must not contain source profile inventory: {key}")
+        if key in values:
+            raise SystemExit(f"duplicate env key in {path}:{line_number}: {key}")
+        values[key] = value.strip().strip('"').strip("'")
+    return values
+
+
+def build_subprocess_env(env_file: Path, mode: str) -> dict[str, str]:
+    env = {key: value for key, value in os.environ.items() if key in PASSTHROUGH_ENV_KEYS}
+    env.update(parse_env_file(env_file))
+    for key in gate_env_vars_for_mode(mode):
+        value = os.environ.get(key)
+        if value is not None:
+            env[key] = value
+    return env
+
+
+def reject_consumed_package(package_dir: Path) -> None:
+    consumed = sorted(package_dir.glob("approval-consumed-*.json"))
+    if consumed:
+        raise SystemExit("reviewed-go package is already consumed: " + str(consumed[0]))
+
+
+def validate_override(value: str | None, field: str, pattern: re.Pattern[str]) -> None:
+    if value is not None and not pattern.fullmatch(value):
+        raise SystemExit(f"{field} has unsupported format")
 
 
 def build_invocation(
@@ -130,6 +227,7 @@ def build_invocation(
     pipeline = load_module(PIPELINE_SCRIPT, "run_controlled_canary_pipeline")
     env_check = load_module(ENV_CHECK_SCRIPT, "check_active_profile_consistency")
 
+    reject_consumed_package(package_dir)
     release_decision_file = require_file(package_dir / "release-decision.json", "release decision")
     approval_file = require_file(package_dir / "approval.json", "approval")
     market_file = require_file(package_dir / "candidate-market.json", "candidate market")
@@ -155,11 +253,16 @@ def build_invocation(
     if mode_flag is None:
         raise SystemExit(f"unsupported mode: {mode}")
 
+    validate_override(idempotency_key, "idempotency_key", SAFE_ID_RE)
+    validate_override(execution_id, "execution_id", SAFE_ID_RE)
+    validate_override(plan_hash, "plan_hash", HEX64_RE)
     idempotency = idempotency_key or f"canary-{approval['approval_hash'][:12]}-{mode}"
     execution = execution_id or f"exec-{approval['approval_hash'][:12]}"
     plan = plan_hash or plan_hash_from_package(approval)
     report = report_file or (package_dir / "post-canary-report.json")
-    marker = approval_consumed_marker or default_marker_path(package_dir)
+    marker = approval_consumed_marker or default_marker_path(package_dir, approval["approval_hash"], execution)
+    if marker.exists():
+        raise SystemExit(f"approval consumed marker already exists: {marker}")
 
     command = [
         "cargo",
@@ -220,8 +323,8 @@ def build_invocation(
         "decision_id": decision_summary["decision_id"],
         "runtime_truth_sha256": runtime_truth_summary["sha256"],
         "command": command,
-        "required_gate_env_vars": REQUIRED_GATE_ENV_VARS,
-        "missing_gate_env_vars": missing_gate_env(),
+        "required_gate_env_vars": gate_env_vars_for_mode(mode),
+        "missing_gate_env_vars": missing_gate_env(mode),
         "report_file": str(report) if mode == "armed" else None,
         "approval_consumed_marker": str(marker) if mode == "armed" else None,
     }
@@ -248,9 +351,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    package_dir = resolve(args.package_dir)
+    env_file = resolve(args.env_file)
     invocation = build_invocation(
-        package_dir=resolve(args.package_dir),
-        env_file=resolve(args.env_file),
+        package_dir=package_dir,
+        env_file=env_file,
         mode=args.mode,
         daily_used_notional_usd=args.daily_used_notional_usd,
         idempotency_key=args.idempotency_key,
@@ -275,6 +380,7 @@ def main() -> int:
     completed = subprocess.run(
         invocation["command"],
         cwd=ROOT,
+        env=build_subprocess_env(env_file, args.mode),
         text=True,
         check=False,
     )
