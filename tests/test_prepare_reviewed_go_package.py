@@ -37,10 +37,46 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
         }
 
     def candidate(self) -> dict:
-        return {"side": "BUY", "order_type": "GTC", "post_only": True}
+        return {
+            "market_id": "condition-1",
+            "token_id": "123",
+            "human_review_ref": "ticket://candidate-review",
+            "side": "BUY",
+            "order_type": "GTC",
+            "post_only": True,
+            "active": True,
+            "accepting_orders": True,
+            "closed": False,
+            "archived": False,
+            "best_ask": "0.03",
+            "limit_price": "0.02",
+            "ask_size": "20",
+            "target_size": "5",
+            "min_order_size": "5",
+            "estimated_order_notional_usd": "0.1",
+            "exchange_rule_snapshot": {
+                "schema_version": 1,
+                "venue": "polymarket_clob",
+                "order_mode": "post_only_limit",
+                "order_type": "GTC",
+                "side": "BUY",
+                "target_size_semantics": "outcome_shares",
+                "min_share_size": "5",
+                "min_tick_size": "0.01",
+                "source": "public_clob_book_plus_reviewed_remote_rule",
+                "captured_at": "2026-05-23T00:00:00+00:00",
+                "expires_at": "2099-01-01T00:00:00+00:00",
+                "evidence_ref": "ticket://reviewed-rule",
+            },
+        }
 
     def runtime_truth(self, artifact_sha: str) -> dict:
         return {
+            "schema_version": 1,
+            "status": "reviewed_runtime_truth_candidate",
+            "source_release": "v0.28.0",
+            "scope": "REAL_FUNDS_CANARY",
+            "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
             "artifact_sha256": artifact_sha,
             "workspace_manifest_sha256": "b" * 64,
             "archived_manifest_sha256": "c" * 64,
@@ -49,7 +85,21 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
                 "remote_side_effects": False,
                 "status": "preflight_ready",
             },
+            "dependencies": [
+                {"name": name, "status": "durable_runtime_truth", "evidence_ref": f"pg://{name}"}
+                for name in [
+                    "kill_switch",
+                    "live_submit_gate",
+                    "idempotency_lease",
+                    "order_cancel_reconciliation",
+                ]
+            ],
+            "references_only_no_secret_values": True,
+            "live_submit_allowed": False,
+            "live_cancel_allowed": False,
+            "real_funds_canary_authorized": False,
             "remote_side_effects": False,
+            "production_ready_claimed": False,
         }
 
     def approval_request(self, artifact_sha: str, candidate_sha: str, runtime_sha: str) -> dict:
@@ -80,6 +130,7 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
             "risk_limits": {
                 "max_order_notional_usd": "0.2",
                 "max_daily_notional_usd": "0.2",
+                "candidate_estimated_order_notional_usd": "0.1",
             },
             "live_submit_authorized": False,
             "remote_side_effects_authorized": False,
