@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -15,7 +16,8 @@ ROOT = Path(__file__).resolve().parents[1]
 ENGINE = ROOT / "polymarket-execution-engine"
 VERSION = (ROOT / "VERSION").read_text().strip()
 VALIDATOR = ENGINE / "validation" / "validate_controlled_canary_release_decision.py"
-
+SAFE_ID_RE = re.compile(r"^[A-Za-z0-9._:/-]{8,160}$")
+PLACEHOLDER_TOKENS = ("REPLACE_WITH", "TODO", "TBD")
 
 REQUIRED_EXTERNAL_REFS = {
     "secret_custody_ref": ("secret_custody", "provider_ref"),
@@ -63,7 +65,11 @@ def sha256(path: Path) -> str:
 
 def has_placeholder(value: object) -> bool:
     if isinstance(value, str):
-        return value.startswith("REPLACE_WITH_") or not value.strip()
+        stripped = value.strip()
+        if not stripped:
+            return True
+        upper = stripped.upper()
+        return any(token in upper for token in PLACEHOLDER_TOKENS) or (stripped.startswith("<") and stripped.endswith(">"))
     if isinstance(value, dict):
         return any(has_placeholder(child) for child in value.values())
     if isinstance(value, list):
@@ -71,21 +77,33 @@ def has_placeholder(value: object) -> bool:
     return False
 
 
+def require_text(value: object, label: str, *, safe_id: bool = False) -> str:
+    if not isinstance(value, str) or has_placeholder(value):
+        raise SystemExit(f"{label} must be a non-empty non-placeholder string")
+    text = value.strip()
+    if safe_id and not SAFE_ID_RE.fullmatch(text):
+        raise SystemExit(f"{label} has unsupported format")
+    return text
+
+
+def canonical_identity(value: object, label: str) -> str:
+    return require_text(value, label).strip().casefold()
+
+
 def require_sha256(value: object, label: str) -> str:
-    if not isinstance(value, str) or len(value) != 64 or any(ch not in "0123456789abcdefABCDEF" for ch in value):
-        raise SystemExit(f"{label} must be a 64-character SHA-256 hex digest")
-    return value.lower()
+    if not isinstance(value, str) or len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
+        raise SystemExit(f"{label} must be a lowercase 64-character SHA-256 hex digest")
+    return value
 
 
 def parse_time(value: object, label: str) -> datetime:
-    if not isinstance(value, str) or not value.strip():
-        raise SystemExit(f"{label} must be an RFC3339 timestamp")
+    text = require_text(value, label)
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
     except ValueError as exc:
         raise SystemExit(f"{label} must be an RFC3339 timestamp") from exc
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
+        raise SystemExit(f"{label} must include timezone")
     return parsed.astimezone(timezone.utc)
 
 
@@ -104,8 +122,9 @@ def validate_approval_request(request: dict[str, Any]) -> None:
         raise SystemExit("approval request must not itself authorize remote side effects")
     if request.get("secrets_included") is not False:
         raise SystemExit("approval request must not include secrets")
-    if not isinstance(request.get("active_profile_ref"), str) or not request["active_profile_ref"].strip():
-        raise SystemExit("approval request active_profile_ref is required")
+    require_text(request.get("account_id"), "approval request account_id")
+    require_text(request.get("active_profile_ref"), "approval request active_profile_ref")
+    require_text(request.get("operator_identity_ref"), "approval request operator_identity_ref")
     if parse_time(request.get("expires_at"), "approval request expires_at") <= datetime.now(timezone.utc):
         raise SystemExit("approval request is expired")
     for field in [
@@ -122,12 +141,7 @@ def validate_approval_request(request: dict[str, Any]) -> None:
         raise SystemExit("approval request archived/evidence manifest hashes must match")
 
 
-def external_refs(
-    external: dict[str, Any],
-    *,
-    dual_control_review_ref: str,
-    dual_control_review_sha256: str | None = None,
-) -> dict[str, str]:
+def external_refs(external: dict[str, Any], *, dual_control_review_ref: str, dual_control_review_sha256: str | None = None) -> dict[str, str]:
     if has_placeholder(external):
         raise SystemExit("external references must not contain placeholders")
     refs: dict[str, str] = {}
@@ -138,21 +152,14 @@ def external_refs(
                 current = None
                 break
             current = current.get(part)
-        if not isinstance(current, str) or not current.strip():
-            raise SystemExit(f"external reference missing {'.'.join(path)}")
-        refs[output_key] = current
+        refs[output_key] = require_text(current, f"external reference {'.'.join(path)}")
     refs["operator_dual_control_review_ref"] = dual_control_review_ref
     if dual_control_review_sha256 is not None:
         refs["operator_dual_control_review_sha256"] = dual_control_review_sha256
     return refs
 
 
-def validate_dual_control_review(
-    review: dict[str, Any],
-    request: dict[str, Any],
-    *,
-    approval_request_sha256: str | None = None,
-) -> str:
+def validate_dual_control_review(review: dict[str, Any], request: dict[str, Any], *, approval_request_sha256: str | None = None) -> str:
     if review.get("schema_version") != 1:
         raise SystemExit("dual-control review schema_version must be 1")
     if review.get("status") != "approved":
@@ -170,22 +177,15 @@ def validate_dual_control_review(
         raise SystemExit("dual-control review reviewed_at must not be in the future")
 
     if approval_request_sha256 is not None:
-        reviewed_approval_sha = require_sha256(
-            review.get("approval_request_sha256"),
-            "dual-control review approval_request_sha256",
-        )
+        reviewed_approval_sha = require_sha256(review.get("approval_request_sha256"), "dual-control review approval_request_sha256")
         if reviewed_approval_sha != approval_request_sha256:
             raise SystemExit("dual-control review approval_request_sha256 does not match approval request file")
 
-    reviewer = review.get("reviewer_identity_ref")
-    if not isinstance(reviewer, str) or not reviewer.strip() or reviewer.startswith("REPLACE_WITH_"):
-        raise SystemExit("dual-control review reviewer_identity_ref is required")
-    if reviewer == request.get("operator_identity_ref"):
+    reviewer = require_text(review.get("reviewer_identity_ref"), "dual-control review reviewer_identity_ref")
+    if canonical_identity(reviewer, "dual-control review reviewer_identity_ref") == canonical_identity(request.get("operator_identity_ref"), "approval request operator_identity_ref"):
         raise SystemExit("dual-control reviewer must differ from operator_identity_ref")
 
-    review_ref = review.get("review_ref")
-    if not isinstance(review_ref, str) or not review_ref.strip() or review_ref.startswith("REPLACE_WITH_"):
-        raise SystemExit("dual-control review_ref is required")
+    review_ref = require_text(review.get("review_ref"), "dual-control review_ref")
 
     for field in [
         "approval_hash",
@@ -205,7 +205,7 @@ def validate_dual_control_review(
     review_limits = review.get("risk_limits", {})
     if not isinstance(request_limits, dict) or not isinstance(review_limits, dict):
         raise SystemExit("dual-control review risk_limits must be an object")
-    for field in ["max_order_notional_usd", "max_daily_notional_usd"]:
+    for field in ["max_order_notional_usd", "max_daily_notional_usd", "candidate_estimated_order_notional_usd"]:
         if review_limits.get(field) != request_limits.get(field):
             raise SystemExit(f"dual-control review risk_limits.{field} does not match approval request")
     checks = review.get("required_reviewer_checks")
@@ -217,28 +217,13 @@ def validate_dual_control_review(
     return review_ref
 
 
-def build_decision(
-    request: dict[str, Any],
-    external: dict[str, Any],
-    *,
-    decision_id: str,
-    decision_reason: str,
-    dual_control_review: dict[str, Any],
-    dual_control_review_sha256: str | None = None,
-    approval_request_sha256: str | None = None,
-) -> dict[str, Any]:
+def build_decision(request: dict[str, Any], external: dict[str, Any], *, decision_id: str, decision_reason: str, dual_control_review: dict[str, Any], dual_control_review_sha256: str | None = None, approval_request_sha256: str | None = None) -> dict[str, Any]:
+    decision_id = require_text(decision_id, "decision_id", safe_id=True)
+    decision_reason = require_text(decision_reason, "decision_reason")
     validate_approval_request(request)
-    dual_control_review_ref = validate_dual_control_review(
-        dual_control_review,
-        request,
-        approval_request_sha256=approval_request_sha256,
-    )
-    refs = external_refs(
-        external,
-        dual_control_review_ref=dual_control_review_ref,
-        dual_control_review_sha256=dual_control_review_sha256,
-    )
-    return {
+    dual_control_review_ref = validate_dual_control_review(dual_control_review, request, approval_request_sha256=approval_request_sha256)
+    refs = external_refs(external, dual_control_review_ref=dual_control_review_ref, dual_control_review_sha256=dual_control_review_sha256)
+    decision = {
         "schema_version": 1,
         "decision_id": decision_id,
         "status": "reviewed_go",
@@ -253,11 +238,14 @@ def build_decision(
         "workspace_manifest_sha256": request["workspace_manifest_sha256"],
         "archived_manifest_sha256": request["archived_manifest_sha256"],
         "market_candidate_sha256": request["market_candidate_sha256"],
+        "runtime_truth_sha256": request["runtime_truth_sha256"],
+        "approval_request_sha256": approval_request_sha256,
         "github_evidence": request["github_evidence"],
         "external_references": refs,
         "risk_limits": {
             "max_order_notional_usd": request["risk_limits"]["max_order_notional_usd"],
             "max_daily_notional_usd": request["risk_limits"]["max_daily_notional_usd"],
+            "candidate_estimated_order_notional_usd": request["risk_limits"].get("candidate_estimated_order_notional_usd"),
         },
         "required_review_signals": {signal: True for signal in REVIEW_SIGNALS},
         "live_submit_authorized": True,
@@ -274,6 +262,7 @@ def build_decision(
         "operator_identity_ref": request["operator_identity_ref"],
         "secrets_included": False,
     }
+    return decision
 
 
 def validate_decision_output(decision: dict[str, Any]) -> None:
