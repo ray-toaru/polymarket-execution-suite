@@ -3,8 +3,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
+import fnmatch
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -14,9 +16,17 @@ VERSION = (ROOT / "VERSION").read_text().strip()
 ARCHIVE_ROOT = f"polymarket_execution_suite_v{VERSION.replace('.', '_')}"
 DIST = ROOT / "dist"
 OUT = DIST / f"polymarket-execution-suite-v{VERSION}.zip"
-FORBIDDEN_PARTS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", "target", "dist"}
-FORBIDDEN_SUFFIXES = {".pyc", ".pyo", ".db", ".sqlite", ".sqlite3"}
+FORBIDDEN_PARTS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", "target", "dist", "secrets", ".secrets", "runtime-secrets"}
+FORBIDDEN_SUFFIXES = {".pyc", ".pyo", ".db", ".sqlite", ".sqlite3", ".pem", ".key", ".p12", ".pfx"}
 FORBIDDEN_FILENAMES = {".env"}
+FORBIDDEN_GLOBS = [".env*", "*.local.json", "*secret*", "*credential*"]
+SECRET_CONTENT_PATTERNS = [
+    re.compile(rb"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+    re.compile(rb"(?i)POLYMARKET_PRIVATE_KEY\s*="),
+    re.compile(rb"(?i)POLY_API_SECRET\s*="),
+    re.compile(rb"(?i)POLY_API_PASSPHRASE\s*="),
+]
+TEXT_SCAN_SUFFIXES = {".py", ".md", ".json", ".toml", ".yaml", ".yml", ".txt", ".env", ".example"}
 DETERMINISTIC_MTIME = (1980, 1, 1, 0, 0, 0)
 EXCLUDED_PREFIXES = {
     "docs/archive",
@@ -65,18 +75,36 @@ def submodule_records() -> list[dict[str, str]]:
         parts = rest.split()
         if len(parts) < 2:
             continue
-        commit = parts[0]
-        path = parts[1]
-        ref = " ".join(parts[2:]).strip()
         records.append(
             {
-                "path": path,
-                "commit": commit,
+                "path": parts[1],
+                "commit": parts[0],
                 "checkout_status": status if status != " " else "clean",
-                "checkout_ref": ref,
+                "checkout_ref": " ".join(parts[2:]).strip(),
             }
         )
     return records
+
+
+def path_has_forbidden_glob(rel_posix: str, name: str) -> bool:
+    return any(
+        fnmatch.fnmatch(name, pattern) or fnmatch.fnmatch(rel_posix, pattern)
+        for pattern in FORBIDDEN_GLOBS
+    )
+
+
+def content_scan_required(path: Path) -> bool:
+    return path.suffix.lower() in TEXT_SCAN_SUFFIXES or path.name.startswith(".env")
+
+
+def contains_forbidden_content(path: Path) -> bool:
+    if not content_scan_required(path):
+        return False
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return True
+    return any(pattern.search(data) for pattern in SECRET_CONTENT_PATTERNS)
 
 
 def allowed(path: Path) -> bool:
@@ -86,11 +114,15 @@ def allowed(path: Path) -> bool:
         return False
     if any(part.endswith(".egg-info") for part in rel.parts):
         return False
-    if path.suffix in FORBIDDEN_SUFFIXES:
+    if path.suffix.lower() in FORBIDDEN_SUFFIXES:
         return False
     if path.name in FORBIDDEN_FILENAMES:
         return False
+    if path_has_forbidden_glob(rel_posix, path.name):
+        return False
     if any(rel_posix == prefix or rel_posix.startswith(prefix + "/") for prefix in EXCLUDED_PREFIXES):
+        return False
+    if contains_forbidden_content(path):
         return False
     return True
 
@@ -141,6 +173,15 @@ def write_deterministic(zf: ZipFile, path: Path) -> None:
     mode = 0o755 if executable_in_archive(path) else 0o644
     info.external_attr = (mode & 0xFFFF) << 16
     zf.writestr(info, archive_bytes(path))
+
+
+def build_archive() -> None:
+    if OUT.exists():
+        OUT.unlink()
+    with ZipFile(OUT, "w", ZIP_DEFLATED) as zf:
+        for path in sorted(ROOT.rglob("*")):
+            if path.is_file() and allowed(path):
+                write_deterministic(zf, path)
 
 
 def classify_dist_entry(name: str, *, is_dir: bool, child_names: set[str] | None = None) -> dict[str, object]:
@@ -262,15 +303,12 @@ def main() -> int:
         print("VERSION file is empty", file=sys.stderr)
         return 1
     DIST.mkdir(exist_ok=True)
-    if OUT.exists():
-        OUT.unlink()
-    with ZipFile(OUT, "w", ZIP_DEFLATED) as zf:
-        for path in sorted(ROOT.rglob("*")):
-            if path.is_file() and allowed(path):
-                write_deterministic(zf, path)
-    sidecar = OUT.with_suffix(OUT.suffix + ".sha256")
-    artifact_sha256 = sha256(OUT)
     evidence_manifest = ROOT / "polymarket-execution-engine" / "evidence" / "current" / "manifest.json"
+    build_archive()
+    initial_artifact_sha256 = sha256(OUT)
+    bind_workspace_manifest(evidence_manifest, initial_artifact_sha256)
+    build_archive()
+    artifact_sha256 = sha256(OUT)
     bind_workspace_manifest(evidence_manifest, artifact_sha256)
     workspace_manifest_sha256 = sha256(evidence_manifest) if evidence_manifest.exists() else None
     manifest_sha256 = (
@@ -278,6 +316,7 @@ def main() -> int:
         if evidence_manifest.exists()
         else None
     )
+    sidecar = OUT.with_suffix(OUT.suffix + ".sha256")
     sidecar.write_text(f"{artifact_sha256}  {OUT.name}\n")
     evidence_sidecar = OUT.with_suffix(OUT.suffix + ".evidence.json")
     evidence_sidecar.write_text(
