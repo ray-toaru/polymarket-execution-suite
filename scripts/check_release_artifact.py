@@ -21,6 +21,13 @@ SECRET_CONTENT_PATTERNS = [
     re.compile(rb"(?i)POLY_API_SECRET\s*="),
     re.compile(rb"(?i)POLY_API_PASSPHRASE\s*="),
 ]
+SECRET_CONTENT_TEST_FIXTURES = {
+    "polymarket-execution-engine/adapters/pmx-official-sdk-adapter/src/tests/liveness_errors.rs": (
+        b"redacts_named_secret_assignments",
+        b"redact_sensitive_text",
+        b"[REDACTED]",
+    ),
+}
 FORBIDDEN_PREFIX_SUFFIXES = (
     "docs/archive/",
     "external_reviews/",
@@ -69,6 +76,21 @@ def forbidden(member: str, expected_root: str | None = None) -> bool:
 
 def contains_forbidden_content(data: bytes) -> bool:
     return any(pattern.search(data) for pattern in SECRET_CONTENT_PATTERNS)
+
+
+def archive_rel(member: str, expected_root: str) -> str:
+    prefix = expected_root + "/"
+    if member.startswith(prefix):
+        return member[len(prefix) :]
+    return member
+
+
+def allowed_secret_content_test_fixture(member: str, expected_root: str, data: bytes) -> bool:
+    rel = archive_rel(member, expected_root)
+    required_markers = SECRET_CONTENT_TEST_FIXTURES.get(rel)
+    if required_markers is None:
+        return False
+    return all(marker in data for marker in required_markers)
 
 
 def sha256(path: Path) -> str:
@@ -190,7 +212,9 @@ def main() -> int:
             {
                 name
                 for name in names
-                if not name.endswith("/") and contains_forbidden_content(zf.read(name))
+                if not name.endswith("/")
+                and contains_forbidden_content(data := zf.read(name))
+                and not allowed_secret_content_test_fixture(name, expected_root, data)
             }
         )
         if content_hits:
