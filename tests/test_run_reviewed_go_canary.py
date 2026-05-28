@@ -35,26 +35,18 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
         package = directory / "reviewed-go"
         package.mkdir()
         env_file = directory / ".env.runtime"
-        env_file.write_text(
-            "\n".join(
-                [
-                    "PMX_ACTIVE_ACCOUNT_PROFILE=acct_b",
-                    "PMX_ACTIVE_ACCOUNT_ID=acct-canary",
-                    "PMX_ACTIVE_PROFILE_REF=local-profile://acct-b",
-                    f"{PK}=dummy_pk",
-                    "POLY_API_KEY=dummy_key",
-                    f"{API_SECRET}=dummy_secret",
-                    "POLY_API_PASSPHRASE=dummy_pass",
-                    "PMX_CLOB_SIGNATURE_TYPE=POLY_1271",
-                    "PMX_CLOB_FUNDER=0x00000000000000000000000000000000000000b0",
-                    "",
-                ]
-            )
-        )
+        env_file.write_text("\n".join(["PMX_ACTIVE_ACCOUNT_PROFILE=acct_b", "PMX_ACTIVE_ACCOUNT_ID=acct-canary", "PMX_ACTIVE_PROFILE_REF=local-profile://acct-b", f"{PK}=dummy_pk", "POLY_API_KEY=dummy_key", f"{API_SECRET}=dummy_secret", "POLY_API_PASSPHRASE=dummy_pass", "PMX_CLOB_SIGNATURE_TYPE=POLY_1271", "PMX_CLOB_FUNDER=0x00000000000000000000000000000000000000b0", ""]))
+        runtime_dependencies = ["kill_switch", "live_submit_gate", "idempotency_lease", "order_cancel_reconciliation", "no_geoblock", "market_live", "account_allowlist", "balance_allowance", "reconcile_worker_healthy", "cancel_only_fallback"]
         self.write_json(package, "release-decision.json", {"decision_id": "decision-1", "decision": "go", "status": "reviewed_go", "scope": "REAL_FUNDS_CANARY", "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL", "live_submit_authorized": True, "live_cancel_authorized": True, "real_funds_canary_authorized": True, "remote_side_effects_authorized": True, "production_deployment_authorized": False, "single_attempt": True, "max_order_count": 1, "post_cancel_required": True, "readback_closeout_required": True})
-        self.write_json(package, "approval.json", {"approval_id": "approval-request-1", "approval_hash": "d" * 64, "account_id": "acct-canary", "scope": "REAL_FUNDS_CANARY", "expires_at": "2099-01-01T00:00:00Z", "artifact_sha256": "a" * 64, "evidence_manifest_sha256": "c" * 64, "workspace_manifest_sha256": "b" * 64, "archived_manifest_sha256": "c" * 64, "market_candidate_sha256": "e" * 64, "max_order_notional_usd": "0.2", "max_daily_notional_usd": "0.2", "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL", "operator_identity_ref": "operator://primary"})
+        approval = {"schema_version": 1, "approval_id": "approval-request-1", "approval_hash": "d" * 64, "account_id": "acct-canary", "active_profile_ref": "local-profile://acct-b", "scope": "REAL_FUNDS_CANARY", "expires_at": "2099-01-01T00:00:00Z", "artifact_sha256": "a" * 64, "evidence_manifest_sha256": "c" * 64, "workspace_manifest_sha256": "b" * 64, "archived_manifest_sha256": "c" * 64, "market_candidate_sha256": "e" * 64, "runtime_truth_sha256": "f" * 64, "approval_request_sha256": "1" * 64, "dual_control_review_sha256": "2" * 64, "max_order_notional_usd": "0.2", "max_daily_notional_usd": "0.2", "candidate_estimated_order_notional_usd": "0.1", "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL", "operator_identity_ref": "operator://primary"}
+        self.write_json(package, "approval.json", approval)
         self.write_json(package, "candidate-market.json", {"market_id": "condition-1", "token_id": "123", "side": "BUY", "order_type": "GTC", "post_only": True, "active": True, "accepting_orders": True, "closed": False, "archived": False, "best_ask": "0.03", "limit_price": "0.02", "ask_size": "20", "target_size": "5", "estimated_order_notional_usd": "0.1", "spread_bps": 100, "min_order_size": "5", "exchange_rule_snapshot": {"schema_version": 1, "venue": "polymarket_clob", "order_mode": "post_only_limit", "order_type": "GTC", "side": "BUY", "target_size_semantics": "outcome_shares", "min_share_size": "5", "min_tick_size": "0.01", "source": "public_clob_book_plus_reviewed_remote_rule", "captured_at": "2026-05-23T00:00:00+00:00", "expires_at": "2099-01-01T00:00:00+00:00", "evidence_ref": "ticket://reviewed-rule"}, "liquidity_score": 100, "book_snapshot_timestamp": "2026-05-23T00:00:00+00:00", "human_review_ref": "ticket://candidate-review"})
-        self.write_json(package, "runtime-truth.json", {"schema_version": 1, "status": "reviewed_runtime_truth_candidate", "source_release": "v0.28.0", "scope": "REAL_FUNDS_CANARY", "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL", "artifact_sha256": "a" * 64, "workspace_manifest_sha256": "b" * 64, "archived_manifest_sha256": "c" * 64, "dependencies": [{"name": name, "status": "durable_runtime_truth", "evidence_ref": f"pg://{name}"} for name in ["kill_switch", "live_submit_gate", "idempotency_lease", "order_cancel_reconciliation"]], "references_only_no_secret_values": True, "live_submit_allowed": False, "live_cancel_allowed": False, "real_funds_canary_authorized": False, "remote_side_effects": False, "production_ready_claimed": False})
+        runtime_truth = {"schema_version": 1, "status": "reviewed_runtime_truth_candidate", "source_release": "v0.28.0", "scope": "REAL_FUNDS_CANARY", "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL", "artifact_sha256": "a" * 64, "workspace_manifest_sha256": "b" * 64, "archived_manifest_sha256": "c" * 64, "dependencies": [{"name": name, "status": "durable_runtime_truth", "evidence_ref": f"pg://{name}"} for name in runtime_dependencies], "references_only_no_secret_values": True, "live_submit_allowed": False, "live_cancel_allowed": False, "real_funds_canary_authorized": False, "remote_side_effects": False, "production_ready_claimed": False}
+        self.write_json(package, "runtime-truth.json", runtime_truth)
+        runtime_sha = self.module.sha256(package / "runtime-truth.json")
+        approval["runtime_truth_sha256"] = runtime_sha
+        self.write_json(package, "approval.json", approval)
+        self.write_json(package, "review.json", {"schema_version": 1, "status": "reviewed_go_package_ready_single_attempt", "decision_id": "decision-1", "artifact_sha256": approval["artifact_sha256"], "workspace_manifest_sha256": approval["workspace_manifest_sha256"], "archived_manifest_sha256": approval["archived_manifest_sha256"], "candidate_market_sha256": approval["market_candidate_sha256"], "runtime_truth_sha256": approval["runtime_truth_sha256"], "approval_hash": approval["approval_hash"], "approval_request_sha256": approval["approval_request_sha256"], "dual_control_review_sha256": approval["dual_control_review_sha256"], "single_attempt_only": True, "operator_reuse_after_consumption_allowed": False})
         return package, env_file
 
     def test_build_invocation_preflight_uses_package_files_without_live_submit_gate(self):
@@ -93,8 +85,7 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
             _, env_file = self.package_fixture(Path(tmp_name))
             original = dict(os.environ)
             try:
-                os.environ.clear()
-                os.environ.update({"PATH": "/bin", PROFILE_PK: "ambient", API_SECRET: "ambient", "PMX_KILL_SWITCH_OPEN": "1"})
+                os.environ.clear(); os.environ.update({"PATH": "/bin", PROFILE_PK: "ambient", API_SECRET: "ambient", "PMX_KILL_SWITCH_OPEN": "1"})
                 env = self.module.build_subprocess_env(env_file, "preflight")
             finally:
                 os.environ.clear(); os.environ.update(original)
