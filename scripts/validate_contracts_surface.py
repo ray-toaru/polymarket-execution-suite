@@ -17,6 +17,12 @@ from validate_contracts_support import (
     rust_routes,
     rust_source_text,
 )
+from validate_contracts_executor import (
+    operation_request_ref,
+    operation_response_ref,
+    schema_property_names,
+    schema_required_names,
+)
 
 
 def iter_json_strings(value: object) -> Iterator[str]:
@@ -49,6 +55,52 @@ def validate_paths_and_statuses(spec: dict) -> None:
         body = rust_handler_body(handler)
         if "StatusCode::ACCEPTED" not in body:
             fail(f"handler {handler} does not visibly return StatusCode::ACCEPTED")
+
+
+def validate_critical_contract_shapes(spec: dict) -> None:
+    expected_refs = {
+        ("/v1/submissions", "post", "request"): "#/components/schemas/SubmitRequest",
+        ("/v1/submissions", "post", "202"): "#/components/schemas/SubmitReceipt",
+        ("/v1/admin/kill-switch", "post", "request"): "#/components/schemas/KillSwitchRequest",
+        ("/v1/admin/kill-switch", "post", "202"): "#/components/schemas/KillSwitchReceipt",
+        ("/v1/admin/cancel-order", "post", "request"): "#/components/schemas/CancelOrderRequest",
+        ("/v1/admin/cancel-order", "post", "202"): "#/components/schemas/CancelReceipt",
+        ("/v1/admin/reconcile", "post", "request"): "#/components/schemas/ReconcileRequest",
+        ("/v1/admin/reconcile", "post", "202"): "#/components/schemas/ReconcileReport",
+    }
+    for (path, method, kind), expected_ref in expected_refs.items():
+        actual_ref = operation_request_ref(spec, path, method) if kind == "request" else operation_response_ref(spec, path, method, kind)
+        if actual_ref != expected_ref:
+            fail(f"critical contract {method.upper()} {path} {kind} must reference {expected_ref}, got {actual_ref}")
+
+    exact_required = {
+        "SubmitRequest": {"execution_id", "plan_hash", "idempotency_key", "mode"},
+        "SubmitReceipt": {"execution_id", "receipt_id", "status", "executor_version", "contract_version"},
+        "KillSwitchRequest": {"scope", "enabled", "reason"},
+        "KillSwitchReceipt": {"scope", "enabled", "changed_at", "effective_at", "state_version", "persisted", "reason"},
+        "CancelOrderRequest": {"account_id", "order_id", "reason"},
+        "CancelReceipt": {"cancel_id", "order_id", "state"},
+        "ReconcileRequest": {"account_id", "execution_id", "reason"},
+        "ReconcileReport": {"reconcile_id", "status", "checked_orders", "findings"},
+    }
+    exact_props = {
+        "SubmitRequest": {"execution_id", "plan_hash", "idempotency_key", "mode"},
+        "SubmitReceipt": {"execution_id", "receipt_id", "status", "executor_version", "contract_version"},
+        "KillSwitchRequest": {"scope", "account_id", "enabled", "reason"},
+        "KillSwitchReceipt": {"scope", "account_id", "enabled", "changed_at", "effective_at", "state_version", "persisted", "reason"},
+        "CancelOrderRequest": {"account_id", "execution_id", "order_id", "reason"},
+        "CancelReceipt": {"cancel_id", "order_id", "state"},
+        "ReconcileRequest": {"account_id", "execution_id", "order_id", "reason", "remote_observation"},
+        "ReconcileReport": {"reconcile_id", "status", "checked_orders", "findings"},
+    }
+    for schema_name, expected in exact_required.items():
+        actual = schema_required_names(spec, schema_name)
+        if actual != expected:
+            fail(f"critical contract schema {schema_name} required fields changed: expected {sorted(expected)} got {sorted(actual)}")
+    for schema_name, expected in exact_props.items():
+        actual = schema_property_names(spec, schema_name)
+        if actual != expected:
+            fail(f"critical contract schema {schema_name} properties changed: expected {sorted(expected)} got {sorted(actual)}")
 
 
 def validate_no_public_forbidden_tokens(spec: dict) -> None:

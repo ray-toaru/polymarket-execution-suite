@@ -13,7 +13,9 @@ on:
       - "tests/**"
       - "docs/**"
       - "hermes-polymarket-executor-adapter"
+      - "hermes-polymarket-executor-adapter/**"
       - "polymarket-execution-engine"
+      - "polymarket-execution-engine/**"
       - "VERSION"
       - "README.md"
       - "ROADMAP.md"
@@ -42,7 +44,9 @@ on:
       - "tests/**"
       - "docs/**"
       - "hermes-polymarket-executor-adapter"
+      - "hermes-polymarket-executor-adapter/**"
       - "polymarket-execution-engine"
+      - "polymarket-execution-engine/**"
       - "VERSION"
       - "README.md"
       - "ROADMAP.md"
@@ -76,6 +80,48 @@ defaults:
     shell: bash --noprofile --norc -euo pipefail {0}
 
 jobs:
+  engine-rust-locked:
+    name: engine rust locked
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.CI_SUBMODULE_TOKEN }}
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.88.0
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            polymarket-execution-engine
+            polymarket-execution-engine/adapters/pmx-official-sdk-adapter
+            polymarket-execution-engine/adapters/pmx-official-sdk-spike
+
+      - name: Check engine formatting
+        working-directory: polymarket-execution-engine
+        run: cargo fmt --all -- --check
+
+      - name: Check engine workspace
+        working-directory: polymarket-execution-engine
+        run: cargo check --workspace --locked
+
+      - name: Run engine workspace tests
+        working-directory: polymarket-execution-engine
+        run: cargo test --workspace --exclude pmx-api --locked -- --test-threads=1
+
+      - name: Run engine fake HTTP e2e tests
+        working-directory: polymarket-execution-engine
+        run: cargo test -p pmx-api --test http_and_fake_e2e --locked -- --test-threads=1
+
   integration-static:
     name: integration static checks
     runs-on: ubuntu-latest
@@ -109,8 +155,14 @@ jobs:
       - name: Run integration Python tests
         run: python -m unittest discover -s tests -p "test_*.py"
 
+      - name: Run adapter tests
+        run: PYTHONPATH=hermes-polymarket-executor-adapter/src python -m pytest -q hermes-polymarket-executor-adapter/tests
+
       - name: Compile integration Python sources
         run: python -m compileall -q scripts tests
+
+      - name: Check docs and evidence governance
+        run: python polymarket-execution-engine/validation/check_docs_evidence_governance.py
 
       - name: Clean local artifacts
         run: python scripts/clean_local_artifacts.py
@@ -122,3 +174,6 @@ jobs:
         run: |
           artifact="$(python scripts/package_release.py | tail -n 1)"
           python scripts/check_release_artifact.py "$artifact" "$(cat VERSION)"
+
+      - name: Enforce v0.28 production-live-candidate consistency
+        run: python scripts/check_v28_production_live_candidate.py --require-ready

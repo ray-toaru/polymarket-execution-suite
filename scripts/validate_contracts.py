@@ -35,6 +35,7 @@ from validate_contracts_governance import (
 from validate_contracts_support import OPENAPI
 from validate_contracts_surface import (
     validate_additional_properties,
+    validate_critical_contract_shapes,
     validate_no_public_forbidden_tokens,
     validate_paths_and_statuses,
     validate_python_field_parity,
@@ -47,36 +48,38 @@ from validate_contracts_surface import (
 class ValidatorSpec:
     id: str
     category: str
+    proof_mode: str
     uses_spec: bool
     fn: object
 
 
 VALIDATORS = [
-    ValidatorSpec("paths_and_statuses", "surface", True, validate_paths_and_statuses),
-    ValidatorSpec("no_public_forbidden_tokens", "surface", True, validate_no_public_forbidden_tokens),
-    ValidatorSpec("additional_properties", "surface", True, validate_additional_properties),
-    ValidatorSpec("python_field_parity", "surface", True, validate_python_field_parity),
-    ValidatorSpec("sql_idempotency", "surface", False, validate_sql_idempotency),
-    ValidatorSpec("rust_deny_unknown_fields", "surface", False, validate_rust_deny_unknown_fields),
-    ValidatorSpec("v04_source_landings", "executor", False, validate_v04_source_landings),
-    ValidatorSpec("v07_source_landings", "executor", False, validate_v07_source_landings),
-    ValidatorSpec("v08_dependency_and_sdk_policy", "executor", False, validate_v08_dependency_and_sdk_policy),
-    ValidatorSpec("v09_official_adapter_boundary", "executor", False, validate_v09_official_adapter_boundary),
-    ValidatorSpec("v12_service_layer", "executor", True, validate_v12_service_layer),
-    ValidatorSpec("v15_admin_audit_and_runtime_provider", "executor", True, validate_v15_admin_audit_and_runtime_provider),
-    ValidatorSpec("v16_postgres_runtime_provider", "executor", True, validate_v16_postgres_runtime_provider),
-    ValidatorSpec("v19_redaction_and_live_guard", "executor", True, validate_v19_redaction_and_live_guard),
-    ValidatorSpec("v20_plan_storage_and_packaging", "executor", True, validate_v20_plan_storage_and_packaging),
-    ValidatorSpec("v21_sign_only_and_runtime_models", "executor", True, validate_v21_sign_only_and_runtime_models),
-    ValidatorSpec("store_and_backend_structure", "executor", False, validate_store_and_backend_structure),
-    ValidatorSpec("v23_lifecycle_query_and_hardening", "executor", True, validate_v23_lifecycle_query_and_hardening),
-    ValidatorSpec("current_hermes_client_surface", "governance", False, validate_current_hermes_client_surface),
-    ValidatorSpec("current_evidence_manifest_guard", "governance", False, validate_current_evidence_manifest_guard),
-    ValidatorSpec("current_docs_and_release_governance", "governance", False, validate_current_docs_and_release_governance),
-    ValidatorSpec("controlled_canary_release_decision_governance", "governance", False, validate_controlled_canary_release_decision_governance),
-    ValidatorSpec("canary_candidate_market_prep_boundary", "governance", False, validate_canary_candidate_market_prep_boundary),
-    ValidatorSpec("single_host_deployment_governance", "governance", False, validate_single_host_deployment_governance),
-    ValidatorSpec("v28_production_live_candidate_guard", "governance", False, validate_v28_production_live_candidate_guard),
+    ValidatorSpec("paths_and_statuses", "surface", "mixed", True, validate_paths_and_statuses),
+    ValidatorSpec("critical_contract_shapes", "surface", "structured", True, validate_critical_contract_shapes),
+    ValidatorSpec("no_public_forbidden_tokens", "surface", "mixed", True, validate_no_public_forbidden_tokens),
+    ValidatorSpec("additional_properties", "surface", "structured", True, validate_additional_properties),
+    ValidatorSpec("python_field_parity", "surface", "structured", True, validate_python_field_parity),
+    ValidatorSpec("sql_idempotency", "surface", "token", False, validate_sql_idempotency),
+    ValidatorSpec("rust_deny_unknown_fields", "surface", "mixed", False, validate_rust_deny_unknown_fields),
+    ValidatorSpec("v04_source_landings", "executor", "token", False, validate_v04_source_landings),
+    ValidatorSpec("v07_source_landings", "executor", "token", False, validate_v07_source_landings),
+    ValidatorSpec("v08_dependency_and_sdk_policy", "executor", "mixed", False, validate_v08_dependency_and_sdk_policy),
+    ValidatorSpec("v09_official_adapter_boundary", "executor", "token", False, validate_v09_official_adapter_boundary),
+    ValidatorSpec("v12_service_layer", "executor", "mixed", True, validate_v12_service_layer),
+    ValidatorSpec("v15_admin_audit_and_runtime_provider", "executor", "mixed", True, validate_v15_admin_audit_and_runtime_provider),
+    ValidatorSpec("v16_postgres_runtime_provider", "executor", "mixed", True, validate_v16_postgres_runtime_provider),
+    ValidatorSpec("v19_redaction_and_live_guard", "executor", "mixed", True, validate_v19_redaction_and_live_guard),
+    ValidatorSpec("v20_plan_storage_and_packaging", "executor", "mixed", True, validate_v20_plan_storage_and_packaging),
+    ValidatorSpec("v21_sign_only_and_runtime_models", "executor", "mixed", True, validate_v21_sign_only_and_runtime_models),
+    ValidatorSpec("store_and_backend_structure", "executor", "token", False, validate_store_and_backend_structure),
+    ValidatorSpec("v23_lifecycle_query_and_hardening", "executor", "mixed", True, validate_v23_lifecycle_query_and_hardening),
+    ValidatorSpec("current_hermes_client_surface", "governance", "mixed", False, validate_current_hermes_client_surface),
+    ValidatorSpec("current_evidence_manifest_guard", "governance", "mixed", False, validate_current_evidence_manifest_guard),
+    ValidatorSpec("current_docs_and_release_governance", "governance", "mixed", False, validate_current_docs_and_release_governance),
+    ValidatorSpec("controlled_canary_release_decision_governance", "governance", "mixed", False, validate_controlled_canary_release_decision_governance),
+    ValidatorSpec("canary_candidate_market_prep_boundary", "governance", "mixed", False, validate_canary_candidate_market_prep_boundary),
+    ValidatorSpec("single_host_deployment_governance", "governance", "mixed", False, validate_single_host_deployment_governance),
+    ValidatorSpec("v28_production_live_candidate_guard", "governance", "mixed", False, validate_v28_production_live_candidate_guard),
 ]
 
 
@@ -97,6 +100,7 @@ def run_validator(validator: ValidatorSpec, spec: dict[str, Any]) -> dict[str, s
         return {
             "id": validator.id,
             "category": validator.category,
+            "proof_mode": validator.proof_mode,
             "status": "fail",
             "error_type": exc.__class__.__name__,
             "error": error_message(exc),
@@ -104,6 +108,7 @@ def run_validator(validator: ValidatorSpec, spec: dict[str, Any]) -> dict[str, s
     return {
         "id": validator.id,
         "category": validator.category,
+        "proof_mode": validator.proof_mode,
         "status": "pass",
     }
 
@@ -114,6 +119,10 @@ def build_report(spec: dict[str, Any], validators: list[ValidatorSpec] | None = 
     for validator in active_validators:
         checks.append(run_validator(validator, spec))
     failed_checks = [check for check in checks if check["status"] != "pass"]
+    proof_mode_counts: dict[str, int] = {}
+    for check in checks:
+        proof_mode = str(check["proof_mode"])
+        proof_mode_counts[proof_mode] = proof_mode_counts.get(proof_mode, 0) + 1
     return {
         "status": "ok" if not failed_checks else "fail",
         "paths": len(spec["paths"]),
@@ -121,6 +130,7 @@ def build_report(spec: dict[str, Any], validators: list[ValidatorSpec] | None = 
         "check_count": len(checks),
         "failed_check_count": len(failed_checks),
         "failed_check_ids": [check["id"] for check in failed_checks],
+        "proof_mode_counts": proof_mode_counts,
         "checks": checks,
     }
 

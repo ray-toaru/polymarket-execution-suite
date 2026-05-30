@@ -105,6 +105,8 @@ class V028ProductionLiveCandidateTests(unittest.TestCase):
         report = self.module.evaluate(self.root)
         self.assertEqual(report["status"], "ready")
         self.assertEqual(report["blockers"], [])
+        self.assertEqual(report["external_evidence"]["status"], "not_locally_verifiable")
+        self.assertEqual(len(report["external_evidence"]["required"]), 4)
 
     def test_live_ready_claim_blocks_candidate(self):
         self.write_ready_tree()

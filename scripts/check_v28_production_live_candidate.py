@@ -88,6 +88,12 @@ def require_false(blockers: list[str], data: dict[str, Any], key: str, label: st
 def evaluate(root: Path = ROOT, target_version: str = TARGET_VERSION) -> dict[str, Any]:
     blockers: list[str] = []
     warnings: list[str] = []
+    external_requirements = [
+        "GitHub CI run bound to the reviewed commit and artifact digest",
+        "Independent approved dual-control review with reviewer identity provenance",
+        "External references package bound to the reviewed-go decision",
+        "Real-funds canary execution evidence from external systems",
+    ]
 
     suite_version = read_text(root / "VERSION").strip()
     if suite_version != target_version:
@@ -162,6 +168,10 @@ def evaluate(root: Path = ROOT, target_version: str = TARGET_VERSION) -> dict[st
         "target_version": target_version,
         "suite_version": suite_version,
         "component_versions": matrix,
+        "external_evidence": {
+            "status": "not_locally_verifiable",
+            "required": external_requirements,
+        },
         "blockers": blockers,
         "warnings": warnings,
     }

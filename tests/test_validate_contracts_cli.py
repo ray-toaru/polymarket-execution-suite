@@ -48,6 +48,7 @@ class ValidateContractsCliTests(unittest.TestCase):
         self.assertEqual(file_report["status"], "ok")
         self.assertEqual(file_report["check_count"], len(file_report["checks"]))
         self.assertGreater(file_report["check_count"], 10)
+        self.assertIn("structured", file_report["proof_mode_counts"])
         categories = {check["category"] for check in file_report["checks"]}
         self.assertEqual(categories, {"surface", "executor", "governance"})
         self.assertTrue(any(check["id"] == "v23_lifecycle_query_and_hardening" for check in file_report["checks"]))
@@ -62,16 +63,19 @@ class ValidateContractsCliTests(unittest.TestCase):
             raise SystemExit("contract validation failed: synthetic failure")
 
         validators = [
-            module.ValidatorSpec("ok_check", "surface", True, ok_validator),
-            module.ValidatorSpec("bad_check", "executor", True, fail_validator),
+            module.ValidatorSpec("ok_check", "surface", "structured", True, ok_validator),
+            module.ValidatorSpec("bad_check", "executor", "token", True, fail_validator),
         ]
         report = module.build_report({"paths": {}, "components": {"schemas": {}}}, validators=validators)
 
         self.assertEqual(report["status"], "fail")
         self.assertEqual(report["failed_check_count"], 1)
         self.assertEqual(report["failed_check_ids"], ["bad_check"])
+        self.assertEqual(report["proof_mode_counts"], {"structured": 1, "token": 1})
         self.assertEqual(report["checks"][0]["status"], "pass")
+        self.assertEqual(report["checks"][0]["proof_mode"], "structured")
         self.assertEqual(report["checks"][1]["status"], "fail")
+        self.assertEqual(report["checks"][1]["proof_mode"], "token")
         self.assertEqual(report["checks"][1]["error_type"], "SystemExit")
         self.assertIn("synthetic failure", report["checks"][1]["error"])
 
