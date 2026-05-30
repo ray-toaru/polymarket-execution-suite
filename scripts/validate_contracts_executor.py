@@ -108,62 +108,86 @@ def require_file_tokens(path, label: str, tokens: list[str]) -> None:
 def validate_v04_source_landings() -> None:
     if not API_E2E_TEST.exists():
         fail("missing HTTP/auth/fake E2E integration test source")
-    test_text = rust_file_with_modules_text(API_E2E_TEST)
-    for needle in ["http_auth_and_fake_e2e_smoke", "StatusCode::UNAUTHORIZED", "StatusCode::FORBIDDEN", "StatusCode::ACCEPTED"]:
-        if needle not in test_text:
-            fail(f"HTTP/auth/fake E2E test missing expected assertion token: {needle}")
-    store_text = rust_source_text(STORE_SRC)
-    for needle in ["pub struct AdvisoryLockKey", "pub fn advisory_lock_key"]:
-        if needle not in store_text:
-            fail(f"pmx-store missing advisory lock helper evidence: {needle}")
+    require_file_tokens(
+        API_E2E_TEST.parent / "http_and_fake_e2e/smoke.rs",
+        "HTTP/auth fake E2E smoke",
+        ["http_auth_and_fake_e2e_smoke", "StatusCode::UNAUTHORIZED", "StatusCode::FORBIDDEN", "StatusCode::ACCEPTED"],
+    )
+    require_file_tokens(
+        STORE_SRC / "model/advisory.rs",
+        "pmx-store advisory lock model",
+        ["pub struct AdvisoryLockKey", "pub fn advisory_lock_key", "const FNV_OFFSET", "const FNV_PRIME", "i64::from_ne_bytes(hash.to_ne_bytes())"],
+    )
+    require_file_tokens(
+        STORE_SRC / "postgres.rs",
+        "pmx-store postgres adapter",
+        ["pub struct PostgresStore", "tokio_postgres::connect(&self.database_url, NoTls)"],
+    )
     if not POSTGRES_RS.exists():
         fail("missing PostgreSQL repository adapter source")
-    postgres_text = rust_source_text(STORE_SRC)
-    for needle in [
-        "pub struct PostgresStore",
-        "impl IdempotencyStore for PostgresStore",
-        "pg_advisory_xact_lock",
-        "same_request_replay_is_persisted",
-        "fingerprint_mismatch_is_conflict",
-        "reservation_double_spend_is_prevented_concurrently",
-        "remote_unknown_is_persisted_conservatively",
-    ]:
-        if needle not in postgres_text:
-            fail(f"PostgreSQL adapter missing expected repository proof token: {needle}")
+    require_file_tokens(
+        STORE_SRC / "postgres_idempotency.rs",
+        "postgres idempotency adapter",
+        ["impl IdempotencyStore for PostgresStore", "begin::begin_submit_attempt(", "finish::finish_submit_attempt(self, attempt).await"],
+    )
+    require_file_tokens(
+        STORE_SRC / "postgres_idempotency/begin.rs",
+        "postgres idempotency begin path",
+        ["SELECT pg_advisory_xact_lock($1)", 'status == "PROCEEDING"', "IdempotencyAction::InProgress", "IdempotencyAction::Proceed"],
+    )
+    require_file_tokens(
+        STORE_SRC / "postgres_tests/idempotency.rs",
+        "postgres idempotency tests",
+        ["same_request_replay_is_persisted", "fingerprint_mismatch_is_conflict"],
+    )
+    require_file_tokens(
+        STORE_SRC / "postgres_tests/receipt_reservation.rs",
+        "postgres receipt/reservation tests",
+        ["reservation_double_spend_is_prevented_concurrently", "remote_unknown_is_persisted_conservatively"],
+    )
 
 
 def validate_v07_source_landings() -> None:
-    gateway_text = rust_source_text(GATEWAY_SRC)
-    for needle in [
-        "pub trait SignerProvider",
-        "pub struct DisabledSignerProvider",
-        "pub struct DeterministicTestSignerProvider",
-        "signer_provider_defaults_are_production_conservative",
-        "fake_gateway_surfaces_remote_unknown_without_local_success",
-    ]:
-        if needle not in gateway_text:
-            fail(f"v0.7 gateway landing missing token: {needle}")
-    e2e_text = rust_file_with_modules_text(API_E2E_TEST)
-    for needle in [
-        "full_scaffold_path_compile_submit_cancel_and_reconcile",
-        "/v1/plans/compile",
-        "/v1/submissions",
-        "/v1/admin/cancel-order",
-        "/v1/admin/reconcile",
-    ]:
-        if needle not in e2e_text:
-            fail(f"v0.7 API E2E landing missing token: {needle}")
-    sdk_text = SDK_SPIKE_RS.read_text()
-    for needle in [
-        "OFFICIAL_SDK_REPOSITORY",
-        "PINNED_OFFICIAL_SDK_VERSION",
-        "LIVE_SUBMIT_FEATURE_NAME",
-        "allow_live_submit: false",
-        "require_explicit_runtime_kill_switch_open: true",
-        "sdk_client_type_marker",
-    ]:
-        if needle not in sdk_text:
-            fail(f"v0.7 SDK spike landing missing token: {needle}")
+    require_file_tokens(
+        GATEWAY_SRC / "traits.rs",
+        "gateway traits",
+        ["pub trait SignerProvider", "pub trait ClobGateway", "pub trait RemoteReconcileReader", "async fn post_order(&self, order: &SignedOrderEnvelope)"],
+    )
+    require_file_tokens(
+        GATEWAY_SRC / "signer.rs",
+        "gateway signer provider",
+        ["pub struct DeterministicTestSignerProvider", "pub struct DeterministicTestSigner", "pub struct SignerProviderConfig", "allow_local_private_key_material: false", "require_remote_signer_in_production: true"],
+    )
+    require_file_tokens(
+        GATEWAY_SRC / "tests/signer.rs",
+        "gateway signer tests",
+        ["disabled_signer_provider_refuses_to_materialize_signer", "signer_provider_defaults_are_production_conservative"],
+    )
+    require_file_tokens(
+        GATEWAY_SRC / "tests/post_cancel.rs",
+        "gateway post/cancel tests",
+        ["deterministic_signer_provider_posts_reads_and_cancels", "fake_gateway_surfaces_remote_unknown_without_local_success"],
+    )
+    require_file_tokens(
+        API_E2E_TEST.parent / "http_and_fake_e2e/scaffold.rs",
+        "HTTP scaffold E2E",
+        ["full_scaffold_path_compile_submit_cancel_and_reconcile", "compile_blocked_plan", "verify_submit_and_sign_only", "verify_non_live_admin_paths", "verify_public_queries"],
+    )
+    require_file_tokens(
+        API_E2E_TEST.parent / "http_and_fake_e2e/scaffold/admin_paths.rs",
+        "HTTP scaffold admin paths",
+        ["/v1/admin/cancel-order", "/v1/admin/reconcile", "/v1/admin/reconcile-order-local", "StatusCode::ACCEPTED", "StatusCode::NOT_FOUND"],
+    )
+    require_file_tokens(
+        API_E2E_TEST.parent / "http_and_fake_e2e/scaffold/submit_sign_only.rs",
+        "HTTP scaffold submit/sign-only",
+        ["/v1/submissions", "/v1/sign-only/standard-constructions", "/v1/sign-only/lifecycle-events", '"mode": "BLOCKED_DRY_RUN"', "StatusCode::BAD_REQUEST"],
+    )
+    require_file_tokens(
+        SDK_SPIKE_RS,
+        "official SDK spike",
+        ["OFFICIAL_SDK_REPOSITORY", "PINNED_OFFICIAL_SDK_VERSION", "LIVE_SUBMIT_FEATURE_NAME", "allow_live_submit: false", "require_explicit_runtime_kill_switch_open: true", "sdk_client_type_marker"],
+    )
 
 
 def validate_v08_dependency_and_sdk_policy() -> None:
@@ -208,34 +232,43 @@ def validate_v09_official_adapter_boundary() -> None:
         fail("missing official SDK adapter boundary crate source")
     if not SDK_ADAPTER_TOML.exists():
         fail("missing official SDK adapter boundary Cargo.toml")
-    adapter_text = rust_source_text(SDK_ADAPTER_SRC)
     adapter_toml = SDK_ADAPTER_TOML.read_text()
-    for needle in [
-        "OfficialSdkAdapterConfig",
-        "AdapterCredentialSnapshot",
-        "SignOnlyDryRunRequest",
-        "SignOnlyDryRunReceipt",
-        "validate_authenticated_non_trading_smoke",
-        "validate_sign_only_dry_run",
-        "validate_live_submit_preconditions",
-        "PMX_RUN_AUTHENTICATED_NON_TRADING_SMOKE",
-        "PMX_ALLOW_SIGN_ONLY_DRY_RUN",
-        "PMX_ALLOW_LIVE_SUBMIT",
-        "posted: bool",
-    ]:
-        if needle not in adapter_text:
-            fail(f"v0.11 official adapter boundary missing token: {needle}")
+    require_file_tokens(
+        SDK_ADAPTER_RS,
+        "official SDK adapter root",
+        ["Official Polymarket SDK adapter boundary", "sign-only dry-runs require explicit opt-in", "live submit requires the explicit `live-submit` feature", "pub use gates::*", "run_sign_only_dry_run", "validate_active_profile_env_for_canary"],
+    )
+    require_file_tokens(
+        SDK_ADAPTER_SRC / "model/config.rs",
+        "official SDK adapter config",
+        ["pub struct OfficialSdkAdapterConfig", "allow_sign_only_dry_run: false", "allow_live_submit: false", "allow_real_funds_canary: false", "pub struct OfficialSdkStandardSignOnlyProfile"],
+    )
+    require_file_tokens(
+        SDK_ADAPTER_SRC / "gates/smoke.rs",
+        "official SDK smoke gates",
+        ["validate_authenticated_non_trading_smoke", "validate_sign_only_dry_run", "ENV_RUN_AUTHENTICATED_SMOKE", "ENV_ALLOW_SIGN_ONLY_DRY_RUN", "ENV_ALLOW_LIVE_SUBMIT"],
+    )
+    require_file_tokens(
+        SDK_ADAPTER_SRC / "sdk_runtime/sign_only/dry_run.rs",
+        "official SDK sign-only dry run",
+        ["SignOnlyDryRunReceipt", "validate_sign_only_dry_run(config, &credentials)?", "signed_order_ref = format!(", "posted: false"],
+    )
+    require_file_tokens(
+        SDK_ADAPTER_SRC / "tests/feature_gated.rs",
+        "official SDK feature-gated tests",
+        ["authenticated_non_trading_smoke_executes_when_enabled", "sign_only_dry_run_executes_when_enabled", "env_helpers_trim_values_and_accept_case_insensitive_true", "assert!(!receipt.posted);"],
+    )
     if 'polymarket_client_sdk_v2 = { version = "=0.6.0-canary.1"' not in adapter_toml:
         fail("official adapter must pin the official SDK canary explicitly")
     if not re.search(r'(?m)^live-submit\s*=\s*\[', adapter_toml):
         fail("official adapter must expose an explicit live-submit feature gate")
     live_canary = SDK_ADAPTER_SRC / "sdk_runtime/live_canary.rs"
     gateway_bridge = SDK_ADAPTER_SRC / "sdk_runtime/gateway.rs"
-    adapter_boundary_text = adapter_text
+    adapter_boundary_text = rust_source_text(SDK_ADAPTER_SRC)
     for allowed_post_order_file in [live_canary, gateway_bridge]:
         if allowed_post_order_file.exists():
             adapter_boundary_text = adapter_boundary_text.replace(allowed_post_order_file.read_text(), "")
-    if 'post_order(' in adapter_boundary_text or 'post_orders(' in adapter_text:
+    if 'post_order(' in adapter_boundary_text or 'post_orders(' in adapter_boundary_text:
         fail("official adapter boundary must not call post_order/post_orders outside guarded canary/gateway bridge paths")
     if gateway_bridge.exists():
         gateway_text = gateway_bridge.read_text()
@@ -249,7 +282,7 @@ def validate_v09_official_adapter_boundary() -> None:
         ]:
             if needle not in gateway_text:
                 fail(f"official SDK gateway bridge missing boundary token: {needle}")
-    if 'allow_live_submit: false' not in adapter_text:
+    if 'allow_live_submit: false' not in rust_source_text(SDK_ADAPTER_SRC):
         fail("official adapter default must keep live submit disabled")
     for doc in [
         EXECUTOR / "docs/AUTHENTICATED_NON_TRADING_SMOKE.md",

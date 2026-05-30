@@ -200,12 +200,54 @@ class ValidateContractsExecutorTests(unittest.TestCase):
             module.validate_v12_service_layer(spec)
         self.assertIn("/v1/plans/compile request", str(ctx.exception))
 
+    def test_v04_requires_postgres_receipt_reservation_tests(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/postgres_tests/receipt_reservation.rs"):
+                return "remote_unknown_is_persisted_conservatively"
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v04_source_landings()
+        self.assertIn("postgres receipt/reservation tests", str(ctx.exception))
+
+    def test_v07_requires_gateway_traits_file_tokens(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-gateway/src/traits.rs"):
+                return "pub trait SignerProvider\npub trait ClobGateway\npub trait RemoteReconcileReader"
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v07_source_landings()
+        self.assertIn("gateway traits", str(ctx.exception))
+
     def test_v16_requires_runtime_worker_schema_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/runtime/workers"]["get"]["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] = "#/components/schemas/Wrong"
         with self.assertRaises(SystemExit) as ctx:
             module.validate_v16_postgres_runtime_provider(spec)
         self.assertIn("RuntimeWorkerStatusReport", str(ctx.exception))
+
+    def test_v09_requires_feature_gated_adapter_tests(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("adapters/pmx-official-sdk-adapter/src/tests/feature_gated.rs"):
+                return "authenticated_non_trading_smoke_executes_when_enabled\nsign_only_dry_run_executes_when_enabled"
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v09_official_adapter_boundary()
+        self.assertIn("official SDK feature-gated tests", str(ctx.exception))
 
     def test_v15_requires_api_admin_audit_support_tokens(self) -> None:
         spec = self._minimal_v23_spec()
