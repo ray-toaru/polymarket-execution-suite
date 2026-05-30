@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "activate_pmx_profile.py"
+RUNTIME_EXAMPLE = ROOT / "polymarket-execution-engine" / ".env.runtime.example"
 
 
 def load_module():
@@ -100,6 +101,33 @@ class ActivatePmxProfileTests(unittest.TestCase):
         self.assertIn("# Active local account profile label.", text)
         self.assertIn("PMX_ACTIVE_ACCOUNT_PROFILE=acct_b", text)
         self.assertNotIn("PMX_PROFILE_ACCT_B_", text)
+
+    def test_runtime_example_matches_generated_runtime_keys(self):
+        activated = {
+            "PMX_ACTIVE_ACCOUNT_PROFILE": "acct_b",
+            "PMX_ACTIVE_ACCOUNT_ID": "acct_b",
+            "PMX_ACTIVE_PROFILE_REF": "local-profile://acct_b",
+            "POLYMARKET_PRIVATE_KEY": "0xabc123",
+            "POLY_API_KEY": "api-key",
+            "POLY_API_SECRET": "api-secret",
+            "POLY_API_PASSPHRASE": "api-pass",
+            "PMX_CLOB_FUNDER": "0x00000000000000000000000000000000000000b0",
+            "PMX_CLOB_SIGNATURE_TYPE": "POLY_1271",
+        }
+        with tempfile.TemporaryDirectory() as tmp_name:
+            output = Path(tmp_name) / ".env.runtime"
+            self.module.write_runtime_env(output, activated)
+            generated_keys = {
+                line.split("=", 1)[0]
+                for line in output.read_text().splitlines()
+                if line and not line.startswith("#")
+            }
+        example_keys = {
+            line.split("=", 1)[0]
+            for line in RUNTIME_EXAMPLE.read_text().splitlines()
+            if line and not line.startswith("#")
+        }
+        self.assertEqual(example_keys, generated_keys)
 
 
 if __name__ == "__main__":

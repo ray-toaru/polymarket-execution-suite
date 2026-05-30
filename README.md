@@ -212,6 +212,10 @@ python polymarket-execution-engine/validation/check_active_profile_consistency.p
   --expected-account-id <approved-account-id>
 ```
 
+Use `polymarket-execution-engine/.env.profiles.example` for the private source
+inventory shape and `polymarket-execution-engine/.env.runtime.example` for the
+runtime-facing output shape.
+
 The runtime-facing env file must expose only generic variables such as
 `POLYMARKET_PRIVATE_KEY`, `POLY_API_*`, `PMX_CLOB_FUNDER`,
 `PMX_CLOB_SIGNATURE_TYPE`, and active-profile metadata. Runtime commands must
