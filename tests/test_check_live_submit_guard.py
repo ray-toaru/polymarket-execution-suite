@@ -68,6 +68,25 @@ class CheckLiveSubmitGuardTests(unittest.TestCase):
             ["idempotency lease/owner guard missing token in idempotency.rs: owner_token"],
         )
 
+    def test_validate_canary_guard_tokens_reports_missing_token(self) -> None:
+        failures = self.module.validate_canary_guard_tokens("LiveCanaryPreconditions only")
+        self.assertTrue(any("official SDK adapter missing live canary guard token" in item for item in failures))
+
+    def test_validate_service_live_submit_tokens_reports_missing_gateway_token(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            live_file = root / "live.rs"
+            submit_file = root / "submit.rs"
+            live_file.write_text("LIVE_SUBMIT_BLOCKED_PRE_SIGN_RUNTIME\nLIVE_SUBMIT_BLOCKED_PRE_POST_RUNTIME\nruntime_submit_block_reason\nraw_signed_payload_logged\": false\nraw_signed_order_exposed\": false")
+            submit_file.write_text("SubmitMode::Live")
+            with mock.patch.object(self.module, "ALLOWED_SERVICE_POST_ORDER_FILE", live_file), mock.patch.object(
+                self.module, "SERVICE_SRC", root
+            ), mock.patch.object(
+                self.module, "service_source_files", return_value=[live_file]
+            ):
+                failures = self.module.validate_service_live_submit_tokens()
+        self.assertIn("pmx-service live gateway path must require explicit submit_plan_with_gateway", failures)
+
 
 if __name__ == "__main__":
     unittest.main()
