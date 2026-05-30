@@ -236,6 +236,70 @@ class ValidateContractsExecutorTests(unittest.TestCase):
             module.validate_v19_redaction_and_live_guard(spec)
         self.assertIn("signed_payload", str(ctx.exception))
 
+    def test_v20_requires_compile_response_binding(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Wrong"}}}}},
+            }
+        }
+        with self.assertRaises(SystemExit) as ctx:
+            module.validate_v20_plan_storage_and_packaging(spec)
+        self.assertIn("ExecutionPlanSummary", str(ctx.exception))
+
+    def test_v21_requires_lifecycle_record_binding(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/sign-only/lifecycle-events"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Wrong"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/SignOnlyLifecycleRecord"}}}}},
+            }
+        }
+        spec["paths"]["/v1/sign-only/standard-constructions"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/StandardSignOnlyConstructionRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/StandardSignOnlyConstructionReceipt"}}}}},
+            }
+        }
+        spec["paths"]["/v1/sign-only/lifecycle-events/{execution_id}"]["get"]["responses"] = {
+            "200": {"content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/SignOnlyLifecycleRecord"}}}}}
+        }
+        spec["components"]["schemas"]["SignOnlyLifecycleRecord"] = {
+            "type": "object",
+            "required": ["execution_id", "account_id", "state", "event", "signed_order_ref", "no_remote_side_effect"],
+            "properties": {
+                "client_event_id": {"type": "string"},
+                "signed_order_ref": {"type": "string"},
+                "no_remote_side_effect": {"type": "boolean"},
+            },
+        }
+        spec["components"]["schemas"]["StandardSignOnlyConstructionRequest"] = {
+            "type": "object",
+            "required": ["execution_id", "account_id", "plan_hash", "no_remote_side_effect"],
+            "properties": {
+                "signed_order_ref": {"type": "string"},
+                "signed_order_digest": {"type": "string"},
+                "no_remote_side_effect": {"type": "boolean"},
+            },
+        }
+        spec["components"]["schemas"]["StandardSignOnlyConstructionReceipt"] = {
+            "type": "object",
+            "properties": {
+                "signed_order_ref": {"type": "string"},
+                "signed_order_digest": {"type": "string"},
+                "lifecycle_records": {"type": "array"},
+                "no_remote_side_effect": {"type": "boolean"},
+            },
+        }
+        spec["components"]["schemas"]["RuntimeWorkerStatusReport"] = {
+            "type": "object",
+            "properties": {"heartbeats": {"type": "array"}, "observations": {"type": "array"}},
+        }
+        with self.assertRaises(SystemExit) as ctx:
+            module.validate_v21_sign_only_and_runtime_models(spec)
+        self.assertIn("SignOnlyLifecycleRecord", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -49,6 +49,14 @@ def schema_property_names(spec: dict, schema_name: str) -> set[str]:
     return set(schema.get("properties", {}).keys())
 
 
+def schema_required_names(spec: dict, schema_name: str) -> set[str]:
+    try:
+        schema = spec["components"]["schemas"][schema_name]
+    except KeyError as exc:
+        fail(f"OpenAPI missing schema {schema_name}: {exc}")
+    return set(schema.get("required", []))
+
+
 def operation_request_ref(spec: dict, path: str, method: str) -> str | None:
     return (
         openapi_operation(spec, path, method)
@@ -512,12 +520,22 @@ def validate_v19_redaction_and_live_guard(spec: dict | None = None) -> None:
             fail(f"v0.19 missing safety doc: {doc.relative_to(ROOT)}")
 
 
-def validate_v20_plan_storage_and_packaging() -> None:
+def validate_v20_plan_storage_and_packaging(spec: dict | None = None) -> None:
+    if spec is None:
+        import yaml
+
+        spec = yaml.safe_load(OPENAPI.read_text())
     migration = (EXECUTOR / "migrations/0001_initial.sql").read_text()
     postgres = (EXECUTOR / "crates/pmx-store/src/postgres.rs").read_text()
     adapter = rust_source_text(SDK_ADAPTER_SRC)
     runtime = rust_source_text(EXECUTOR / "crates/pmx-runtime/src")
     core = rust_source_text(CORE_SRC)
+    compile_request_ref = operation_request_ref(spec, "/v1/plans/compile", "post")
+    compile_response_ref = operation_response_ref(spec, "/v1/plans/compile", "post", "200")
+    if compile_request_ref != "#/components/schemas/CompilePlanRequest":
+        fail("v0.20 compile plan request must reference CompilePlanRequest")
+    if compile_response_ref != "#/components/schemas/ExecutionPlanSummary":
+        fail("v0.20 compile plan response must reference ExecutionPlanSummary")
     for needle in ["DROP TABLE IF EXISTS plan_summaries", "execution_plans.summary_json as canonical plan summary storage"]:
         if needle not in migration:
             fail(f"v0.20 migration plan storage missing token: {needle}")
@@ -551,10 +569,51 @@ def validate_v20_plan_storage_and_packaging() -> None:
             fail(f"v0.20 missing artifact: {doc.relative_to(ROOT)}")
 
 
-def validate_v21_sign_only_and_runtime_models() -> None:
+def validate_v21_sign_only_and_runtime_models(spec: dict | None = None) -> None:
+    if spec is None:
+        import yaml
+
+        spec = yaml.safe_load(OPENAPI.read_text())
     core = rust_source_text(CORE_SRC)
     adapter = rust_source_text(SDK_ADAPTER_SRC)
     runtime = rust_source_text(EXECUTOR / "crates/pmx-runtime/src")
+    expected_sign_only_refs = {
+        ("/v1/sign-only/lifecycle-events", "post", "request"): "#/components/schemas/SignOnlyLifecycleRecord",
+        ("/v1/sign-only/lifecycle-events", "post", "202"): "#/components/schemas/SignOnlyLifecycleRecord",
+        ("/v1/sign-only/standard-constructions", "post", "request"): "#/components/schemas/StandardSignOnlyConstructionRequest",
+        ("/v1/sign-only/standard-constructions", "post", "202"): "#/components/schemas/StandardSignOnlyConstructionReceipt",
+        ("/v1/sign-only/lifecycle-events/{execution_id}", "get", "200_items"): "#/components/schemas/SignOnlyLifecycleRecord",
+    }
+    for (path, method, kind), expected_ref in expected_sign_only_refs.items():
+        if kind == "request":
+            actual_ref = operation_request_ref(spec, path, method)
+        elif kind == "200_items":
+            actual_ref = operation_response_array_item_ref(spec, path, method, "200")
+        else:
+            actual_ref = operation_response_ref(spec, path, method, kind)
+        if actual_ref != expected_ref:
+            fail(f"v0.21 {method.upper()} {path} {kind} must reference {expected_ref}, got {actual_ref}")
+    sign_only_required = schema_required_names(spec, "SignOnlyLifecycleRecord")
+    if not {"execution_id", "account_id", "state", "event", "signed_order_ref", "no_remote_side_effect"}.issubset(sign_only_required):
+        fail("v0.21 SignOnlyLifecycleRecord schema missing required lifecycle fields")
+    sign_only_props = schema_property_names(spec, "SignOnlyLifecycleRecord")
+    for required_prop in {"client_event_id", "signed_order_ref", "no_remote_side_effect"}:
+        if required_prop not in sign_only_props:
+            fail(f"v0.21 SignOnlyLifecycleRecord schema must expose {required_prop}")
+    standard_req_required = schema_required_names(spec, "StandardSignOnlyConstructionRequest")
+    if not {"execution_id", "account_id", "plan_hash", "no_remote_side_effect"}.issubset(standard_req_required):
+        fail("v0.21 StandardSignOnlyConstructionRequest missing required binding fields")
+    standard_req_props = schema_property_names(spec, "StandardSignOnlyConstructionRequest")
+    for required_prop in {"signed_order_ref", "signed_order_digest", "no_remote_side_effect"}:
+        if required_prop not in standard_req_props:
+            fail(f"v0.21 StandardSignOnlyConstructionRequest must expose {required_prop}")
+    standard_receipt_props = schema_property_names(spec, "StandardSignOnlyConstructionReceipt")
+    for required_prop in {"signed_order_ref", "signed_order_digest", "lifecycle_records", "no_remote_side_effect"}:
+        if required_prop not in standard_receipt_props:
+            fail(f"v0.21 StandardSignOnlyConstructionReceipt must expose {required_prop}")
+    runtime_worker_props = schema_property_names(spec, "RuntimeWorkerStatusReport")
+    if runtime_worker_props != {"heartbeats", "observations"}:
+        fail(f"v0.21 RuntimeWorkerStatusReport properties changed unexpectedly: {sorted(runtime_worker_props)}")
     for needle in ["pub enum SignOnlyLifecycleState", "transition_sign_only_lifecycle", "sign_only_lifecycle_has_remote_side_effect"]:
         if needle not in core:
             fail(f"v0.21 sign-only lifecycle core missing token: {needle}")
