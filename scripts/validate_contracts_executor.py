@@ -555,19 +555,6 @@ def validate_v19_redaction_and_live_guard(spec: dict | None = None) -> None:
         import yaml
 
         spec = yaml.safe_load(OPENAPI.read_text())
-    adapter_text = rust_source_text(SDK_ADAPTER_SRC)
-    for needle in [
-        "pub const REDACTED",
-        "redact_sensitive_text",
-        "redact_normalized_error",
-        "gateway_error_conversion_redacts_sensitive_message",
-        "read_only_smoke_ignores_ambient_credentials_but_must_remain_unauthenticated",
-    ]:
-        if needle not in adapter_text:
-            fail(f"v0.19 adapter redaction/read-only update missing token: {needle}")
-    if not LIVE_SUBMIT_GUARD.exists():
-        fail("missing v0.19 live-submit static guard")
-    guard_text = LIVE_SUBMIT_GUARD.read_text()
     forbidden_public_tokens = {"SignedOrderEnvelope", "signed_payload", "private_key", "clob_secret", "post_order"}
     public_strings = set()
     stack = [spec]
@@ -584,6 +571,29 @@ def validate_v19_redaction_and_live_guard(spec: dict | None = None) -> None:
     for token in forbidden_public_tokens:
         if token in public_strings:
             fail(f"v0.19 public contract exposes forbidden live/signed term: {token}")
+    require_file_tokens(
+        SDK_ADAPTER_SRC / "redaction.rs",
+        "v0.19 adapter redaction",
+        ["pub fn redact_sensitive_text", "pub fn redact_normalized_error", "gateway_error_from_normalized_sdk_error", "looks_like_hex_private_key", "redact_assignment_value"],
+    )
+    require_file_tokens(
+        SDK_ADAPTER_SRC / "model/constants.rs",
+        "v0.19 adapter constants",
+        ['pub const REDACTED: &str = "[REDACTED]";'],
+    )
+    require_file_tokens(
+        SDK_ADAPTER_SRC / "liveness/error_normalization.rs",
+        "v0.19 liveness error normalization",
+        ["pub fn normalize_sdk_error", "OfficialSdkErrorCategory::RemoteRejected", "OfficialSdkErrorCategory::WebSocketFailed", "OfficialSdkErrorCategory::AuthenticationFailed"],
+    )
+    require_file_tokens(
+        SDK_ADAPTER_SRC / "tests/liveness_errors.rs",
+        "v0.19 adapter redaction tests",
+        ["gateway_error_conversion_redacts_sensitive_message", "normalized_error_redaction_covers_remote_unknown_messages", "redacts_private_key_like_hex_tokens", "redacts_named_secret_assignments"],
+    )
+    if not LIVE_SUBMIT_GUARD.exists():
+        fail("missing v0.19 live-submit static guard")
+    guard_text = LIVE_SUBMIT_GUARD.read_text()
     for needle in ["post_order", "post_orders", "public OpenAPI", "live-submit static guard passed"]:
         if needle not in guard_text:
             fail(f"v0.19 live-submit static guard missing token: {needle}")
@@ -601,9 +611,6 @@ def validate_v20_plan_storage_and_packaging(spec: dict | None = None) -> None:
         spec = yaml.safe_load(OPENAPI.read_text())
     migration = (EXECUTOR / "migrations/0001_initial.sql").read_text()
     postgres = (EXECUTOR / "crates/pmx-store/src/postgres.rs").read_text()
-    adapter = rust_source_text(SDK_ADAPTER_SRC)
-    runtime = rust_source_text(EXECUTOR / "crates/pmx-runtime/src")
-    core = rust_source_text(CORE_SRC)
     compile_request_ref = operation_request_ref(spec, "/v1/plans/compile", "post")
     compile_response_ref = operation_response_ref(spec, "/v1/plans/compile", "post", "200")
     if compile_request_ref != "#/components/schemas/CompilePlanRequest":
@@ -615,20 +622,36 @@ def validate_v20_plan_storage_and_packaging(spec: dict | None = None) -> None:
             fail(f"v0.20 migration plan storage missing token: {needle}")
     validate_absent_tokens(migration, "v0.20 migration", ["CREATE TABLE IF NOT EXISTS plan_summaries"])
     validate_absent_tokens(postgres, "v0.20 PostgresStore", ["INSERT INTO plan_summaries", '"plan_summaries"'])
-    for needle in [
-        "validate_token_id",
-        "validate_limit_price_for_sdk",
-        "plan_mapping_rejects_placeholder_token_id",
-        "normalized_error_redaction_covers_remote_unknown_messages",
-    ]:
-        if needle not in adapter:
-            fail(f"v0.20 SDK adapter coverage missing token: {needle}")
-    for needle in ["pub enum RuntimeSignal", "runtime_breakdown_from_signals", "geoblock_unknown_and_reconcile_backlog_block_submit"]:
-        if needle not in runtime:
-            fail(f"v0.20 runtime linkage missing token: {needle}")
-    for needle in ["cancel_state_from_lifecycle", "lifecycle_requires_reconcile", "remote_unknown_states_require_reconcile"]:
-        if needle not in core:
-            fail(f"v0.20 cancel/reconcile linkage missing token: {needle}")
+    require_file_tokens(
+        SDK_ADAPTER_SRC / "mapping/validation.rs",
+        "v0.20 SDK mapping validation",
+        ["validate_token_id", "validate_limit_price_for_sdk", "validate_positive_quantity_for_sdk"],
+    )
+    require_file_tokens(
+        SDK_ADAPTER_SRC / "tests/liveness_errors.rs",
+        "v0.20 SDK liveness tests",
+        ["normalized_error_redaction_covers_remote_unknown_messages"],
+    )
+    require_file_tokens(
+        EXECUTOR / "crates/pmx-runtime/src/health/signal/model.rs",
+        "v0.20 runtime signal model",
+        ["pub enum RuntimeSignal", "ReconcileBacklog", "remote_unknown_orders: u32"],
+    )
+    require_file_tokens(
+        EXECUTOR / "crates/pmx-runtime/src/health/signal/breakdown.rs",
+        "v0.20 runtime breakdown",
+        ["pub fn runtime_breakdown_from_signals", "RuntimeSignal::Geoblock", "RuntimeSignal::ReconcileBacklog"],
+    )
+    require_file_tokens(
+        EXECUTOR / "crates/pmx-runtime/src/runtime_tests/breakdown_loop/capabilities/blocking.rs",
+        "v0.20 runtime evaluation tests",
+        ["geoblock_unknown_and_reconcile_backlog_block_submit"],
+    )
+    require_file_tokens(
+        CORE_SRC / "domain/lifecycle/order.rs",
+        "v0.20 core order lifecycle",
+        ["cancel_state_from_lifecycle", "lifecycle_requires_reconcile", "OrderLifecycleState::RemoteUnknown", "OrderLifecycleState::PartialRemoteUnknown"],
+    )
     for doc in [
         ROOT / "scripts/package_release.py",
         ROOT / "scripts/check_release_artifact.py",
@@ -646,9 +669,6 @@ def validate_v21_sign_only_and_runtime_models(spec: dict | None = None) -> None:
         import yaml
 
         spec = yaml.safe_load(OPENAPI.read_text())
-    core = rust_source_text(CORE_SRC)
-    adapter = rust_source_text(SDK_ADAPTER_SRC)
-    runtime = rust_source_text(EXECUTOR / "crates/pmx-runtime/src")
     expected_sign_only_refs = {
         ("/v1/sign-only/lifecycle-events", "post", "request"): "#/components/schemas/SignOnlyLifecycleRecord",
         ("/v1/sign-only/lifecycle-events", "post", "202"): "#/components/schemas/SignOnlyLifecycleRecord",
@@ -686,24 +706,36 @@ def validate_v21_sign_only_and_runtime_models(spec: dict | None = None) -> None:
     runtime_worker_props = schema_property_names(spec, "RuntimeWorkerStatusReport")
     if runtime_worker_props != {"heartbeats", "observations"}:
         fail(f"v0.21 RuntimeWorkerStatusReport properties changed unexpectedly: {sorted(runtime_worker_props)}")
-    for needle in ["pub enum SignOnlyLifecycleState", "transition_sign_only_lifecycle", "sign_only_lifecycle_has_remote_side_effect"]:
-        if needle not in core:
-            fail(f"v0.21 sign-only lifecycle core missing token: {needle}")
-    for needle in [
-        "sign_only_lifecycle_records_from_receipt",
-        "sign_only_lifecycle_records_are_persistable_and_non_mutating",
-        "sign_only_lifecycle_rejects_posted_receipt",
-    ]:
-        if needle not in adapter:
-            fail(f"v0.21 sign-only lifecycle adapter missing token: {needle}")
-    for needle in [
-        "pub enum RuntimeWorkerKind",
-        "pub struct RuntimeWorkerAction",
-        "worker_actions_from_runtime_signals",
-        "worker_actions_mark_stale_runtime_inputs_as_fail_closed_updates",
-    ]:
-        if needle not in runtime:
-            fail(f"v0.21 runtime worker model missing token: {needle}")
+    require_file_tokens(
+        CORE_SRC / "domain/lifecycle/sign_only.rs",
+        "v0.21 sign-only lifecycle core",
+        ["pub enum SignOnlyLifecycleState", "transition_sign_only_lifecycle", "sign_only_lifecycle_has_remote_side_effect", "pub client_event_id: Option<String>"],
+    )
+    require_file_tokens(
+        SDK_ADAPTER_SRC / "lifecycle.rs",
+        "v0.21 sign-only lifecycle adapter",
+        ["sign_only_lifecycle_records_from_receipt", "no_remote_side_effect: true", "sign-only receipt unexpectedly indicates remote posting", "signed_order_ref: Some(receipt.signed_order_ref.clone())"],
+    )
+    require_file_tokens(
+        SDK_ADAPTER_SRC / "tests/sign_only.rs",
+        "v0.21 sign-only lifecycle tests",
+        ["sign_only_lifecycle_records_are_persistable_and_non_mutating", "sign_only_lifecycle_rejects_posted_receipt", "standard_sign_only_construction_emits_only_digest_ref_and_lifecycle"],
+    )
+    require_file_tokens(
+        EXECUTOR / "crates/pmx-runtime/src/health/action.rs",
+        "v0.21 runtime worker action model",
+        ["pub struct RuntimeWorkerAction", "worker_actions_from_runtime_signals", "should_fail_closed: health.blocks_submit()", "pub struct RuntimeWorkerStoreWrite"],
+    )
+    require_file_tokens(
+        EXECUTOR / "crates/pmx-runtime/src/health/worker.rs",
+        "v0.21 runtime worker kinds",
+        ["pub enum RuntimeWorkerKind"],
+    )
+    require_file_tokens(
+        EXECUTOR / "crates/pmx-runtime/src/runtime_tests/breakdown_loop/capabilities/groups.rs",
+        "v0.21 runtime worker tests",
+        ["worker_actions_mark_stale_runtime_inputs_as_fail_closed_updates"],
+    )
     for doc in [
         EXECUTOR / "validation/check_sign_only_lifecycle.py",
         EXECUTOR / "validation/check_runtime_worker_models.py",
