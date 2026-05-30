@@ -137,16 +137,25 @@ def validate_python_field_parity(spec: dict) -> None:
 
 def validate_sql_idempotency() -> None:
     sql = SQL.read_text()
-    if "idempotency_key TEXT PRIMARY KEY" in sql:
+    if re.search(r"idempotency_key\s+TEXT\s+PRIMARY\s+KEY", sql):
         fail("idempotency_key must not be a global primary key")
-    required = [
-        "UNIQUE(account_id, execution_id, idempotency_key)",
-        "request_fingerprint TEXT NOT NULL",
-        "submit_attempt INTEGER NOT NULL CHECK (submit_attempt >= 1)",
-    ]
-    for needle in required:
-        if needle not in sql:
-            fail(f"SQL missing idempotency invariant: {needle}")
+    table_match = re.search(
+        r"CREATE TABLE IF NOT EXISTS idempotency_records\s*\((?P<body>.*?)\);\s*",
+        sql,
+        re.DOTALL,
+    )
+    if not table_match:
+        fail("SQL missing idempotency_records table")
+    body = table_match.group("body")
+    required_column_patterns = {
+        "request_fingerprint TEXT NOT NULL": r"\brequest_fingerprint\s+TEXT\s+NOT\s+NULL\b",
+        "submit_attempt INTEGER NOT NULL CHECK (submit_attempt >= 1)": r"\bsubmit_attempt\s+INTEGER\s+NOT\s+NULL\s+CHECK\s*\(\s*submit_attempt\s*>=\s*1\s*\)",
+        "UNIQUE(account_id, execution_id, idempotency_key)": r"UNIQUE\s*\(\s*account_id\s*,\s*execution_id\s*,\s*idempotency_key\s*\)",
+        "UNIQUE(account_id, execution_id, submit_attempt)": r"UNIQUE\s*\(\s*account_id\s*,\s*execution_id\s*,\s*submit_attempt\s*\)",
+    }
+    for label, pattern in required_column_patterns.items():
+        if not re.search(pattern, body, re.DOTALL):
+            fail(f"SQL missing idempotency invariant: {label}")
 
 
 def validate_rust_deny_unknown_fields() -> None:

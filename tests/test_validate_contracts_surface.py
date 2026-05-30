@@ -134,6 +134,33 @@ class ValidateContractsSurfaceTests(unittest.TestCase):
             module.validate_critical_contract_shapes(spec)
         self.assertIn("SubmitRequest", str(ctx.exception))
 
+    def test_validate_sql_idempotency_parses_table_constraints_structurally(self) -> None:
+        sql = """
+        CREATE TABLE IF NOT EXISTS idempotency_records (
+            idempotency_record_id BIGSERIAL PRIMARY KEY,
+            account_id TEXT NOT NULL,
+            execution_id TEXT NOT NULL,
+            idempotency_key TEXT NOT NULL,
+            submit_attempt INTEGER NOT NULL CHECK ( submit_attempt >= 1 ),
+            request_fingerprint TEXT NOT NULL,
+            UNIQUE ( account_id, execution_id, idempotency_key ),
+            UNIQUE ( account_id, execution_id, submit_attempt )
+        );
+        """
+        with mock.patch.object(module, "SQL", mock.Mock(read_text=mock.Mock(return_value=sql))):
+            module.validate_sql_idempotency()
+
+    def test_validate_sql_idempotency_rejects_global_primary_key(self) -> None:
+        sql = """
+        CREATE TABLE IF NOT EXISTS idempotency_records (
+            idempotency_key TEXT PRIMARY KEY
+        );
+        """
+        with mock.patch.object(module, "SQL", mock.Mock(read_text=mock.Mock(return_value=sql))):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_sql_idempotency()
+        self.assertIn("idempotency_key must not be a global primary key", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

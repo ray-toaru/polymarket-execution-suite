@@ -124,6 +124,32 @@ def validate_required_groups(groups: dict[str, tuple[str, list[str]]]) -> None:
         require_tokens(text, label, needles)
 
 
+def rust_module_names(text: str, prefix: str = "mod") -> set[str]:
+    pattern = rf"(?m)^\s*{re.escape(prefix)}\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*;"
+    return set(re.findall(pattern, text))
+
+
+def rust_pub_use_targets(text: str) -> set[str]:
+    return set(re.findall(r"(?m)^\s*pub\s+use\s+([a-zA-Z_][a-zA-Z0-9_]*)::", text))
+
+
+def rust_async_fn_names(text: str) -> set[str]:
+    return set(re.findall(r"(?m)^\s*pub(?:\([^)]*\))?\s+async\s+fn\s+([a-zA-Z_][a-zA-Z0-9_]*)", text))
+
+
+def ensure_match_arms(text: str, label: str, fn_name: str, required_arms: list[str]) -> None:
+    marker = f"async fn {fn_name}"
+    start = text.find(marker)
+    if start == -1:
+        fail(f"{label} missing async fn: {fn_name}")
+    next_match = re.search(r"\n\s*(?:pub(?:\([^)]*\))?\s+)?async fn ", text[start + len(marker) :])
+    end = len(text) if not next_match else start + len(marker) + next_match.start()
+    body = text[start:end]
+    for arm in required_arms:
+        if arm not in body:
+            fail(f"{label} missing token: {arm}")
+
+
 def validate_v04_source_landings() -> None:
     if not API_E2E_TEST.exists():
         fail("missing HTTP/auth/fake E2E integration test source")
@@ -755,87 +781,116 @@ def validate_store_and_backend_structure() -> None:
     api_backend_audit = (API_SRC / "backend/audit.rs").read_text()
     api_backend_sign_only = (API_SRC / "backend/sign_only.rs").read_text()
     api_backend_runtime = (API_SRC / "backend/runtime.rs").read_text()
+    store_private_modules = rust_module_names(store_lib, "mod")
+    for module_name in [
+        "postgres_audit",
+        "postgres_execution",
+        "postgres_idempotency",
+        "postgres_runtime",
+        "postgres_sign_only",
+        "postgres_worker",
+    ]:
+        if module_name not in store_private_modules:
+            fail(f"pmx-store module boundary missing token: mod {module_name};")
+    if "postgres" not in rust_module_names(store_lib, "pub mod"):
+        fail("pmx-store module boundary missing token: pub mod postgres;")
+    if "postgres" not in rust_pub_use_targets(store_lib) or "PostgresStore" not in store_lib:
+        fail("pmx-store module boundary missing token: pub use postgres::PostgresStore;")
 
-    require_tokens(
-        store_lib,
-        "pmx-store module boundary",
-        [
-            "pub mod postgres;",
-            "mod postgres_audit;",
-            "mod postgres_execution;",
-            "mod postgres_idempotency;",
-            "mod postgres_runtime;",
-            "mod postgres_sign_only;",
-            "mod postgres_worker;",
-            "pub use postgres::PostgresStore;",
-        ],
-    )
-    require_tokens(
-        postgres_rs,
-        "PostgresStore structure",
-        [
-            "pub struct PostgresStore",
-            "database_url: String",
-            "pub async fn connect",
-            'simple_query("SELECT 1")',
-            "pub async fn apply_schema",
-            "pub async fn applied_schema_migrations",
-            "pub(crate) async fn client",
-            "tokio_postgres::connect(&self.database_url, NoTls)",
-            'client.batch_execute("ROLLBACK")',
-        ],
-    )
-    require_tokens(
-        service_lib,
-        "pmx-service module boundary",
-        [
-            "mod runtime_state;",
-            "mod runtime_worker;",
-            "mod sign_only;",
-            "mod submit;",
-            "pub use runtime_state::*;",
-            "pub use runtime_worker::*;",
-            "pub use sign_only::*;",
-            "pub use submit::*;",
-        ],
-    )
-    require_tokens(
+    postgres_async_fns = rust_async_fn_names(postgres_rs)
+    for fn_name in ["connect", "apply_schema", "applied_schema_migrations"]:
+        if fn_name not in postgres_async_fns:
+            fail(f"PostgresStore structure missing token: pub async fn {fn_name}")
+    if not re.search(r"pub\s+struct\s+PostgresStore\b", postgres_rs):
+        fail("PostgresStore structure missing token: pub struct PostgresStore")
+    if "database_url: String" not in postgres_rs:
+        fail("PostgresStore structure missing token: database_url: String")
+    if "pub(crate) async fn client" not in postgres_rs:
+        fail("PostgresStore structure missing token: pub(crate) async fn client")
+    for needle in [
+        'simple_query("SELECT 1")',
+        "tokio_postgres::connect(&self.database_url, NoTls)",
+        'client.batch_execute("ROLLBACK")',
+    ]:
+        if needle not in postgres_rs:
+            fail(f"PostgresStore structure missing token: {needle}")
+
+    service_modules = rust_module_names(service_lib, "mod")
+    for module_name in ["runtime_state", "runtime_worker", "sign_only", "submit"]:
+        if module_name not in service_modules:
+            fail(f"pmx-service module boundary missing token: mod {module_name};")
+    service_reexports = rust_pub_use_targets(service_lib)
+    for module_name in ["runtime_state", "runtime_worker", "sign_only", "submit"]:
+        if module_name not in service_reexports:
+            fail(f"pmx-service module boundary missing token: pub use {module_name}::*;")
+
+    ensure_match_arms(
         api_backend_audit,
         "pmx-api audit backend bridge",
+        "record_admin_audit_event",
         [
-            "impl ServiceBackend",
-            "record_admin_audit_event",
-            "list_admin_audit_events",
             "Self::InMemory(service) => service.record_admin_audit_event(event).await",
             "Self::Postgres(service) => service.record_admin_audit_event(event).await",
+        ],
+    )
+    ensure_match_arms(
+        api_backend_audit,
+        "pmx-api audit backend bridge",
+        "list_admin_audit_events",
+        [
             "Self::InMemory(service) => service.list_admin_audit_events(query).await",
             "Self::Postgres(service) => service.list_admin_audit_events(query).await",
         ],
     )
-    require_tokens(
+
+    ensure_match_arms(
         api_backend_sign_only,
         "pmx-api sign-only backend bridge",
+        "record_standard_sign_only_construction",
         [
-            "record_standard_sign_only_construction",
-            "list_sign_only_lifecycle_events",
             "Self::InMemory(service) => service.record_standard_sign_only_construction(req).await",
             "Self::Postgres(service) => service.record_standard_sign_only_construction(req).await",
+        ],
+    )
+    ensure_match_arms(
+        api_backend_sign_only,
+        "pmx-api sign-only backend bridge",
+        "list_sign_only_lifecycle_events",
+        [
             "Self::InMemory(service) => service.list_sign_only_lifecycle_events(query).await",
             "Self::Postgres(service) => service.list_sign_only_lifecycle_events(query).await",
         ],
     )
-    require_tokens(
+
+    ensure_match_arms(
         api_backend_runtime,
         "pmx-api runtime backend bridge",
+        "list_runtime_worker_status",
         [
-            "list_runtime_worker_status",
-            "set_account_kill_switch",
-            "set_global_kill_switch",
             "Self::InMemory(service) => service.list_runtime_worker_status(query).await",
             "Self::Postgres(service) => service.list_runtime_worker_status(query).await",
+        ],
+    )
+    ensure_match_arms(
+        api_backend_runtime,
+        "pmx-api runtime backend bridge",
+        "set_account_kill_switch",
+        [
             ".store()",
             ".set_account_kill_switch(account_id, enabled, reason)",
+            "Self::InMemory(service)",
+            "Self::Postgres(service)",
+        ],
+    )
+    ensure_match_arms(
+        api_backend_runtime,
+        "pmx-api runtime backend bridge",
+        "set_global_kill_switch",
+        [
+            ".store()",
             ".set_global_kill_switch(enabled, reason)",
+            "Self::InMemory(service)",
+            "Self::Postgres(service)",
         ],
     )
 
