@@ -72,6 +72,19 @@ def operation_response_ref(spec: dict, path: str, method: str, status: str) -> s
     )
 
 
+def operation_response_array_item_ref(spec: dict, path: str, method: str, status: str) -> str | None:
+    return (
+        openapi_operation(spec, path, method)
+        .get("responses", {})
+        .get(status, {})
+        .get("content", {})
+        .get("application/json", {})
+        .get("schema", {})
+        .get("items", {})
+        .get("$ref")
+    )
+
+
 def validate_v04_source_landings() -> None:
     if not API_E2E_TEST.exists():
         fail("missing HTTP/auth/fake E2E integration test source")
@@ -326,12 +339,27 @@ def validate_v12_service_layer(spec: dict | None = None) -> None:
             fail(f"PostgreSQL API E2E missing token: {needle}")
 
 
-def validate_v15_admin_audit_and_runtime_provider() -> None:
+def validate_v15_admin_audit_and_runtime_provider(spec: dict | None = None) -> None:
+    if spec is None:
+        import yaml
+
+        spec = yaml.safe_load(OPENAPI.read_text())
     service_text = rust_source_text(SERVICE_SRC)
     store_text = rust_source_text(STORE_SRC)
     postgres_text = rust_source_text(STORE_SRC)
     api_text = rust_source_text(API_SRC)
     pg_test_text = rust_file_with_modules_text(API_POSTGRES_E2E_TEST)
+    audit_operation = openapi_operation(spec, "/v1/admin/audit-events", "get")
+    if operation_response_array_item_ref(spec, "/v1/admin/audit-events", "get", "200") != "#/components/schemas/AdminAuditEvent":
+        fail("v0.15 admin audit response must be an array of AdminAuditEvent")
+    if operation_request_ref(spec, "/v1/admin/kill-switch", "post") != "#/components/schemas/KillSwitchRequest":
+        fail("v0.15 kill-switch request must reference KillSwitchRequest")
+    if operation_response_ref(spec, "/v1/admin/kill-switch", "post", "202") != "#/components/schemas/KillSwitchReceipt":
+        fail("v0.15 kill-switch response must reference KillSwitchReceipt")
+    audit_params = operation_parameter_names(audit_operation)
+    for required_param in {"before_audit_id", "operation", "principal_subject", "result", "correlation_id"}:
+        if required_param not in audit_params:
+            fail(f"v0.15 admin audit query must expose {required_param}")
     for needle in [
         "pub struct AdminAuditEvent",
         "pub trait AdminAuditStore",
@@ -440,7 +468,11 @@ def validate_v16_postgres_runtime_provider(spec: dict | None = None) -> None:
             fail(f"v0.18 missing continuation artifact: {doc.relative_to(ROOT)}")
 
 
-def validate_v19_redaction_and_live_guard() -> None:
+def validate_v19_redaction_and_live_guard(spec: dict | None = None) -> None:
+    if spec is None:
+        import yaml
+
+        spec = yaml.safe_load(OPENAPI.read_text())
     adapter_text = rust_source_text(SDK_ADAPTER_SRC)
     for needle in [
         "pub const REDACTED",
@@ -454,6 +486,22 @@ def validate_v19_redaction_and_live_guard() -> None:
     if not LIVE_SUBMIT_GUARD.exists():
         fail("missing v0.19 live-submit static guard")
     guard_text = LIVE_SUBMIT_GUARD.read_text()
+    forbidden_public_tokens = {"SignedOrderEnvelope", "signed_payload", "private_key", "clob_secret", "post_order"}
+    public_strings = set()
+    stack = [spec]
+    while stack:
+        current = stack.pop()
+        if isinstance(current, dict):
+            for key, value in current.items():
+                public_strings.add(str(key))
+                stack.append(value)
+        elif isinstance(current, list):
+            stack.extend(current)
+        elif isinstance(current, str):
+            public_strings.add(current)
+    for token in forbidden_public_tokens:
+        if token in public_strings:
+            fail(f"v0.19 public contract exposes forbidden live/signed term: {token}")
     for needle in ["post_order", "post_orders", "public OpenAPI", "live-submit static guard passed"]:
         if needle not in guard_text:
             fail(f"v0.19 live-submit static guard missing token: {needle}")

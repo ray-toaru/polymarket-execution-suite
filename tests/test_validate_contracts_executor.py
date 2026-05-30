@@ -207,6 +207,35 @@ class ValidateContractsExecutorTests(unittest.TestCase):
             module.validate_v16_postgres_runtime_provider(spec)
         self.assertIn("RuntimeWorkerStatusReport", str(ctx.exception))
 
+    def test_v15_requires_admin_audit_query_filters(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/admin/audit-events"]["get"]["parameters"] = [{"name": "before_audit_id"}]
+        spec["paths"]["/v1/admin/audit-events"]["get"]["responses"] = {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "schema": {"type": "array", "items": {"$ref": "#/components/schemas/AdminAuditEvent"}}
+                    }
+                }
+            }
+        }
+        spec["paths"]["/v1/admin/kill-switch"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/KillSwitchRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/KillSwitchReceipt"}}}}},
+            }
+        }
+        with self.assertRaises(SystemExit) as ctx:
+            module.validate_v15_admin_audit_and_runtime_provider(spec)
+        self.assertIn("v0.15 admin audit query must expose", str(ctx.exception))
+
+    def test_v19_rejects_forbidden_public_contract_tokens_structurally(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["components"]["schemas"]["Leak"] = {"type": "object", "properties": {"danger": {"description": "signed_payload"}}}
+        with self.assertRaises(SystemExit) as ctx:
+            module.validate_v19_redaction_and_live_guard(spec)
+        self.assertIn("signed_payload", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()
