@@ -4,6 +4,7 @@ import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = ROOT / "polymarket-execution-engine" / "validation" / "check_live_submit_guard.py"
@@ -49,6 +50,23 @@ class CheckLiveSubmitGuardTests(unittest.TestCase):
                 failure_prefix="bad call sites",
             )
         self.assertEqual(failures, ["bad call sites; found a.rs, b.rs"])
+
+    def test_validate_idempotency_guard_tokens_reports_missing_token(self) -> None:
+        fake_path = Path("/repo/idempotency.rs")
+        with mock.patch.object(
+            self.module,
+            "REQUIRED_IDEMPOTENCY_TOKENS",
+            [(fake_path, ["IDEMPOTENCY_LEASE_SECS", "owner_token"])],
+        ), mock.patch("pathlib.Path.read_text", autospec=True, return_value="IDEMPOTENCY_LEASE_SECS"), mock.patch.object(
+            self.module,
+            "ROOT",
+            Path("/repo"),
+        ):
+            failures = self.module.validate_idempotency_guard_tokens()
+        self.assertEqual(
+            failures,
+            ["idempotency lease/owner guard missing token in idempotency.rs: owner_token"],
+        )
 
 
 if __name__ == "__main__":
