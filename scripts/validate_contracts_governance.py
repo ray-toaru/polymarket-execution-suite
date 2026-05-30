@@ -16,6 +16,18 @@ from validate_contracts_support import (
 )
 
 
+def require_existing_paths(paths: list, label: str) -> None:
+    for path in paths:
+        if not path.exists():
+            fail(f"{label} missing: {path.relative_to(ROOT)}")
+
+
+def validate_absent_tokens(text: str, label: str, tokens: list[str]) -> None:
+    for token in tokens:
+        if token in text:
+            fail(f"{label} contains forbidden token: {token}")
+
+
 def validate_current_hermes_client_surface() -> None:
     client_text = (CONTROL / "src/hermes_polymarket_executor_adapter/client.py").read_text()
     model_text = (CONTROL / "src/hermes_polymarket_executor_adapter/models.py").read_text()
@@ -173,20 +185,23 @@ def validate_controlled_canary_release_decision_governance() -> None:
     runtime_truth_invalid_partial = EXECUTOR / "config/controlled-canary.runtime-truth.invalid-partial.fixture.json"
     runtime_truth_invalid_sensitive = EXECUTOR / "config/controlled-canary.runtime-truth.invalid-sensitive.fixture.json"
     runtime_truth_validator = EXECUTOR / "validation/validate_controlled_canary_runtime_truth.py"
-    for path in [template, example, invalid, invalid_mismatched, validator]:
-        if not path.exists():
-            fail(f"controlled canary release-decision governance file missing: {path.relative_to(ROOT)}")
-    for path in [external_template, external_example, external_invalid, external_validator]:
-        if not path.exists():
-            fail(f"controlled canary external-reference governance file missing: {path.relative_to(ROOT)}")
-    for path in [
+    require_existing_paths(
+        [template, example, invalid, invalid_mismatched, validator],
+        "controlled canary release-decision governance file",
+    )
+    require_existing_paths(
+        [external_template, external_example, external_invalid, external_validator],
+        "controlled canary external-reference governance file",
+    )
+    require_existing_paths(
+        [
         runtime_truth_template,
         runtime_truth_invalid_partial,
         runtime_truth_invalid_sensitive,
         runtime_truth_validator,
-    ]:
-        if not path.exists():
-            fail(f"controlled canary runtime-truth governance file missing: {path.relative_to(ROOT)}")
+        ],
+        "controlled canary runtime-truth governance file",
+    )
     template_data = json.loads(template.read_text())
     example_data = json.loads(example.read_text())
     invalid_data = json.loads(invalid.read_text())
@@ -431,7 +446,7 @@ def validate_canary_candidate_market_prep_boundary() -> None:
     ]:
         if needle not in text:
             fail(f"canary candidate market prep script missing boundary token: {needle}")
-    for forbidden in [
+    validate_absent_tokens(text, "canary candidate market prep script", [
         "post_order",
         "post_orders",
         "private_key",
@@ -440,18 +455,14 @@ def validate_canary_candidate_market_prep_boundary() -> None:
         "POLYMARKET_PRIVATE_KEY",
         "PMX_ALLOW_LIVE_SUBMIT=1",
         "PMX_ALLOW_REAL_FUNDS_CANARY=1",
-    ]:
-        if forbidden in text:
-            fail(f"canary candidate market prep script contains forbidden token: {forbidden}")
+    ])
     live_canary = (SDK_ADAPTER_SRC / "sdk_runtime/live_canary.rs").read_text()
-    for forbidden in [
+    validate_absent_tokens(live_canary, "execution-engine live canary runtime", [
         "simplified_markets",
         "sampling_markets",
         "sampling_simplified_markets",
         ".market_order(",
-    ]:
-        if forbidden in live_canary:
-            fail(f"execution-engine live canary runtime contains forbidden token: {forbidden}")
+    ])
     for needle in [
         "limit_order()",
         "size(size)",
@@ -567,9 +578,11 @@ def validate_single_host_deployment_governance() -> None:
             fail(f"single-host deployment README missing token: {needle}")
     if "--dry-run" not in canary_service:
         fail("single-host canary service must run dry-run mode")
-    for forbidden in ["--armed", "--allow-live-submit-config", "--allow-real-funds-canary-config"]:
-        if forbidden in canary_service:
-            fail(f"single-host canary service must not include {forbidden}")
+    validate_absent_tokens(
+        canary_service,
+        "single-host canary service",
+        ["--armed", "--allow-live-submit-config", "--allow-real-funds-canary-config"],
+    )
     for needle in [
         "single_host_deployment_validation",
         "69-single-host-deployment-drill.log",
@@ -627,7 +640,7 @@ def validate_single_host_deployment_governance() -> None:
     ]:
         if needle not in go_candidate_validator:
             fail(f"single-host go candidate validator missing token: {needle}")
-    for forbidden in [
+    validate_absent_tokens(combined_templates, "single-host deployment files", [
         "-----BEGIN",
         "clob_secret=",
         "raw_signature=",
@@ -637,9 +650,7 @@ def validate_single_host_deployment_governance() -> None:
         "PMX_ALLOW_LIVE_CANCEL=1",
         "PMX_ALLOW_REAL_FUNDS_CANARY=1",
         "PMX_PRODUCTION_DEPLOYMENT_ENABLED=1",
-    ]:
-        if forbidden in combined_templates:
-            fail(f"single-host deployment files contain forbidden token: {forbidden}")
+    ])
 
 
 def validate_v28_production_live_candidate_guard() -> None:

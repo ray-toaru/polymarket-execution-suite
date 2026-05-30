@@ -105,6 +105,20 @@ def require_file_tokens(path, label: str, tokens: list[str]) -> None:
     require_tokens(path.read_text(), label, tokens)
 
 
+def validate_absent_tokens(text: str, label: str, tokens: list[str]) -> None:
+    for token in tokens:
+        if token in text:
+            fail(f"{label} contains forbidden token: {token}")
+
+
+def source_tree_text_without_paths(root, excluded_paths: list) -> str:
+    text = rust_source_text(root)
+    for excluded in excluded_paths:
+        if excluded.exists():
+            text = text.replace(excluded.read_text(), "")
+    return text
+
+
 def validate_v04_source_landings() -> None:
     if not API_E2E_TEST.exists():
         fail("missing HTTP/auth/fake E2E integration test source")
@@ -271,12 +285,12 @@ def validate_v09_official_adapter_boundary() -> None:
         fail("official adapter must expose an explicit live-submit feature gate")
     live_canary = SDK_ADAPTER_SRC / "sdk_runtime/live_canary.rs"
     gateway_bridge = SDK_ADAPTER_SRC / "sdk_runtime/gateway.rs"
-    adapter_boundary_text = rust_source_text(SDK_ADAPTER_SRC)
-    for allowed_post_order_file in [live_canary, gateway_bridge]:
-        if allowed_post_order_file.exists():
-            adapter_boundary_text = adapter_boundary_text.replace(allowed_post_order_file.read_text(), "")
-    if 'post_order(' in adapter_boundary_text or 'post_orders(' in adapter_boundary_text:
-        fail("official adapter boundary must not call post_order/post_orders outside guarded canary/gateway bridge paths")
+    adapter_boundary_text = source_tree_text_without_paths(SDK_ADAPTER_SRC, [live_canary, gateway_bridge])
+    validate_absent_tokens(
+        adapter_boundary_text,
+        "official adapter boundary",
+        ["post_order(", "post_orders("],
+    )
     if gateway_bridge.exists():
         gateway_text = gateway_bridge.read_text()
         for needle in [
@@ -348,8 +362,7 @@ def validate_v12_service_layer(spec: dict | None = None) -> None:
         ['"SUBMIT_BLOCKED_BEFORE_REMOTE"', '"no_remote_side_effect": true', '"reservation_written": false', "finish_submit_attempt(pmx_store::FinishSubmitAttempt"],
     )
     blocked_submit = (SERVICE_SRC / "submit/blocked.rs").read_text()
-    if "save_order_reservation" in blocked_submit:
-        fail("blocked submit path must not persist reservations")
+    validate_absent_tokens(blocked_submit, "blocked submit path", ["save_order_reservation"])
     require_file_tokens(
         SERVICE_SRC / "service_tests/flow.rs",
         "service flow tests",
@@ -367,8 +380,7 @@ def validate_v12_service_layer(spec: dict | None = None) -> None:
     ]:
         if needle not in backend_text:
             fail(f"pmx-api backend structure missing token: {needle}")
-    if 'pub fn fake_snapshot' in api_text:
-        fail("pmx-api must not keep fake_snapshot helper after pmx-service extraction")
+    validate_absent_tokens(api_text, "pmx-api", ["pub fn fake_snapshot"])
     if not (EXECUTOR / "validation/run_current_gates.sh").exists():
         fail("missing current gate runner")
     if not API_POSTGRES_E2E_TEST.exists():
@@ -517,8 +529,11 @@ def validate_v16_postgres_runtime_provider(spec: dict | None = None) -> None:
     ]:
         if needle not in pg_test_text:
             fail(f"v0.16 PostgreSQL runtime/audit E2E missing token: {needle}")
-    if "read-only smoke must not depend on signer credentials" in spike_text:
-        fail("SDK spike read-only smoke must not fail just because credentials are exported")
+    validate_absent_tokens(
+        spike_text,
+        "SDK spike read-only smoke",
+        ["read-only smoke must not depend on signer credentials"],
+    )
     for doc in [
         EXECUTOR / "docs/POSTGRES_RUNTIME_PROVIDER.md",
         EXECUTOR / "docs/ADMIN_AUDIT_FAILURE_PATHS.md",
@@ -593,10 +608,8 @@ def validate_v20_plan_storage_and_packaging(spec: dict | None = None) -> None:
     for needle in ["DROP TABLE IF EXISTS plan_summaries", "execution_plans.summary_json as canonical plan summary storage"]:
         if needle not in migration:
             fail(f"v0.20 migration plan storage missing token: {needle}")
-    if "CREATE TABLE IF NOT EXISTS plan_summaries" in migration:
-        fail("v0.20 migration must not recreate plan_summaries")
-    if "INSERT INTO plan_summaries" in postgres or '"plan_summaries"' in postgres:
-        fail("v0.20 PostgresStore must not read/write plan_summaries")
+    validate_absent_tokens(migration, "v0.20 migration", ["CREATE TABLE IF NOT EXISTS plan_summaries"])
+    validate_absent_tokens(postgres, "v0.20 PostgresStore", ["INSERT INTO plan_summaries", '"plan_summaries"'])
     for needle in [
         "validate_token_id",
         "validate_limit_price_for_sdk",
