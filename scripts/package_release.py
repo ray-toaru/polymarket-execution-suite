@@ -292,6 +292,23 @@ def bind_workspace_manifest(evidence_manifest: Path, artifact_sha256: str) -> No
     evidence_manifest.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
 
 
+def contract_validation_report_metadata() -> dict[str, str] | None:
+    report = (
+        ROOT
+        / "polymarket-execution-engine"
+        / "evidence"
+        / "current"
+        / "logs"
+        / "25-contract-validation.report.json"
+    )
+    if not report.exists():
+        return None
+    return {
+        "path": str(report.relative_to(ROOT)),
+        "sha256": sha256(report),
+    }
+
+
 def main() -> int:
     if not VERSION:
         print("VERSION file is empty", file=sys.stderr)
@@ -336,6 +353,7 @@ def main() -> int:
                     "manifest_sha256": manifest_sha256,
                     "archived_manifest_sha256": manifest_sha256,
                     "workspace_manifest_sha256": workspace_manifest_sha256,
+                    "contract_validation_report": contract_validation_report_metadata(),
                 },
                 "release_decision_path": "RELEASE_DECISION.md",
                 "note": "This external sidecar binds the final zip hash; files inside the zip do not self-assert the final containing-archive hash.",

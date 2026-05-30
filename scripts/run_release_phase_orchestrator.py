@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import hashlib
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -15,6 +17,7 @@ PRODUCTION_CONTROL_SUITE = ROOT / "scripts" / "run_production_control_suite.py"
 DEPLOYMENT_VALIDATION_SUITE = ROOT / "scripts" / "run_deployment_validation_suite.py"
 LIVE_SUBMIT_PROMOTION_SUITE = ROOT / "scripts" / "run_live_submit_promotion_suite.py"
 REVIEWED_GO_DECISION_WORKFLOW = ROOT / "scripts" / "run_reviewed_go_decision_workflow.py"
+CONTRACT_VALIDATION_SCRIPT = ROOT / "scripts" / "validate_contracts.py"
 
 
 def load_module(path: Path, name: str):
@@ -30,6 +33,76 @@ def resolve(path: Path | None) -> Path | None:
     if path is None:
         return None
     return path if path.is_absolute() else ROOT / path
+
+
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def contract_validation_output_dir(args: argparse.Namespace) -> Path:
+    if args.output_dir:
+        return resolve(args.output_dir) / "contract-validation"
+    return ROOT / "dist" / "release-phase-orchestrator" / "contract-validation"
+
+
+def build_contract_validation_plan(args: argparse.Namespace) -> dict[str, Any]:
+    report_file = contract_validation_output_dir(args) / "contract-validation.report.json"
+    log_file = contract_validation_output_dir(args) / "contract-validation.stdout.json"
+    return {
+        "status": "ready",
+        "suite": "contract_validation",
+        "command": [
+            sys.executable,
+            str(CONTRACT_VALIDATION_SCRIPT),
+            "--report-file",
+            str(report_file),
+        ],
+        "report_file": str(report_file),
+        "stdout_file": str(log_file),
+    }
+
+
+def execute_contract_validation(plan: dict[str, Any]) -> dict[str, Any]:
+    report_file = Path(plan["report_file"])
+    stdout_file = Path(plan["stdout_file"])
+    report_file.parent.mkdir(parents=True, exist_ok=True)
+    completed = subprocess.run(
+        plan["command"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    stdout_file.write_text(completed.stdout)
+    if completed.stderr:
+        stdout_file.with_suffix(stdout_file.suffix + ".stderr").write_text(completed.stderr)
+    if report_file.exists():
+        report = json.loads(report_file.read_text())
+    else:
+        report = {
+            "status": "fail",
+            "failed_check_count": None,
+            "failed_check_ids": [],
+            "checks": [],
+        }
+    result = {
+        "status": "pass" if completed.returncode == 0 and report.get("status") == "ok" else "fail",
+        "suite": "contract_validation",
+        "command": plan["command"],
+        "report_file": str(report_file),
+        "stdout_file": str(stdout_file),
+        "returncode": completed.returncode,
+        "report_status": report.get("status"),
+        "failed_check_count": report.get("failed_check_count"),
+        "failed_check_ids": report.get("failed_check_ids", []),
+    }
+    if report_file.exists():
+        result["report_sha256"] = sha256(report_file)
+    return result
 
 
 def parse_args() -> argparse.Namespace:
@@ -90,6 +163,7 @@ def build_stage_plans(args: argparse.Namespace) -> dict[str, Any]:
         "status": "ready",
         "workflow": "release_phase_orchestrator",
         "stages": {
+            "contract_validation": build_contract_validation_plan(args),
             "production_control": production_module.build_suite_plan(
                 release_zip=args.release_zip,
                 output_dir=(output_dir / "production-control") if output_dir else None,
@@ -184,6 +258,38 @@ def execute_orchestrator(args: argparse.Namespace) -> dict[str, Any]:
     promotion_module = load_module(LIVE_SUBMIT_PROMOTION_SUITE, "run_live_submit_promotion_suite")
 
     stage_results: dict[str, Any] = {}
+    stage_results["contract_validation"] = execute_contract_validation(
+        plans["stages"]["contract_validation"]
+    )
+    if stage_results["contract_validation"]["status"] == "fail":
+        blocked = {
+            "status": "blocked",
+            "blocked_reason": "contract_validation_failed",
+            "depends_on": "contract_validation",
+        }
+        stage_results["production_control"] = {
+            **blocked,
+            "suite": plans["stages"]["production_control"]["suite"],
+        }
+        stage_results["deployment_validation"] = {
+            **blocked,
+            "suite": plans["stages"]["deployment_validation"]["suite"],
+        }
+        reviewed_go_stage = plans["stages"]["reviewed_go_decision_chain"]
+        reviewed_go_name = reviewed_go_stage.get("workflow", "reviewed_go_decision_chain")
+        stage_results["live_submit_promotion"] = {
+            **blocked,
+            "suite": plans["stages"]["live_submit_promotion"]["suite"],
+        }
+        stage_results["reviewed_go_decision_chain"] = {
+            **blocked,
+            "workflow": reviewed_go_name,
+        }
+        return {
+            "status": "fail",
+            "workflow": "release_phase_orchestrator",
+            "stages": stage_results,
+        }
     stage_results["production_control"] = production_module.execute_suite(
         plans["stages"]["production_control"]
     )

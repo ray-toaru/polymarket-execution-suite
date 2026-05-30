@@ -4,6 +4,8 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -78,27 +80,57 @@ VALIDATORS = [
 ]
 
 
-def build_report(spec: dict) -> dict:
-    checks = []
-    for validator in VALIDATORS:
+def error_message(exc: BaseException) -> str:
+    text = str(exc).strip()
+    if text:
+        return text
+    return exc.__class__.__name__
+
+
+def run_validator(validator: ValidatorSpec, spec: dict[str, Any]) -> dict[str, str]:
+    try:
         if validator.uses_spec:
             validator.fn(spec)
         else:
             validator.fn()
-        checks.append(
-            {
-                "id": validator.id,
-                "category": validator.category,
-                "status": "pass",
-            }
-        )
+    except BaseException as exc:
+        return {
+            "id": validator.id,
+            "category": validator.category,
+            "status": "fail",
+            "error_type": exc.__class__.__name__,
+            "error": error_message(exc),
+        }
     return {
-        "status": "ok",
+        "id": validator.id,
+        "category": validator.category,
+        "status": "pass",
+    }
+
+
+def build_report(spec: dict[str, Any], validators: list[ValidatorSpec] | None = None) -> dict[str, Any]:
+    active_validators = validators or VALIDATORS
+    checks = []
+    for validator in active_validators:
+        checks.append(run_validator(validator, spec))
+    failed_checks = [check for check in checks if check["status"] != "pass"]
+    return {
+        "status": "ok" if not failed_checks else "fail",
         "paths": len(spec["paths"]),
         "schemas": len(spec["components"]["schemas"]),
         "check_count": len(checks),
+        "failed_check_count": len(failed_checks),
+        "failed_check_ids": [check["id"] for check in failed_checks],
         "checks": checks,
     }
+
+
+def write_report(report: dict[str, Any], report_file: str | Path) -> None:
+    path = Path(report_file)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as fh:
+        json.dump(report, fh, indent=2, sort_keys=True)
+        fh.write("\n")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -110,10 +142,10 @@ def main(argv: list[str] | None = None) -> None:
     spec = yaml.safe_load(OPENAPI.read_text())
     report = build_report(spec)
     if args.report_file:
-        with open(args.report_file, "w", encoding="utf-8") as fh:
-            json.dump(report, fh, indent=2, sort_keys=True)
-            fh.write("\n")
+        write_report(report, args.report_file)
     print(json.dumps(report, sort_keys=True))
+    if report["status"] != "ok":
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

@@ -66,6 +66,7 @@ class RunReleasePhaseOrchestratorTests(unittest.TestCase):
             args = self.base_args(tmp)
             plan = self.module.build_stage_plans(args)
         self.assertEqual(plan["workflow"], "release_phase_orchestrator")
+        self.assertEqual(plan["stages"]["contract_validation"]["suite"], "contract_validation")
         self.assertEqual(plan["stages"]["production_control"]["suite"], "production_control_evidence")
         self.assertEqual(plan["stages"]["deployment_validation"]["suite"], "deployment_validation_evidence")
         self.assertEqual(plan["stages"]["live_submit_promotion"]["suite"], "live_submit_promotion_evidence")
@@ -103,6 +104,9 @@ class RunReleasePhaseOrchestratorTests(unittest.TestCase):
                 def execute_suite(plan):
                     return {"status": "pass", "suite": plan["suite"]}
 
+            def fake_execute_contract_validation(plan):
+                return {"status": "pass", "suite": plan["suite"], "report_status": "ok"}
+
             def fake_load_module(path, name):
                 if path == self.module.PRODUCTION_CONTROL_SUITE:
                     return FakeProductionModule()
@@ -113,9 +117,11 @@ class RunReleasePhaseOrchestratorTests(unittest.TestCase):
                 raise AssertionError(f"unexpected module load: {path}")
 
             self.module.load_module = fake_load_module
+            self.module.execute_contract_validation = fake_execute_contract_validation
             result = self.module.execute_orchestrator(args)
 
         self.assertEqual(result["status"], "pass")
+        self.assertEqual(result["stages"]["contract_validation"]["status"], "pass")
         self.assertEqual(result["stages"]["reviewed_go_decision_chain"]["status"], "blocked")
 
     def test_execute_orchestrator_runs_reviewed_go_when_inputs_are_present(self):
@@ -175,6 +181,9 @@ class RunReleasePhaseOrchestratorTests(unittest.TestCase):
                 def execute_workflow(args):
                     return {"status": "review_packet_ready_requires_independent_review"}
 
+            def fake_execute_contract_validation(plan):
+                return {"status": "pass", "suite": plan["suite"], "report_status": "ok"}
+
             def fake_load_module(path, name):
                 if path == self.module.PRODUCTION_CONTROL_SUITE:
                     return FakeProductionModule()
@@ -187,6 +196,7 @@ class RunReleasePhaseOrchestratorTests(unittest.TestCase):
                 raise AssertionError(f"unexpected module load: {path}")
 
             self.module.load_module = fake_load_module
+            self.module.execute_contract_validation = fake_execute_contract_validation
             result = self.module.execute_orchestrator(args)
 
         self.assertEqual(result["status"], "pass")
@@ -194,6 +204,63 @@ class RunReleasePhaseOrchestratorTests(unittest.TestCase):
             result["stages"]["reviewed_go_decision_chain"]["status"],
             "review_packet_ready_requires_independent_review",
         )
+
+    def test_execute_orchestrator_blocks_downstream_stages_when_contract_validation_fails(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            args = self.base_args(tmp)
+
+            class FakeProductionModule:
+                @staticmethod
+                def build_suite_plan(**kwargs):
+                    return {"status": "ready", "suite": "production_control_evidence"}
+
+                @staticmethod
+                def execute_suite(plan):
+                    raise AssertionError("downstream suite should not run after contract validation failure")
+
+            class FakeDeploymentModule:
+                @staticmethod
+                def build_suite_plan(**kwargs):
+                    return {"status": "ready", "suite": "deployment_validation_evidence"}
+
+                @staticmethod
+                def execute_suite(plan):
+                    raise AssertionError("downstream suite should not run after contract validation failure")
+
+            class FakePromotionModule:
+                @staticmethod
+                def build_suite_plan(**kwargs):
+                    return {"status": "ready", "suite": "live_submit_promotion_evidence"}
+
+                @staticmethod
+                def execute_suite(plan):
+                    raise AssertionError("downstream suite should not run after contract validation failure")
+
+            def fake_load_module(path, name):
+                if path == self.module.PRODUCTION_CONTROL_SUITE:
+                    return FakeProductionModule()
+                if path == self.module.DEPLOYMENT_VALIDATION_SUITE:
+                    return FakeDeploymentModule()
+                if path == self.module.LIVE_SUBMIT_PROMOTION_SUITE:
+                    return FakePromotionModule()
+                raise AssertionError(f"unexpected module load: {path}")
+
+            self.module.load_module = fake_load_module
+            self.module.execute_contract_validation = lambda plan: {
+                "status": "fail",
+                "suite": plan["suite"],
+                "report_status": "fail",
+                "failed_check_ids": ["synthetic_failure"],
+            }
+            result = self.module.execute_orchestrator(args)
+
+        self.assertEqual(result["status"], "fail")
+        self.assertEqual(result["stages"]["contract_validation"]["status"], "fail")
+        self.assertEqual(result["stages"]["production_control"]["status"], "blocked")
+        self.assertEqual(result["stages"]["deployment_validation"]["status"], "blocked")
+        self.assertEqual(result["stages"]["live_submit_promotion"]["status"], "blocked")
+        self.assertEqual(result["stages"]["reviewed_go_decision_chain"]["status"], "blocked")
 
 
 if __name__ == "__main__":

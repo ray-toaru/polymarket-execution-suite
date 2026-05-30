@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 import tempfile
 from unittest import mock
+import json
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -134,6 +135,34 @@ class PackageReleaseIndexTests(unittest.TestCase):
 
         self.assertIn(tracked_root, files)
         self.assertIn(tracked_submodule, files)
+
+    def test_contract_validation_report_metadata_returns_path_and_hash(self):
+        report = (
+            ROOT
+            / "polymarket-execution-engine"
+            / "evidence"
+            / "current"
+            / "logs"
+            / "25-contract-validation.report.json"
+        )
+        report.parent.mkdir(parents=True, exist_ok=True)
+        previous = report.read_text() if report.exists() else None
+        try:
+            report.write_text(json.dumps({"status": "ok"}, sort_keys=True) + "\n")
+            metadata = self.package_release.contract_validation_report_metadata()
+            expected_sha256 = self.package_release.sha256(report)
+        finally:
+            if previous is None:
+                report.unlink()
+            else:
+                report.write_text(previous)
+
+        assert metadata is not None
+        self.assertEqual(
+            metadata["path"],
+            "polymarket-execution-engine/evidence/current/logs/25-contract-validation.report.json",
+        )
+        self.assertEqual(metadata["sha256"], expected_sha256)
 
 
 if __name__ == "__main__":
