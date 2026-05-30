@@ -200,6 +200,20 @@ class ValidateContractsExecutorTests(unittest.TestCase):
             module.validate_v12_service_layer(spec)
         self.assertIn("/v1/plans/compile request", str(ctx.exception))
 
+    def test_v08_requires_toolchain_pin(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("polymarket-execution-engine/rust-toolchain.toml"):
+                return '[toolchain]\nchannel = "stable"\ncomponents = ["rustfmt", "clippy"]\nprofile = "minimal"\n'
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v08_dependency_and_sdk_policy()
+        self.assertIn("executor rust toolchain", str(ctx.exception))
+
     def test_v04_requires_postgres_receipt_reservation_tests(self) -> None:
         original_read_text = Path.read_text
 
@@ -234,6 +248,45 @@ class ValidateContractsExecutorTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as ctx:
             module.validate_v16_postgres_runtime_provider(spec)
         self.assertIn("RuntimeWorkerStatusReport", str(ctx.exception))
+
+    def test_v12_requires_service_binding_hash_inputs(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        spec["paths"]["/v1/submissions"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/SubmitRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/SubmitReceipt"}}}}},
+            }
+        }
+        spec["paths"]["/v1/admin/cancel-order"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CancelOrderRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CancelReceipt"}}}}},
+            }
+        }
+        spec["paths"]["/v1/admin/reconcile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReconcileRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReconcileReport"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-service/src/binding/hash_inputs.rs"):
+                return "pub(crate) struct PlanHashInput<'a>\napproval_id: &'a str\napproval_hash: &'a HashValue\nexecutor_version: &'a str"
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v12_service_layer(spec)
+        self.assertIn("service binding hash inputs", str(ctx.exception))
 
     def test_v09_requires_feature_gated_adapter_tests(self) -> None:
         original_read_text = Path.read_text

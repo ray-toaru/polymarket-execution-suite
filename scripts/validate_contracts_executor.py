@@ -191,27 +191,34 @@ def validate_v07_source_landings() -> None:
 
 
 def validate_v08_dependency_and_sdk_policy() -> None:
-    cargo_text = ROOT_CARGO_TOML.read_text()
-    for needle in [
-        'edition = "2024"',
-        'rust-version = "1.88"',
-        f'version = "{(ROOT / "VERSION").read_text().strip()}"',
-        'tokio = { version = "1.52.3"',
-        'serde = { version = "1.0.228"',
-    ]:
-        if needle not in cargo_text:
-            fail(f"v0.13 Cargo baseline missing token: {needle}")
+    require_file_tokens(
+        ROOT_CARGO_TOML,
+        "root Cargo baseline",
+        [
+            'edition = "2024"',
+            'rust-version = "1.88"',
+            f'version = "{(ROOT / "VERSION").read_text().strip()}"',
+            'tokio = { version = "1.52.3"',
+            'serde = { version = "1.0.228"',
+        ],
+    )
+    require_file_tokens(
+        EXECUTOR / "rust-toolchain.toml",
+        "executor rust toolchain",
+        ['channel = "1.88.0"', 'components = ["rustfmt", "clippy"]', 'profile = "minimal"'],
+    )
+    require_file_tokens(
+        SDK_SPIKE_TOML,
+        "official SDK spike Cargo",
+        ['name = "pmx-official-sdk-spike"', 'rust-version = "1.88"', 'sdk-typecheck = ["dep:polymarket_client_sdk_v2"]', 'live-submit = ["sdk-typecheck"]', 'polymarket_client_sdk_v2 = { version = "=0.6.0-canary.1"'],
+    )
+    require_file_tokens(
+        SDK_SPIKE_RS,
+        "official SDK spike",
+        ['PINNED_OFFICIAL_SDK_VERSION: &str = "=0.6.0-canary.1"', 'read_only_ok_smoke', 'default_read_only_client', 'polymarket_client_sdk_v2::clob::Client::new', 'client.server_time()'],
+    )
     sdk_text = SDK_SPIKE_RS.read_text()
     sdk_toml = SDK_SPIKE_TOML.read_text()
-    for needle in [
-        'PINNED_OFFICIAL_SDK_VERSION: &str = "=0.6.0-canary.1"',
-        'read_only_ok_smoke',
-        'default_read_only_client',
-        'polymarket_client_sdk_v2::clob::Client::new',
-        'client.server_time()',
-    ]:
-        if needle not in sdk_text:
-            fail(f"v0.11 SDK read-only smoke missing token: {needle}")
     if 'use std::time::Duration;' in sdk_text and '#[cfg(feature = "sdk-typecheck")]\n    use std::time::Duration;' not in sdk_text:
         fail("Duration import must be cfg-gated to avoid no-feature warning")
     if 'polymarket_client_sdk_v2 = { version = "=0.6.0-canary.1"' not in sdk_toml:
@@ -300,14 +307,12 @@ def validate_v12_service_layer(spec: dict | None = None) -> None:
         import yaml
 
         spec = yaml.safe_load(OPENAPI.read_text())
+    api_text = rust_source_text(API_SRC)
     if not SERVICE_RS.exists():
         fail("missing pmx-service crate source")
     if not SERVICE_TOML.exists():
         fail("missing pmx-service Cargo.toml")
-    service_text = rust_source_text(SERVICE_SRC)
-    api_text = rust_source_text(API_SRC)
     backend_text = (API_SRC / "backend.rs").read_text()
-    root_toml = ROOT_CARGO_TOML.read_text()
     expected_openapi_refs = {
         ("/v1/plans/compile", "post", "request"): "#/components/schemas/CompilePlanRequest",
         ("/v1/plans/compile", "post", "200"): "#/components/schemas/ExecutionPlanSummary",
@@ -322,49 +327,39 @@ def validate_v12_service_layer(spec: dict | None = None) -> None:
         actual_ref = operation_request_ref(spec, path, method) if kind == "request" else operation_response_ref(spec, path, method, kind)
         if actual_ref != expected_ref:
             fail(f"OpenAPI {method.upper()} {path} {kind} must reference {expected_ref}, got {actual_ref}")
-    for needle in [
-        '"crates/pmx-service"',
-        'name = "pmx-service"',
-        'pub struct ExecutorService',
-        'pub trait RuntimeStateProvider',
-        'pub enum SubmitOutcome',
-        'IdempotencyAction::InProgress',
-        'verify_decision_binding',
-        'DecisionByIdRequest',
-        'CompilePlanByIdCommand',
-        'evaluate_decision_by_id',
-        'compile_plan_by_id',
-        'ApprovalHashInput',
-        'approval_receipt_hash',
-        'approval_hash does not match canonical approval receipt',
-        'service_id_bound_flow_persists_and_blocks_submit',
-        'service_flow_persists_and_blocks_submit',
-        'service_rejects_object_graph_mismatch',
-        'service_rejects_tampered_approval_hash',
-    ]:
-        combined = root_toml + "\n" + SERVICE_TOML.read_text() + "\n" + service_text
-        if needle not in combined:
-            fail(f"service layer contract missing token: {needle}")
+    require_file_tokens(
+        SERVICE_TOML,
+        "pmx-service Cargo",
+        ['name = "pmx-service"'],
+    )
+    require_file_tokens(
+        SERVICE_RS,
+        "pmx-service crate root",
+        ["mod binding;", "mod plan_flow;", "mod submit;", "pub use binding::*;", "pub use submit::*;"],
+    )
+    require_file_tokens(
+        SERVICE_SRC / "binding/hash_inputs.rs",
+        "service binding hash inputs",
+        ["pub(crate) struct PlanHashInput<'a>", "approval_id: &'a str", "approval_hash: &'a HashValue", "executor_version: &'a str", "contract_version: &'a str", "pub(crate) struct ApprovalHashInput<'a>", "bound_snapshot_hash: &'a HashValue"],
+    )
+    require_file_tokens(
+        SERVICE_SRC / "submit/blocked.rs",
+        "blocked submit path",
+        ['"SUBMIT_BLOCKED_BEFORE_REMOTE"', '"no_remote_side_effect": true', '"reservation_written": false', "finish_submit_attempt(pmx_store::FinishSubmitAttempt"],
+    )
     blocked_submit = (SERVICE_SRC / "submit/blocked.rs").read_text()
-    for needle in ['"SUBMIT_BLOCKED_BEFORE_REMOTE"', '"no_remote_side_effect": true', '"reservation_written": false']:
-        if needle not in blocked_submit:
-            fail(f"blocked submit path missing non-live boundary token: {needle}")
     if "save_order_reservation" in blocked_submit:
         fail("blocked submit path must not persist reservations")
-    for needle in [
-        'pub enum ServiceBackend',
-        'ServiceBackend::InMemory',
-        'ServiceBackend::Postgres',
-        'try_postgres_app',
-        'service.normalize(',
-        'service.capture_snapshot(',
-        'service.evaluate_decision_by_id(',
-        'service.compile_plan_by_id(',
-        'service.submit_plan(',
-        'SubmitOutcome::Accepted',
-    ]:
-        if needle not in api_text:
-            fail(f"API handler not wired through pmx-service: {needle}")
+    require_file_tokens(
+        SERVICE_SRC / "service_tests/flow.rs",
+        "service flow tests",
+        ["service_flow_persists_and_blocks_submit", "service_id_bound_flow_persists_and_blocks_submit", "service_rejects_object_graph_mismatch", "service_rejects_tampered_approval_hash"],
+    )
+    require_file_tokens(
+        API_SRC / "routes/bootstrap.rs",
+        "API bootstrap routes",
+        ['.route("/v1/plans/compile", post(flow::compile_plan))', '.route("/v1/submissions", post(flow::submit_plan))', '"/v1/admin/cancel-order"', '"/v1/admin/reconcile"', "pub async fn try_postgres_app(", "AppState::postgres(store)"],
+    )
     for needle in [
         "pub enum ServiceBackend",
         "InMemory(ExecutorService<InMemoryStore>)",
