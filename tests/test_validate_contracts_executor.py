@@ -300,6 +300,30 @@ class ValidateContractsExecutorTests(unittest.TestCase):
             module.validate_v21_sign_only_and_runtime_models(spec)
         self.assertIn("SignOnlyLifecycleRecord", str(ctx.exception))
 
+    def test_store_and_backend_structure_rejects_missing_postgres_export(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/lib.rs"):
+                return "mod helpers;\nmod memory;\nmod model;\n"
+            if path.endswith("crates/pmx-store/src/postgres.rs"):
+                return "pub struct PostgresStore\ndatabase_url: String\npub async fn connect\nsimple_query(\"SELECT 1\")\npub async fn apply_schema\npub async fn applied_schema_migrations\npub(crate) async fn client\ntokio_postgres::connect(&self.database_url, NoTls)\nclient.batch_execute(\"ROLLBACK\")"
+            if path.endswith("crates/pmx-service/src/lib.rs"):
+                return "mod runtime_state;\nmod runtime_worker;\nmod sign_only;\nmod submit;\npub use runtime_state::*;\npub use runtime_worker::*;\npub use sign_only::*;\npub use submit::*;"
+            if path.endswith("crates/pmx-api/src/backend/audit.rs"):
+                return "impl ServiceBackend\nrecord_admin_audit_event\nlist_admin_audit_events\nSelf::InMemory(service) => service.record_admin_audit_event(event).await\nSelf::Postgres(service) => service.record_admin_audit_event(event).await\nSelf::InMemory(service) => service.list_admin_audit_events(query).await\nSelf::Postgres(service) => service.list_admin_audit_events(query).await"
+            if path.endswith("crates/pmx-api/src/backend/sign_only.rs"):
+                return "record_standard_sign_only_construction\nlist_sign_only_lifecycle_events\nSelf::InMemory(service) => service.record_standard_sign_only_construction(req).await\nSelf::Postgres(service) => service.record_standard_sign_only_construction(req).await\nSelf::InMemory(service) => service.list_sign_only_lifecycle_events(query).await\nSelf::Postgres(service) => service.list_sign_only_lifecycle_events(query).await"
+            if path.endswith("crates/pmx-api/src/backend/runtime.rs"):
+                return "list_runtime_worker_status\nset_account_kill_switch\nset_global_kill_switch\nSelf::InMemory(service) => service.list_runtime_worker_status(query).await\nSelf::Postgres(service) => service.list_runtime_worker_status(query).await\n.store()\n.set_account_kill_switch(account_id, enabled, reason)\n.set_global_kill_switch(enabled, reason)"
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_store_and_backend_structure()
+        self.assertIn("pmx-store module boundary missing token: pub mod postgres;", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

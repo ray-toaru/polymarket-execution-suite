@@ -93,6 +93,12 @@ def operation_response_array_item_ref(spec: dict, path: str, method: str, status
     )
 
 
+def require_tokens(text: str, label: str, tokens: list[str]) -> None:
+    for token in tokens:
+        if token not in text:
+            fail(f"{label} missing token: {token}")
+
+
 def validate_v04_source_landings() -> None:
     if not API_E2E_TEST.exists():
         fail("missing HTTP/auth/fake E2E integration test source")
@@ -642,6 +648,98 @@ def validate_v21_sign_only_and_runtime_models(spec: dict | None = None) -> None:
     ]:
         if not doc.exists():
             fail(f"v0.21 missing artifact: {doc.relative_to(ROOT)}")
+
+
+def validate_store_and_backend_structure() -> None:
+    store_lib = (STORE_SRC / "lib.rs").read_text()
+    postgres_rs = (STORE_SRC / "postgres.rs").read_text()
+    service_lib = (SERVICE_SRC / "lib.rs").read_text()
+    api_backend_audit = (API_SRC / "backend/audit.rs").read_text()
+    api_backend_sign_only = (API_SRC / "backend/sign_only.rs").read_text()
+    api_backend_runtime = (API_SRC / "backend/runtime.rs").read_text()
+
+    require_tokens(
+        store_lib,
+        "pmx-store module boundary",
+        [
+            "pub mod postgres;",
+            "mod postgres_audit;",
+            "mod postgres_execution;",
+            "mod postgres_idempotency;",
+            "mod postgres_runtime;",
+            "mod postgres_sign_only;",
+            "mod postgres_worker;",
+            "pub use postgres::PostgresStore;",
+        ],
+    )
+    require_tokens(
+        postgres_rs,
+        "PostgresStore structure",
+        [
+            "pub struct PostgresStore",
+            "database_url: String",
+            "pub async fn connect",
+            'simple_query("SELECT 1")',
+            "pub async fn apply_schema",
+            "pub async fn applied_schema_migrations",
+            "pub(crate) async fn client",
+            "tokio_postgres::connect(&self.database_url, NoTls)",
+            'client.batch_execute("ROLLBACK")',
+        ],
+    )
+    require_tokens(
+        service_lib,
+        "pmx-service module boundary",
+        [
+            "mod runtime_state;",
+            "mod runtime_worker;",
+            "mod sign_only;",
+            "mod submit;",
+            "pub use runtime_state::*;",
+            "pub use runtime_worker::*;",
+            "pub use sign_only::*;",
+            "pub use submit::*;",
+        ],
+    )
+    require_tokens(
+        api_backend_audit,
+        "pmx-api audit backend bridge",
+        [
+            "impl ServiceBackend",
+            "record_admin_audit_event",
+            "list_admin_audit_events",
+            "Self::InMemory(service) => service.record_admin_audit_event(event).await",
+            "Self::Postgres(service) => service.record_admin_audit_event(event).await",
+            "Self::InMemory(service) => service.list_admin_audit_events(query).await",
+            "Self::Postgres(service) => service.list_admin_audit_events(query).await",
+        ],
+    )
+    require_tokens(
+        api_backend_sign_only,
+        "pmx-api sign-only backend bridge",
+        [
+            "record_standard_sign_only_construction",
+            "list_sign_only_lifecycle_events",
+            "Self::InMemory(service) => service.record_standard_sign_only_construction(req).await",
+            "Self::Postgres(service) => service.record_standard_sign_only_construction(req).await",
+            "Self::InMemory(service) => service.list_sign_only_lifecycle_events(query).await",
+            "Self::Postgres(service) => service.list_sign_only_lifecycle_events(query).await",
+        ],
+    )
+    require_tokens(
+        api_backend_runtime,
+        "pmx-api runtime backend bridge",
+        [
+            "list_runtime_worker_status",
+            "set_account_kill_switch",
+            "set_global_kill_switch",
+            "Self::InMemory(service) => service.list_runtime_worker_status(query).await",
+            "Self::Postgres(service) => service.list_runtime_worker_status(query).await",
+            ".store()",
+            ".set_account_kill_switch(account_id, enabled, reason)",
+            ".set_global_kill_switch(enabled, reason)",
+        ],
+    )
 
 
 def validate_v23_lifecycle_query_and_hardening(spec: dict | None = None) -> None:

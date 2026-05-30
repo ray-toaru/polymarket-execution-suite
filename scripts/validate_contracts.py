@@ -7,6 +7,7 @@ import json
 import yaml
 
 from validate_contracts_executor import (
+    validate_store_and_backend_structure,
     validate_v04_source_landings,
     validate_v07_source_landings,
     validate_v08_dependency_and_sdk_policy,
@@ -61,6 +62,7 @@ def main(argv: list[str] | None = None) -> None:
     validate_v19_redaction_and_live_guard(spec)
     validate_v20_plan_storage_and_packaging(spec)
     validate_v21_sign_only_and_runtime_models(spec)
+    validate_store_and_backend_structure()
     validate_v23_lifecycle_query_and_hardening(spec)
     validate_current_hermes_client_surface()
     validate_current_evidence_manifest_guard()
