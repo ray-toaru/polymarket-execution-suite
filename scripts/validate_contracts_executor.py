@@ -99,6 +99,12 @@ def require_tokens(text: str, label: str, tokens: list[str]) -> None:
             fail(f"{label} missing token: {token}")
 
 
+def require_file_tokens(path, label: str, tokens: list[str]) -> None:
+    if not path.exists():
+        fail(f"missing {label} source: {path.relative_to(ROOT)}")
+    require_tokens(path.read_text(), label, tokens)
+
+
 def validate_v04_source_landings() -> None:
     if not API_E2E_TEST.exists():
         fail("missing HTTP/auth/fake E2E integration test source")
@@ -358,10 +364,6 @@ def validate_v15_admin_audit_and_runtime_provider(spec: dict | None = None) -> N
         import yaml
 
         spec = yaml.safe_load(OPENAPI.read_text())
-    service_text = rust_source_text(SERVICE_SRC)
-    store_text = rust_source_text(STORE_SRC)
-    postgres_text = rust_source_text(STORE_SRC)
-    api_text = rust_source_text(API_SRC)
     pg_test_text = rust_file_with_modules_text(API_POSTGRES_E2E_TEST)
     audit_operation = openapi_operation(spec, "/v1/admin/audit-events", "get")
     if operation_response_array_item_ref(spec, "/v1/admin/audit-events", "get", "200") != "#/components/schemas/AdminAuditEvent":
@@ -374,32 +376,46 @@ def validate_v15_admin_audit_and_runtime_provider(spec: dict | None = None) -> N
     for required_param in {"before_audit_id", "operation", "principal_subject", "result", "correlation_id"}:
         if required_param not in audit_params:
             fail(f"v0.15 admin audit query must expose {required_param}")
-    for needle in [
-        "pub struct AdminAuditEvent",
-        "pub trait AdminAuditStore",
-        "impl AdminAuditStore for InMemoryStore",
-        "admin_audit: Vec<AdminAuditEvent>",
-    ]:
-        if needle not in store_text:
-            fail(f"store admin audit missing token: {needle}")
-    for needle in ["impl AdminAuditStore for PostgresStore", "INSERT INTO admin_audit_events", "postgres_records_admin_audit_event"]:
-        if needle not in postgres_text:
-            fail(f"postgres admin audit missing token: {needle}")
-    for needle in [
-        "pub struct StaticRuntimeStateProvider",
-        "record_admin_audit_event",
-        "static_runtime_provider_can_reach_ready_plan_but_submit_still_blocks",
-    ]:
-        if needle not in service_text:
-            fail(f"service runtime/audit missing token: {needle}")
-    for needle in [
-        "record_admin_audit",
-        "AdminAuditEvent",
-        "pmx_service_server_authoritative_id_bound_admin_audit",
-        "operation: &'static str",
-    ]:
-        if needle not in api_text:
-            fail(f"API admin audit missing token: {needle}")
+    require_file_tokens(
+        STORE_SRC / "model/audit.rs",
+        "store admin audit model",
+        ["pub struct AdminAuditEvent", "pub trait AdminAuditStore", "pub struct AdminAuditQuery", "pub correlation_id: Option<String>"],
+    )
+    require_file_tokens(
+        STORE_SRC / "memory/audit.rs",
+        "in-memory admin audit store",
+        ["impl AdminAuditStore for InMemoryStore", "sanitize_admin_audit_event", "state.admin_audit.push(stored)", "correlation_id"],
+    )
+    require_file_tokens(
+        STORE_SRC / "postgres_audit/admin.rs",
+        "postgres admin audit store",
+        ["impl AdminAuditStore for PostgresStore", "INSERT INTO admin_audit_events", "FROM admin_audit_events", "AND ($6::text IS NULL OR correlation_id = $6)"],
+    )
+    require_file_tokens(
+        SERVICE_SRC / "service/audit.rs",
+        "service admin audit bridge",
+        ["AdminAuditStore", "pub async fn record_admin_audit_event", "self.store.record_admin_audit_event(&event).await?", "pub async fn list_admin_audit_events"],
+    )
+    require_file_tokens(
+        API_SRC / "backend/audit.rs",
+        "API admin audit backend",
+        ["record_admin_audit_event", "list_admin_audit_events", "Self::InMemory(service) => service.record_admin_audit_event(event).await", "Self::Postgres(service) => service.list_admin_audit_events(query).await"],
+    )
+    require_file_tokens(
+        API_SRC / "routes/admin/audit.rs",
+        "API admin audit routes",
+        ["pub(crate) async fn list_admin_audit_events", "AdminAuditQuery", "correlation_id: query.correlation_id", "StatusCode::OK"],
+    )
+    require_file_tokens(
+        API_SRC / "support/audit.rs",
+        "API admin audit support",
+        ["pub(crate) async fn record_admin_audit", "operation: &'static str", "record_admin_audit_event(AdminAuditEvent", "principal_subject: principal.subject.clone()"],
+    )
+    require_file_tokens(
+        API_SRC / "routes/health.rs",
+        "API health route",
+        ['"service_layer": "pmx_service_server_authoritative_id_bound_admin_audit"'],
+    )
     for needle in ["http_postgres_admin_routes_record_audit_events", "admin_audit_events", "KillSwitch", "CancelOrder"]:
         if needle not in pg_test_text:
             fail(f"PostgreSQL API audit E2E missing token: {needle}")
@@ -412,10 +428,6 @@ def validate_v16_postgres_runtime_provider(spec: dict | None = None) -> None:
         import yaml
 
         spec = yaml.safe_load(OPENAPI.read_text())
-    service_text = rust_source_text(SERVICE_SRC)
-    store_text = rust_source_text(STORE_SRC)
-    postgres_text = rust_source_text(STORE_SRC)
-    api_text = rust_source_text(API_SRC)
     backend_text = (API_SRC / "backend.rs").read_text()
     health_text = (API_SRC / "routes/health.rs").read_text()
     pg_test_text = rust_file_with_modules_text(API_POSTGRES_E2E_TEST)
@@ -423,38 +435,46 @@ def validate_v16_postgres_runtime_provider(spec: dict | None = None) -> None:
     runtime_worker_ref = operation_response_ref(spec, "/v1/runtime/workers", "get", "200")
     if runtime_worker_ref != "#/components/schemas/RuntimeWorkerStatusReport":
         fail("v0.16 runtime workers response must reference RuntimeWorkerStatusReport")
-    for needle in [
-        "pub struct ExecutionLifecycleEvent",
-        "pub trait ExecutionLifecycleStore",
-        "impl ExecutionLifecycleStore for InMemoryStore",
-        "pub struct RuntimeStateQuery",
-        "pub trait RuntimeStateStore",
-        "impl RuntimeStateStore for InMemoryStore",
-        "set_runtime_state_for_test",
-    ]:
-        if needle not in store_text:
-            fail(f"v0.16 store runtime state missing token: {needle}")
-    for needle in [
-        "impl ExecutionLifecycleStore for PostgresStore",
-        "execution_lifecycle_events",
-        "postgres_records_execution_lifecycle_event",
-        "impl RuntimeStateStore for PostgresStore",
-        "runtime_accounts",
-        "collateral_profiles",
-        "worker_health",
-        "postgres_loads_runtime_state_from_runtime_tables",
-    ]:
-        if needle not in postgres_text:
-            fail(f"v0.16 postgres runtime state missing token: {needle}")
-    for needle in [
-        "async fn capture_runtime_state",
-        "pub struct StoreBackedRuntimeStateProvider",
-        "StoreBackedRuntimeStateProvider::new",
-        "store_backed_runtime_provider_uses_store_state",
-        "SUBMIT_BLOCKED_BEFORE_REMOTE",
-    ]:
-        if needle not in service_text:
-            fail(f"v0.16 service runtime provider missing token: {needle}")
+    require_file_tokens(
+        STORE_SRC / "model/runtime.rs",
+        "store runtime model",
+        ["pub struct RuntimeStateQuery", "pub trait RuntimeStateStore", "pub struct RuntimeWorkerStatusReport", "pub trait RuntimeWorkerStatusStore"],
+    )
+    require_file_tokens(
+        STORE_SRC / "memory/runtime/state.rs",
+        "in-memory runtime state store",
+        ["impl RuntimeStateStore for InMemoryStore", "apply_runtime_worker_observations", "worker_status_from_heartbeats", "global_kill_switch"],
+    )
+    require_file_tokens(
+        STORE_SRC / "memory/runtime/support.rs",
+        "in-memory runtime support",
+        ["pub fn set_runtime_state_for_test(", "query.state_scope_key()", "runtime_observation_is_fresh", "observations_for_account"],
+    )
+    require_file_tokens(
+        STORE_SRC / "postgres_runtime.rs",
+        "postgres runtime state store",
+        ["impl RuntimeStateStore for PostgresStore", "IsolationLevel::RepeatableRead", "account_collateral::load_account_state", "worker_rows::load_worker_rows", "apply_runtime_worker_observations", "impl RuntimeControlStore for PostgresStore"],
+    )
+    require_file_tokens(
+        STORE_SRC / "postgres_worker/status.rs",
+        "postgres runtime worker status store",
+        ["impl RuntimeWorkerStatusStore for PostgresStore", "FROM worker_health", "FROM runtime_worker_observations", "RuntimeWorkerStatusReport"],
+    )
+    require_file_tokens(
+        SERVICE_SRC / "runtime_state/store_backed.rs",
+        "service store-backed runtime provider",
+        ["pub struct StoreBackedRuntimeStateProvider<S>", "pub fn new(store: S) -> Self", "async fn capture_runtime_state", "load_runtime_state(&query)", "fail_closed_runtime_state(query.required_capabilities)"],
+    )
+    require_file_tokens(
+        SERVICE_SRC / "service_tests/flow.rs",
+        "service runtime provider flow tests",
+        ["static_runtime_provider_can_reach_ready_plan_but_submit_still_blocks", "assert_eq!(plan.status, PlanStatus::Ready);", "SubmitMode::BlockedDryRun", "SubmitStatus::Blocked"],
+    )
+    require_file_tokens(
+        API_SRC / "backend/runtime.rs",
+        "API runtime backend",
+        ["list_runtime_worker_status", "set_account_kill_switch", "set_global_kill_switch", ".store()", ".set_account_kill_switch(account_id, enabled, reason)", ".set_global_kill_switch(enabled, reason)"],
+    )
     for needle in ["StoreBackedRuntimeStateProvider<PostgresStore>", "StoreBackedRuntimeStateProvider::new(store.clone())"]:
         if needle not in backend_text:
             fail(f"v0.16 API postgres runtime provider missing token: {needle}")

@@ -207,6 +207,58 @@ class ValidateContractsExecutorTests(unittest.TestCase):
             module.validate_v16_postgres_runtime_provider(spec)
         self.assertIn("RuntimeWorkerStatusReport", str(ctx.exception))
 
+    def test_v15_requires_api_admin_audit_support_tokens(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/admin/audit-events"]["get"]["parameters"] = [
+            {"name": "before_audit_id"},
+            {"name": "operation"},
+            {"name": "principal_subject"},
+            {"name": "result"},
+            {"name": "correlation_id"},
+        ]
+        spec["paths"]["/v1/admin/audit-events"]["get"]["responses"] = {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "schema": {"type": "array", "items": {"$ref": "#/components/schemas/AdminAuditEvent"}}
+                    }
+                }
+            }
+        }
+        spec["paths"]["/v1/admin/kill-switch"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/KillSwitchRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/KillSwitchReceipt"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/src/support/audit.rs"):
+                return "pub(crate) async fn record_admin_audit\nprincipal_subject: principal.subject.clone()"
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v15_admin_audit_and_runtime_provider(spec)
+        self.assertIn("API admin audit support", str(ctx.exception))
+
+    def test_v16_requires_store_backed_runtime_provider_tokens(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-service/src/runtime_state/store_backed.rs"):
+                return "pub struct StoreBackedRuntimeStateProvider<S>\npub fn new(store: S) -> Self\nasync fn capture_runtime_state"
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v16_postgres_runtime_provider(spec)
+        self.assertIn("service store-backed runtime provider", str(ctx.exception))
+
     def test_v15_requires_admin_audit_query_filters(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/admin/audit-events"]["get"]["parameters"] = [{"name": "before_audit_id"}]
