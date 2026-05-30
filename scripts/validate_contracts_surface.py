@@ -98,12 +98,20 @@ def validate_sql_idempotency() -> None:
 
 
 def validate_rust_deny_unknown_fields() -> None:
-    text = rust_source_text(API_SRC) + "\n" + rust_source_text(CORE_SRC)
-    for struct_name in [
-        "TradeIntent", "NormalizedIntent", "DecisionRequest", "CompilePlanRequest",
-        "SubmitPlanRequest", "CancelOrderRequest", "KillSwitchRequest", "ReconcileRequest",
-        "ReconcileOrderLocalRequest",
-    ]:
-        pattern = rf"#\[serde\(deny_unknown_fields\)\]\s*pub struct {struct_name}"
-        if not re.search(pattern, text):
-            fail(f"Rust DTO {struct_name} missing #[serde(deny_unknown_fields)]")
+    file_structs = {
+        API_SRC / "model.rs": [
+            "DecisionRequest",
+            "CompilePlanRequest",
+            "SubmitPlanRequest",
+            "CancelOrderRequest",
+            "ReconcileOrderLocalRequest",
+        ],
+        CORE_SRC / "domain/intent.rs": ["TradeIntent", "NormalizedIntent"],
+        CORE_SRC / "domain/plan/ops.rs": ["KillSwitchRequest", "ReconcileRequest"],
+    }
+    for path, struct_names in file_structs.items():
+        text = path.read_text()
+        for struct_name in struct_names:
+            pattern = rf"#\[serde\(deny_unknown_fields\)\]\s*pub struct {struct_name}"
+            if not re.search(pattern, text):
+                fail(f"Rust DTO {struct_name} missing #[serde(deny_unknown_fields)] in {path.relative_to(CONTROL.parent)}")

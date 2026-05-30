@@ -376,6 +376,11 @@ class ValidateContractsExecutorTests(unittest.TestCase):
             module.validate_v15_admin_audit_and_runtime_provider(spec)
         self.assertIn("v0.15 admin audit query must expose", str(ctx.exception))
 
+    def test_validate_required_groups_reports_label(self) -> None:
+        with self.assertRaises(SystemExit) as ctx:
+            module.validate_required_groups({"demo group": ("only-one-token", ["missing-token"])})
+        self.assertIn("demo group missing token: missing-token", str(ctx.exception))
+
     def test_v19_rejects_forbidden_public_contract_tokens_structurally(self) -> None:
         spec = self._minimal_v23_spec()
         spec["components"]["schemas"]["Leak"] = {"type": "object", "properties": {"danger": {"description": "signed_payload"}}}

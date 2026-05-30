@@ -119,6 +119,11 @@ def source_tree_text_without_paths(root, excluded_paths: list) -> str:
     return text
 
 
+def validate_required_groups(groups: dict[str, tuple[str, list[str]]]) -> None:
+    for label, (text, needles) in groups.items():
+        require_tokens(text, label, needles)
+
+
 def validate_v04_source_landings() -> None:
     if not API_E2E_TEST.exists():
         fail("missing HTTP/auth/fake E2E integration test source")
@@ -808,7 +813,6 @@ def validate_v23_lifecycle_query_and_hardening(spec: dict | None = None) -> None
         import yaml
 
         spec = yaml.safe_load(OPENAPI.read_text())
-    api = rust_source_text(API_SRC)
     core = rust_source_text(CORE_SRC)
     store = rust_source_text(STORE_SRC)
     postgres = rust_source_text(STORE_SRC)
@@ -816,6 +820,11 @@ def validate_v23_lifecycle_query_and_hardening(spec: dict | None = None) -> None
     policy = (EXECUTOR / "crates/pmx-policy/src/lib.rs").read_text()
     sql = SQL.read_text()
     gate = (EXECUTOR / "validation/run_current_gates_impl.sh").read_text()
+    api_runtime_read = (API_SRC / "routes/read/runtime.rs").read_text()
+    api_reconcile_local = (API_SRC / "routes/admin/reconcile/local.rs").read_text()
+    api_support_error = (API_SRC / "support/error.rs").read_text()
+    api_support_audit = (API_SRC / "support/audit.rs").read_text()
+    api_cancel_route = (API_SRC / "routes/admin/cancel.rs").read_text()
     required_paths = {
         "/v1/sign-only/lifecycle-events",
         "/v1/lifecycle/executions/{execution_id}/events",
@@ -880,13 +889,14 @@ def validate_v23_lifecycle_query_and_hardening(spec: dict | None = None) -> None
         "sql": (sql, ["CREATE TABLE IF NOT EXISTS orders", "CREATE TABLE IF NOT EXISTS order_events", "idx_order_events_order_created", "client_event_id TEXT", "uq_sign_only_lifecycle_client_event", "WHERE client_event_id IS NOT NULL", "ADD COLUMN IF NOT EXISTS client_event_id", "ADD COLUMN IF NOT EXISTS observed_at", "ADD COLUMN IF NOT EXISTS correlation_id"]),
         "service": (service, ["candidate.client_event_id.as_deref()", "record.event_id = None", "record.created_at = None", "record_standard_sign_only_construction", "account_id does not match request"]),
         "policy": (policy, ["WorkerStatus::Degraded => reasons.push(BlockReason::WorkerDegraded)", "degraded_worker_blocks_pre_live"]),
-        "api": (api, ["correlation_id_from_headers", "api_error_with_correlation", "redacted_payload_envelope", "principal_subject: query.principal_subject", "result: query.result", "reconcile_order_local", "ReconcileOrderLocalResponse", "list_runtime_worker_status", "/v1/runtime/workers"]),
+        "api runtime read route": (api_runtime_read, ["pub(crate) async fn list_runtime_worker_status", "Query(query): Query<RuntimeWorkerStatusListQuery>", "list_runtime_worker_status(RuntimeWorkerStatusQuery", "StatusCode::OK"]),
+        "api reconcile local route": (api_reconcile_local, ["pub(crate) async fn reconcile_order_local", "api_error_with_correlation", "record_admin_audit(", "ReconcileOrderLocalResponse", "no_remote_side_effect: true"]),
+        "api support error": (api_support_error, ["correlation_id_from_headers", "api_error_with_correlation"]),
+        "api support audit": (api_support_audit, ["pub(crate) async fn record_admin_audit", "operation: &'static str", "AdminAuditEvent"]),
+        "api cancel route": (api_cancel_route, ["redacted_payload_envelope", "payload: redacted_payload_envelope(", "CancelReceipt"]),
         "gate": (gate, ["run_current_gates.sh", "check_current_lifecycle_api.py", "check_version_consistency.py", "check_docs_evidence_governance.py", "write_current_evidence_manifest.py", "check_runtime_worker_status_query.py", "42-runtime-worker-status-query.log", "evidence/current"]),
     }
-    for label, (text, needles) in required_by_file.items():
-        for needle in needles:
-            if needle not in text:
-                fail(f"current {label} missing token: {needle}")
+    validate_required_groups(required_by_file)
     if core.count("pub client_event_id: Option<String>") != 1:
         fail("current SignOnlyLifecycleRecord must have exactly one client_event_id field")
     if store.count("pub observed_at: Option<DateTime<Utc>>") != 1:

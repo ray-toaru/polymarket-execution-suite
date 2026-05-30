@@ -47,6 +47,20 @@ class ValidateContractsSurfaceTests(unittest.TestCase):
                 module.validate_no_public_forbidden_tokens({"openapi": "clean"})
         self.assertIn("forbidden token private_key in control package", str(ctx.exception))
 
+    def test_validate_rust_deny_unknown_fields_targets_specific_files(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/src/model.rs"):
+                return "#[serde(deny_unknown_fields)]\npub struct DecisionRequest\n#[serde(deny_unknown_fields)]\npub struct CompilePlanRequest\n#[serde(deny_unknown_fields)]\npub struct SubmitPlanRequest\n#[serde(deny_unknown_fields)]\npub struct CancelOrderRequest\n"
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_rust_deny_unknown_fields()
+        self.assertIn("ReconcileOrderLocalRequest", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()
