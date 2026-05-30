@@ -171,6 +171,42 @@ class ValidateContractsExecutorTests(unittest.TestCase):
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("before_audit_id", str(ctx.exception))
 
+    def test_v12_requires_compile_request_ref(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}}
+            }
+        }
+        spec["paths"]["/v1/submissions"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/SubmitRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/SubmitReceipt"}}}}},
+            }
+        }
+        spec["paths"]["/v1/admin/cancel-order"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CancelOrderRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CancelReceipt"}}}}},
+            }
+        }
+        spec["paths"]["/v1/admin/reconcile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReconcileRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReconcileReport"}}}}},
+            }
+        }
+        with self.assertRaises(SystemExit) as ctx:
+            module.validate_v12_service_layer(spec)
+        self.assertIn("/v1/plans/compile request", str(ctx.exception))
+
+    def test_v16_requires_runtime_worker_schema_ref(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/runtime/workers"]["get"]["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] = "#/components/schemas/Wrong"
+        with self.assertRaises(SystemExit) as ctx:
+            module.validate_v16_postgres_runtime_provider(spec)
+        self.assertIn("RuntimeWorkerStatusReport", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

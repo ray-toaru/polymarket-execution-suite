@@ -49,6 +49,29 @@ def schema_property_names(spec: dict, schema_name: str) -> set[str]:
     return set(schema.get("properties", {}).keys())
 
 
+def operation_request_ref(spec: dict, path: str, method: str) -> str | None:
+    return (
+        openapi_operation(spec, path, method)
+        .get("requestBody", {})
+        .get("content", {})
+        .get("application/json", {})
+        .get("schema", {})
+        .get("$ref")
+    )
+
+
+def operation_response_ref(spec: dict, path: str, method: str, status: str) -> str | None:
+    return (
+        openapi_operation(spec, path, method)
+        .get("responses", {})
+        .get(status, {})
+        .get("content", {})
+        .get("application/json", {})
+        .get("schema", {})
+        .get("$ref")
+    )
+
+
 def validate_v04_source_landings() -> None:
     if not API_E2E_TEST.exists():
         fail("missing HTTP/auth/fake E2E integration test source")
@@ -206,14 +229,33 @@ def validate_v09_official_adapter_boundary() -> None:
             fail(f"v0.11 missing continuation artifact: {doc.relative_to(ROOT)}")
 
 
-def validate_v12_service_layer() -> None:
+def validate_v12_service_layer(spec: dict | None = None) -> None:
+    if spec is None:
+        import yaml
+
+        spec = yaml.safe_load(OPENAPI.read_text())
     if not SERVICE_RS.exists():
         fail("missing pmx-service crate source")
     if not SERVICE_TOML.exists():
         fail("missing pmx-service Cargo.toml")
     service_text = rust_source_text(SERVICE_SRC)
     api_text = rust_source_text(API_SRC)
+    backend_text = (API_SRC / "backend.rs").read_text()
     root_toml = ROOT_CARGO_TOML.read_text()
+    expected_openapi_refs = {
+        ("/v1/plans/compile", "post", "request"): "#/components/schemas/CompilePlanRequest",
+        ("/v1/plans/compile", "post", "200"): "#/components/schemas/ExecutionPlanSummary",
+        ("/v1/submissions", "post", "request"): "#/components/schemas/SubmitRequest",
+        ("/v1/submissions", "post", "202"): "#/components/schemas/SubmitReceipt",
+        ("/v1/admin/cancel-order", "post", "request"): "#/components/schemas/CancelOrderRequest",
+        ("/v1/admin/cancel-order", "post", "202"): "#/components/schemas/CancelReceipt",
+        ("/v1/admin/reconcile", "post", "request"): "#/components/schemas/ReconcileRequest",
+        ("/v1/admin/reconcile", "post", "202"): "#/components/schemas/ReconcileReport",
+    }
+    for (path, method, kind), expected_ref in expected_openapi_refs.items():
+        actual_ref = operation_request_ref(spec, path, method) if kind == "request" else operation_response_ref(spec, path, method, kind)
+        if actual_ref != expected_ref:
+            fail(f"OpenAPI {method.upper()} {path} {kind} must reference {expected_ref}, got {actual_ref}")
     for needle in [
         '"crates/pmx-service"',
         'name = "pmx-service"',
@@ -257,6 +299,13 @@ def validate_v12_service_layer() -> None:
     ]:
         if needle not in api_text:
             fail(f"API handler not wired through pmx-service: {needle}")
+    for needle in [
+        "pub enum ServiceBackend",
+        "InMemory(ExecutorService<InMemoryStore>)",
+        "Postgres(ExecutorService<PostgresStore, StoreBackedRuntimeStateProvider<PostgresStore>>)",
+    ]:
+        if needle not in backend_text:
+            fail(f"pmx-api backend structure missing token: {needle}")
     if 'pub fn fake_snapshot' in api_text:
         fail("pmx-api must not keep fake_snapshot helper after pmx-service extraction")
     if not (EXECUTOR / "validation/run_current_gates.sh").exists():
@@ -316,13 +365,22 @@ def validate_v15_admin_audit_and_runtime_provider() -> None:
         fail("missing current gate runner")
 
 
-def validate_v16_postgres_runtime_provider() -> None:
+def validate_v16_postgres_runtime_provider(spec: dict | None = None) -> None:
+    if spec is None:
+        import yaml
+
+        spec = yaml.safe_load(OPENAPI.read_text())
     service_text = rust_source_text(SERVICE_SRC)
     store_text = rust_source_text(STORE_SRC)
     postgres_text = rust_source_text(STORE_SRC)
     api_text = rust_source_text(API_SRC)
+    backend_text = (API_SRC / "backend.rs").read_text()
+    health_text = (API_SRC / "routes/health.rs").read_text()
     pg_test_text = rust_file_with_modules_text(API_POSTGRES_E2E_TEST)
     spike_text = SDK_SPIKE_RS.read_text()
+    runtime_worker_ref = operation_response_ref(spec, "/v1/runtime/workers", "get", "200")
+    if runtime_worker_ref != "#/components/schemas/RuntimeWorkerStatusReport":
+        fail("v0.16 runtime workers response must reference RuntimeWorkerStatusReport")
     for needle in [
         "pub struct ExecutionLifecycleEvent",
         "pub trait ExecutionLifecycleStore",
@@ -356,8 +414,11 @@ def validate_v16_postgres_runtime_provider() -> None:
         if needle not in service_text:
             fail(f"v0.16 service runtime provider missing token: {needle}")
     for needle in ["StoreBackedRuntimeStateProvider<PostgresStore>", "StoreBackedRuntimeStateProvider::new(store.clone())"]:
-        if needle not in api_text:
+        if needle not in backend_text:
             fail(f"v0.16 API postgres runtime provider missing token: {needle}")
+    for needle in ['Self::Postgres(_) => "postgres"', '"database": state.service.storage_mode()']:
+        if needle not in (backend_text + "\n" + health_text):
+            fail(f"v0.16 postgres health/backend structure missing token: {needle}")
     for needle in [
         "http_postgres_runtime_rows_can_reach_ready_plan_but_submit_still_blocks",
         "seed_allow_runtime",
