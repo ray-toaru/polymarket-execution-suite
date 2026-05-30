@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import tomllib
 
 from validate_contracts_support import (
     API_E2E_TEST,
@@ -150,69 +151,116 @@ def ensure_match_arms(text: str, label: str, fn_name: str, required_arms: list[s
             fail(f"{label} missing token: {arm}")
 
 
+def rust_trait_method_signatures(text: str, trait_name: str) -> set[str]:
+    pattern = rf"(?s)trait\s+{re.escape(trait_name)}[^\{{]*\{{(.*?)\n\}}"
+    match = re.search(pattern, text)
+    if not match:
+        fail(f"missing Rust trait: {trait_name}")
+    body = match.group(1)
+    return set(
+        re.findall(
+            r"(?m)^\s*async\s+fn\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(",
+            body,
+        )
+    )
+
+
+def cargo_toml(path: Path) -> dict:
+    try:
+        return tomllib.loads(path.read_text())
+    except FileNotFoundError:
+        fail(f"missing Cargo/TOML file: {path.relative_to(ROOT)}")
+
+
 def validate_v04_source_landings() -> None:
     if not API_E2E_TEST.exists():
         fail("missing HTTP/auth/fake E2E integration test source")
-    require_file_tokens(
-        API_E2E_TEST.parent / "http_and_fake_e2e/smoke.rs",
-        "HTTP/auth fake E2E smoke",
-        ["http_auth_and_fake_e2e_smoke", "StatusCode::UNAUTHORIZED", "StatusCode::FORBIDDEN", "StatusCode::ACCEPTED"],
-    )
-    require_file_tokens(
-        STORE_SRC / "model/advisory.rs",
-        "pmx-store advisory lock model",
-        ["pub struct AdvisoryLockKey", "pub fn advisory_lock_key", "const FNV_OFFSET", "const FNV_PRIME", "i64::from_ne_bytes(hash.to_ne_bytes())"],
-    )
-    require_file_tokens(
-        STORE_SRC / "postgres.rs",
-        "pmx-store postgres adapter",
-        ["pub struct PostgresStore", "tokio_postgres::connect(&self.database_url, NoTls)"],
-    )
+    smoke_text = (API_E2E_TEST.parent / "http_and_fake_e2e/smoke.rs").read_text()
+    for fn_name in ["http_auth_and_fake_e2e_smoke"]:
+        if fn_name not in smoke_text:
+            fail(f"HTTP/auth fake E2E smoke missing token: {fn_name}")
+    for status in ["StatusCode::UNAUTHORIZED", "StatusCode::FORBIDDEN", "StatusCode::ACCEPTED"]:
+        if status not in smoke_text:
+            fail(f"HTTP/auth fake E2E smoke missing token: {status}")
+    advisory_text = (STORE_SRC / "model/advisory.rs").read_text()
+    if not re.search(r"pub\s+struct\s+AdvisoryLockKey\b", advisory_text):
+        fail("pmx-store advisory lock model missing token: pub struct AdvisoryLockKey")
+    if not re.search(r"pub\s+fn\s+advisory_lock_key\s*\(", advisory_text):
+        fail("pmx-store advisory lock model missing token: pub fn advisory_lock_key")
+    for needle in ["const FNV_OFFSET", "const FNV_PRIME", "i64::from_ne_bytes(hash.to_ne_bytes())"]:
+        if needle not in advisory_text:
+            fail(f"pmx-store advisory lock model missing token: {needle}")
+    postgres_text = (STORE_SRC / "postgres.rs").read_text()
+    if not re.search(r"pub\s+struct\s+PostgresStore\b", postgres_text):
+        fail("pmx-store postgres adapter missing token: pub struct PostgresStore")
+    if "tokio_postgres::connect(&self.database_url, NoTls)" not in postgres_text:
+        fail("pmx-store postgres adapter missing token: tokio_postgres::connect(&self.database_url, NoTls)")
     if not POSTGRES_RS.exists():
         fail("missing PostgreSQL repository adapter source")
-    require_file_tokens(
-        STORE_SRC / "postgres_idempotency.rs",
+    idempotency_adapter = (STORE_SRC / "postgres_idempotency.rs").read_text()
+    if "impl IdempotencyStore for PostgresStore" not in idempotency_adapter:
+        fail("postgres idempotency adapter missing token: impl IdempotencyStore for PostgresStore")
+    ensure_match_arms(
+        idempotency_adapter.replace("async fn finish_submit_attempt", "\nasync fn finish_submit_attempt"),
         "postgres idempotency adapter",
-        ["impl IdempotencyStore for PostgresStore", "begin::begin_submit_attempt(", "finish::finish_submit_attempt(self, attempt).await"],
+        "begin_submit_attempt",
+        ["begin::begin_submit_attempt(", "request_fingerprint"],
     )
-    require_file_tokens(
-        STORE_SRC / "postgres_idempotency/begin.rs",
-        "postgres idempotency begin path",
-        ["SELECT pg_advisory_xact_lock($1)", 'status == "PROCEEDING"', "IdempotencyAction::InProgress", "IdempotencyAction::Proceed"],
+    ensure_match_arms(
+        idempotency_adapter.replace("async fn finish_submit_attempt", "\nasync fn finish_submit_attempt"),
+        "postgres idempotency adapter",
+        "finish_submit_attempt",
+        ["finish::finish_submit_attempt(self, attempt).await"],
     )
-    require_file_tokens(
-        STORE_SRC / "postgres_tests/idempotency.rs",
-        "postgres idempotency tests",
-        ["same_request_replay_is_persisted", "fingerprint_mismatch_is_conflict"],
-    )
-    require_file_tokens(
-        STORE_SRC / "postgres_tests/receipt_reservation.rs",
-        "postgres receipt/reservation tests",
-        ["reservation_double_spend_is_prevented_concurrently", "remote_unknown_is_persisted_conservatively"],
-    )
+    begin_text = (STORE_SRC / "postgres_idempotency/begin.rs").read_text()
+    for needle in ["SELECT pg_advisory_xact_lock($1)", 'status == "PROCEEDING"', "IdempotencyAction::InProgress", "IdempotencyAction::Proceed"]:
+        if needle not in begin_text:
+            fail(f"postgres idempotency begin path missing token: {needle}")
+    idempotency_tests = (STORE_SRC / "postgres_tests/idempotency.rs").read_text()
+    for test_name in ["same_request_replay_is_persisted", "fingerprint_mismatch_is_conflict"]:
+        if test_name not in idempotency_tests:
+            fail(f"postgres idempotency tests missing token: {test_name}")
+    reservation_tests = (STORE_SRC / "postgres_tests/receipt_reservation.rs").read_text()
+    for test_name in ["reservation_double_spend_is_prevented_concurrently", "remote_unknown_is_persisted_conservatively"]:
+        if test_name not in reservation_tests:
+            fail(f"postgres receipt/reservation tests missing token: {test_name}")
 
 
 def validate_v07_source_landings() -> None:
-    require_file_tokens(
-        GATEWAY_SRC / "traits.rs",
-        "gateway traits",
-        ["pub trait SignerProvider", "pub trait ClobGateway", "pub trait RemoteReconcileReader", "async fn post_order(&self, order: &SignedOrderEnvelope)"],
-    )
-    require_file_tokens(
-        GATEWAY_SRC / "signer.rs",
-        "gateway signer provider",
-        ["pub struct DeterministicTestSignerProvider", "pub struct DeterministicTestSigner", "pub struct SignerProviderConfig", "allow_local_private_key_material: false", "require_remote_signer_in_production: true"],
-    )
-    require_file_tokens(
-        GATEWAY_SRC / "tests/signer.rs",
-        "gateway signer tests",
-        ["disabled_signer_provider_refuses_to_materialize_signer", "signer_provider_defaults_are_production_conservative"],
-    )
-    require_file_tokens(
-        GATEWAY_SRC / "tests/post_cancel.rs",
-        "gateway post/cancel tests",
-        ["deterministic_signer_provider_posts_reads_and_cancels", "fake_gateway_surfaces_remote_unknown_without_local_success"],
-    )
+    traits_text = (GATEWAY_SRC / "traits.rs").read_text()
+    for trait_name in ["SignerProvider", "ClobGateway", "RemoteReconcileReader"]:
+        if f"trait {trait_name}" not in traits_text:
+            fail(f"gateway traits missing token: pub trait {trait_name}")
+    try:
+        signer_provider_methods = rust_trait_method_signatures(traits_text, "SignerProvider")
+        clob_gateway_methods = rust_trait_method_signatures(traits_text, "ClobGateway")
+        reconcile_reader_methods = rust_trait_method_signatures(traits_text, "RemoteReconcileReader")
+    except SystemExit as exc:
+        fail(f"gateway traits malformed: {exc}")
+    if signer_provider_methods != {"signer_for_account"}:
+        fail(f"gateway traits missing token: pub trait SignerProvider")
+    if not {"post_order", "cancel_order", "get_order", "get_open_orders"}.issubset(clob_gateway_methods):
+        fail("gateway traits missing token: async fn post_order(&self, order: &SignedOrderEnvelope)")
+    if reconcile_reader_methods != {"read_remote_order_observations"}:
+        fail("gateway traits missing token: pub trait RemoteReconcileReader")
+    signer_text = (GATEWAY_SRC / "signer.rs").read_text()
+    for needle in [
+        "pub struct DeterministicTestSignerProvider",
+        "pub struct DeterministicTestSigner",
+        "pub struct SignerProviderConfig",
+        "allow_local_private_key_material: false",
+        "require_remote_signer_in_production: true",
+    ]:
+        if needle not in signer_text:
+            fail(f"gateway signer provider missing token: {needle}")
+    signer_tests = (GATEWAY_SRC / "tests/signer.rs").read_text()
+    for test_name in ["disabled_signer_provider_refuses_to_materialize_signer", "signer_provider_defaults_are_production_conservative"]:
+        if test_name not in signer_tests:
+            fail(f"gateway signer tests missing token: {test_name}")
+    post_cancel_tests = (GATEWAY_SRC / "tests/post_cancel.rs").read_text()
+    for test_name in ["deterministic_signer_provider_posts_reads_and_cancels", "fake_gateway_surfaces_remote_unknown_without_local_success"]:
+        if test_name not in post_cancel_tests:
+            fail(f"gateway post/cancel tests missing token: {test_name}")
     require_file_tokens(
         API_E2E_TEST.parent / "http_and_fake_e2e/scaffold.rs",
         "HTTP scaffold E2E",
@@ -284,36 +332,62 @@ def validate_v09_official_adapter_boundary() -> None:
         fail("missing official SDK adapter boundary crate source")
     if not SDK_ADAPTER_TOML.exists():
         fail("missing official SDK adapter boundary Cargo.toml")
-    adapter_toml = SDK_ADAPTER_TOML.read_text()
-    require_file_tokens(
-        SDK_ADAPTER_RS,
-        "official SDK adapter root",
-        ["Official Polymarket SDK adapter boundary", "sign-only dry-runs require explicit opt-in", "live submit requires the explicit `live-submit` feature", "pub use gates::*", "run_sign_only_dry_run", "validate_active_profile_env_for_canary"],
-    )
-    require_file_tokens(
-        SDK_ADAPTER_SRC / "model/config.rs",
-        "official SDK adapter config",
-        ["pub struct OfficialSdkAdapterConfig", "allow_sign_only_dry_run: false", "allow_live_submit: false", "allow_real_funds_canary: false", "pub struct OfficialSdkStandardSignOnlyProfile"],
-    )
-    require_file_tokens(
-        SDK_ADAPTER_SRC / "gates/smoke.rs",
-        "official SDK smoke gates",
-        ["validate_authenticated_non_trading_smoke", "validate_sign_only_dry_run", "ENV_RUN_AUTHENTICATED_SMOKE", "ENV_ALLOW_SIGN_ONLY_DRY_RUN", "ENV_ALLOW_LIVE_SUBMIT"],
-    )
-    require_file_tokens(
-        SDK_ADAPTER_SRC / "sdk_runtime/sign_only/dry_run.rs",
-        "official SDK sign-only dry run",
-        ["SignOnlyDryRunReceipt", "validate_sign_only_dry_run(config, &credentials)?", "signed_order_ref = format!(", "posted: false"],
-    )
-    require_file_tokens(
-        SDK_ADAPTER_SRC / "tests/feature_gated.rs",
-        "official SDK feature-gated tests",
-        ["authenticated_non_trading_smoke_executes_when_enabled", "sign_only_dry_run_executes_when_enabled", "env_helpers_trim_values_and_accept_case_insensitive_true", "assert!(!receipt.posted);"],
-    )
-    if 'polymarket_client_sdk_v2 = { version = "=0.6.0-canary.1"' not in adapter_toml:
+    adapter_toml = cargo_toml(SDK_ADAPTER_TOML)
+    adapter_text = SDK_ADAPTER_RS.read_text()
+    for needle in [
+        "Official Polymarket SDK adapter boundary",
+        "sign-only dry-runs require explicit opt-in",
+        "live submit requires the explicit `live-submit` feature",
+        "pub use gates::*",
+    ]:
+        if needle not in adapter_text:
+            fail(f"official SDK adapter root missing token: {needle}")
+    adapter_modules = rust_module_names(adapter_text, "mod")
+    for module_name in ["gates", "lifecycle", "liveness", "mapping", "model", "redaction", "sdk_runtime", "standard_sign_only"]:
+        if module_name not in adapter_modules:
+            fail(f"official SDK adapter root missing token: mod {module_name};")
+    if "gates" not in rust_pub_use_targets(adapter_text):
+        fail("official SDK adapter root missing token: pub use gates::*")
+    feature_names = set(adapter_toml.get("features", {}).keys())
+    for feature_name in ["sdk-typecheck", "authenticated-smoke", "sign-only-dry-run", "live-submit"]:
+        if feature_name not in feature_names:
+            fail(f"official adapter must expose feature: {feature_name}")
+    sdk_dep = adapter_toml.get("dependencies", {}).get("polymarket_client_sdk_v2", {})
+    if sdk_dep.get("version") != "=0.6.0-canary.1":
         fail("official adapter must pin the official SDK canary explicitly")
-    if not re.search(r'(?m)^live-submit\s*=\s*\[', adapter_toml):
-        fail("official adapter must expose an explicit live-submit feature gate")
+    bins = {entry.get("name"): entry for entry in adapter_toml.get("bin", [])}
+    if bins.get("pmx-real-funds-canary", {}).get("required-features") != ["live-submit"]:
+        fail("official adapter must gate pmx-real-funds-canary behind live-submit")
+    config_text = (SDK_ADAPTER_SRC / "model/config.rs").read_text()
+    for needle in [
+        "pub struct OfficialSdkAdapterConfig",
+        "allow_sign_only_dry_run: false",
+        "allow_live_submit: false",
+        "allow_real_funds_canary: false",
+        "pub struct OfficialSdkStandardSignOnlyProfile",
+    ]:
+        if needle not in config_text:
+            fail(f"official SDK adapter config missing token: {needle}")
+    smoke_text = (SDK_ADAPTER_SRC / "gates/smoke.rs").read_text()
+    for fn_name in ["validate_authenticated_non_trading_smoke", "validate_sign_only_dry_run"]:
+        if fn_name not in smoke_text:
+            fail(f"official SDK smoke gates missing token: {fn_name}")
+    for env_name in ["ENV_RUN_AUTHENTICATED_SMOKE", "ENV_ALLOW_SIGN_ONLY_DRY_RUN", "ENV_ALLOW_LIVE_SUBMIT"]:
+        if env_name not in smoke_text:
+            fail(f"official SDK smoke gates missing token: {env_name}")
+    sign_only_text = (SDK_ADAPTER_SRC / "sdk_runtime/sign_only/dry_run.rs").read_text()
+    for needle in ["SignOnlyDryRunReceipt", "validate_sign_only_dry_run(config, &credentials)?", "signed_order_ref = format!(", "posted: false"]:
+        if needle not in sign_only_text:
+            fail(f"official SDK sign-only dry run missing token: {needle}")
+    feature_tests = (SDK_ADAPTER_SRC / "tests/feature_gated.rs").read_text()
+    for test_name in [
+        "authenticated_non_trading_smoke_executes_when_enabled",
+        "sign_only_dry_run_executes_when_enabled",
+        "env_helpers_trim_values_and_accept_case_insensitive_true",
+        "assert!(!receipt.posted);",
+    ]:
+        if test_name not in feature_tests:
+            fail(f"official SDK feature-gated tests missing token: {test_name}")
     live_canary = SDK_ADAPTER_SRC / "sdk_runtime/live_canary.rs"
     gateway_bridge = SDK_ADAPTER_SRC / "sdk_runtime/gateway.rs"
     adapter_boundary_text = source_tree_text_without_paths(SDK_ADAPTER_SRC, [live_canary, gateway_bridge])
