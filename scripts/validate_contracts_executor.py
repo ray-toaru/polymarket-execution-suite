@@ -30,6 +30,25 @@ from validate_contracts_support import (
 )
 
 
+def openapi_operation(spec: dict, path: str, method: str) -> dict:
+    try:
+        return spec["paths"][path][method]
+    except KeyError as exc:
+        fail(f"OpenAPI missing {method.upper()} {path}: {exc}")
+
+
+def operation_parameter_names(operation: dict) -> set[str]:
+    return {param["name"] for param in operation.get("parameters", [])}
+
+
+def schema_property_names(spec: dict, schema_name: str) -> set[str]:
+    try:
+        schema = spec["components"]["schemas"][schema_name]
+    except KeyError as exc:
+        fail(f"OpenAPI missing schema {schema_name}: {exc}")
+    return set(schema.get("properties", {}).keys())
+
+
 def validate_v04_source_landings() -> None:
     if not API_E2E_TEST.exists():
         fail("missing HTTP/auth/fake E2E integration test source")
@@ -457,8 +476,11 @@ def validate_v21_sign_only_and_runtime_models() -> None:
             fail(f"v0.21 missing artifact: {doc.relative_to(ROOT)}")
 
 
-def validate_v23_lifecycle_query_and_hardening() -> None:
-    openapi = OPENAPI.read_text()
+def validate_v23_lifecycle_query_and_hardening(spec: dict | None = None) -> None:
+    if spec is None:
+        import yaml
+
+        spec = yaml.safe_load(OPENAPI.read_text())
     api = rust_source_text(API_SRC)
     core = rust_source_text(CORE_SRC)
     store = rust_source_text(STORE_SRC)
@@ -467,8 +489,64 @@ def validate_v23_lifecycle_query_and_hardening() -> None:
     policy = (EXECUTOR / "crates/pmx-policy/src/lib.rs").read_text()
     sql = SQL.read_text()
     gate = (EXECUTOR / "validation/run_current_gates_impl.sh").read_text()
+    required_paths = {
+        "/v1/sign-only/lifecycle-events",
+        "/v1/lifecycle/executions/{execution_id}/events",
+        "/v1/runtime/workers",
+        "/v1/admin/audit-events",
+        "/v1/admin/reconcile-order-local",
+    }
+    missing_paths = required_paths - set(spec["paths"].keys())
+    if missing_paths:
+        fail(f"current OpenAPI missing lifecycle/runtime/admin paths: {sorted(missing_paths)}")
+
+    sign_only_events = openapi_operation(spec, "/v1/sign-only/lifecycle-events/{execution_id}", "get")
+    execution_events = openapi_operation(spec, "/v1/lifecycle/executions/{execution_id}/events", "get")
+    audit_events = openapi_operation(spec, "/v1/admin/audit-events", "get")
+    reconcile_local = openapi_operation(spec, "/v1/admin/reconcile-order-local", "post")
+    runtime_workers = openapi_operation(spec, "/v1/runtime/workers", "get")
+
+    if "before_event_id" not in operation_parameter_names(sign_only_events):
+        fail("current OpenAPI sign-only lifecycle execution query must expose before_event_id")
+    if "before_event_id" not in operation_parameter_names(execution_events):
+        fail("current OpenAPI execution lifecycle query must expose before_event_id")
+    if "before_audit_id" not in operation_parameter_names(audit_events):
+        fail("current OpenAPI admin audit query must expose before_audit_id")
+
+    response_ref = (
+        runtime_workers.get("responses", {})
+        .get("200", {})
+        .get("content", {})
+        .get("application/json", {})
+        .get("schema", {})
+        .get("$ref")
+    )
+    if response_ref != "#/components/schemas/RuntimeWorkerStatusReport":
+        fail("current OpenAPI runtime worker response must reference RuntimeWorkerStatusReport")
+
+    request_ref = (
+        reconcile_local.get("requestBody", {})
+        .get("content", {})
+        .get("application/json", {})
+        .get("schema", {})
+        .get("$ref")
+    )
+    if request_ref != "#/components/schemas/ReconcileOrderLocalRequest":
+        fail("current OpenAPI reconcile-order-local request must reference ReconcileOrderLocalRequest")
+    reconcile_response_ref = (
+        reconcile_local.get("responses", {})
+        .get("202", {})
+        .get("content", {})
+        .get("application/json", {})
+        .get("schema", {})
+        .get("$ref")
+    )
+    if reconcile_response_ref != "#/components/schemas/ReconcileOrderLocalResponse":
+        fail("current OpenAPI reconcile-order-local response must reference ReconcileOrderLocalResponse")
+
+    if "client_event_id" not in schema_property_names(spec, "SignOnlyLifecycleRecord"):
+        fail("current OpenAPI SignOnlyLifecycleRecord must expose client_event_id")
     required_by_file = {
-        "openapi": (openapi, ["/v1/sign-only/lifecycle-events", "/v1/lifecycle/executions/{execution_id}/events", "/v1/runtime/workers", "/v1/admin/audit-events", "/v1/admin/reconcile-order-local", "client_event_id", "before_event_id", "before_audit_id", "readOnly: true", "ReconcileOrderLocalRequest", "ReconcileOrderLocalResponse", "RuntimeWorkerStatusReport"]),
         "core": (core, ["pub struct RedactedPayloadEnvelope", "redacted_payload_envelope", "redacted_fields", "WorkerDegraded", "pub struct SignOnlyLifecycleRecord", "pub client_event_id: Option<String>", "left.client_event_id == right.client_event_id"]),
         "store": (store, ["OrderLifecycleRecord", "OrderLifecycleStore", "record_order_lifecycle_event", "in_memory_order_lifecycle_records_cancel_requested", "RuntimeWorkerHeartbeat", "RuntimeWorkerHealthStore", "RuntimeWorkerStatusReport", "RuntimeWorkerStatusStore", "list_runtime_worker_status", "record_worker_heartbeat", "in_memory_worker_heartbeat_informs_runtime_state", "principal_subject: Option<String>", "result: Option<String>", "sign_only_lifecycle_record_is_replay", "client_event_id reused with different event payload", "PMX_RUNTIME_OBSERVATION_TTL_SECONDS", "runtime_observation_ttl_seconds", "execution_id={}"]),
         "postgres": (postgres, ["impl OrderLifecycleStore for PostgresStore", "postgres_records_order_lifecycle_event", "impl RuntimeWorkerHealthStore for PostgresStore", "impl RuntimeWorkerStatusStore for PostgresStore", "postgres_records_worker_heartbeat", "postgres_lists_runtime_worker_status", "principal_subject = $4", "result = $5", "pg_advisory_xact_lock", "sign_only_lifecycle_record_is_replay", "runtime_observation_ttl_seconds", "FOREIGN_KEY_VIOLATION", "CHECK_VIOLATION"]),
@@ -486,5 +564,6 @@ def validate_v23_lifecycle_query_and_hardening() -> None:
         fail("current SignOnlyLifecycleRecord must have exactly one client_event_id field")
     if store.count("pub observed_at: Option<DateTime<Utc>>") != 1:
         fail("current RuntimeWorkerObservation must have exactly one observed_at field")
-    if "SignedOrderEnvelope" in openapi or "signed_payload" in openapi:
+    openapi_text = OPENAPI.read_text()
+    if "SignedOrderEnvelope" in openapi_text or "signed_payload" in openapi_text:
         fail("current public OpenAPI must not expose signed payload internals")

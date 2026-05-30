@@ -61,7 +61,7 @@ def main(argv: list[str] | None = None) -> None:
     validate_v19_redaction_and_live_guard()
     validate_v20_plan_storage_and_packaging()
     validate_v21_sign_only_and_runtime_models()
-    validate_v23_lifecycle_query_and_hardening()
+    validate_v23_lifecycle_query_and_hardening(spec)
     validate_current_hermes_client_surface()
     validate_current_evidence_manifest_guard()
     validate_current_docs_and_release_governance()
