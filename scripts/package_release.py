@@ -172,6 +172,14 @@ def write_deterministic(zf: ZipFile, path: Path) -> None:
     zf.writestr(info, archive_bytes(path))
 
 
+def build_release_zip() -> None:
+    if OUT.exists():
+        OUT.unlink()
+    with ZipFile(OUT, "w", ZIP_DEFLATED) as zf:
+        for path in release_source_files():
+            write_deterministic(zf, path)
+
+
 def is_reviewed_go_material(name: str) -> bool:
     return name.startswith("pmx-canary-reviewed-go-") or (
         name.startswith("pmx-") and "-reviewed-go-" in name
@@ -314,15 +322,20 @@ def main() -> int:
         print("VERSION file is empty", file=sys.stderr)
         return 1
     DIST.mkdir(exist_ok=True)
-    if OUT.exists():
-        OUT.unlink()
-    with ZipFile(OUT, "w", ZIP_DEFLATED) as zf:
-        for path in release_source_files():
-            write_deterministic(zf, path)
-    sidecar = OUT.with_suffix(OUT.suffix + ".sha256")
-    artifact_sha256 = sha256(OUT)
     evidence_manifest = ROOT / "polymarket-execution-engine" / "evidence" / "current" / "manifest.json"
+    sidecar = OUT.with_suffix(OUT.suffix + ".sha256")
+
+    # First pass discovers the artifact hash needed for workspace-side binding.
+    build_release_zip()
+    artifact_sha256 = sha256(OUT)
     bind_workspace_manifest(evidence_manifest, artifact_sha256)
+
+    # Second pass rebuilds the archive with the bound workspace manifest. The archived
+    # copy remains stable because archive_bytes() normalizes the self-referential hash.
+    build_release_zip()
+    artifact_sha256 = sha256(OUT)
+    bind_workspace_manifest(evidence_manifest, artifact_sha256)
+
     workspace_manifest_sha256 = sha256(evidence_manifest) if evidence_manifest.exists() else None
     manifest_sha256 = (
         hashlib.sha256(archive_bytes(evidence_manifest)).hexdigest()
