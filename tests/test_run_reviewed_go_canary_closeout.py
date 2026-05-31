@@ -63,10 +63,12 @@ class RunReviewedGoCanaryCloseoutTests(unittest.TestCase):
                 release_zip=None,
                 daily_used_notional_usd="0",
                 account_address=None,
+                include_live_config_overrides=False,
             )
         self.assertEqual(plan["account_address"], "0x00000000000000000000000000000000000000b0")
         self.assertEqual(plan["steps"][2]["stdout_path"], str(package / "order-status-query.json"))
         self.assertIn("__REMOTE_ORDER_ID__", plan["steps"][2]["command"])
+        self.assertNotIn("--include-live-config-overrides", plan["steps"][1]["command"])
 
     def test_build_workflow_plan_requires_account_address_without_funder(self):
         with tempfile.TemporaryDirectory() as tmp_name:
@@ -79,7 +81,22 @@ class RunReviewedGoCanaryCloseoutTests(unittest.TestCase):
                     release_zip=None,
                     daily_used_notional_usd="0",
                     account_address=None,
+                    include_live_config_overrides=False,
                 )
+
+    def test_build_workflow_plan_only_adds_live_override_opt_in_when_requested(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            package, env_file = self.package_fixture(Path(tmp_name))
+            plan = self.module.build_workflow_plan(
+                package_dir=package,
+                env_file=env_file,
+                release_zip=None,
+                daily_used_notional_usd="0",
+                account_address=None,
+                include_live_config_overrides=True,
+            )
+        self.assertIn("--include-live-config-overrides", plan["steps"][1]["command"])
+        self.assertTrue(plan["includes_live_config_overrides"])
 
     def test_execute_workflow_substitutes_remote_order_and_writes_readback_paths(self):
         with tempfile.TemporaryDirectory() as tmp_name:
@@ -91,6 +108,7 @@ class RunReviewedGoCanaryCloseoutTests(unittest.TestCase):
                 release_zip=None,
                 daily_used_notional_usd="0",
                 account_address=None,
+                include_live_config_overrides=False,
             )
 
             class Completed:

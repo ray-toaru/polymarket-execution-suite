@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import stat
 import tempfile
 import unittest
 from pathlib import Path
@@ -128,6 +129,24 @@ class ActivatePmxProfileTests(unittest.TestCase):
             if line and not line.startswith("#")
         }
         self.assertEqual(example_keys, generated_keys)
+
+    def test_write_runtime_env_sets_owner_only_permissions(self):
+        activated = {
+            "PMX_ACTIVE_ACCOUNT_PROFILE": "acct_b",
+            "PMX_ACTIVE_ACCOUNT_ID": "acct_b",
+            "PMX_ACTIVE_PROFILE_REF": "local-profile://acct_b",
+            "POLYMARKET_PRIVATE_KEY": "0xabc123",
+            "POLY_API_KEY": "api-key",
+            "POLY_API_SECRET": "api-secret",
+            "POLY_API_PASSPHRASE": "api-pass",
+            "PMX_CLOB_FUNDER": "0x00000000000000000000000000000000000000b0",
+            "PMX_CLOB_SIGNATURE_TYPE": "POLY_1271",
+        }
+        with tempfile.TemporaryDirectory() as tmp_name:
+            output = Path(tmp_name) / ".env.runtime"
+            self.module.write_runtime_env(output, activated)
+            mode = stat.S_IMODE(output.stat().st_mode)
+        self.assertEqual(mode, stat.S_IRUSR | stat.S_IWUSR)
 
 
 if __name__ == "__main__":

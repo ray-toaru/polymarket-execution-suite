@@ -172,6 +172,7 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                 plan_hash=None,
                 report_file=None,
                 approval_consumed_marker=None,
+                include_live_config_overrides=False,
             )
 
             self.assertEqual(plan["mode"], "preflight")
@@ -181,6 +182,8 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
             self.assertIn(str(package / "approval.json"), plan["command"])
             self.assertIn(str(package / "runtime-truth.json"), plan["command"])
             self.assertIn("PMX_ALLOW_LIVE_SUBMIT", plan["required_gate_env_vars"])
+            self.assertFalse(plan["includes_live_config_overrides"])
+            self.assertNotIn("--allow-live-submit-config", plan["command"])
 
     def test_build_invocation_armed_defaults_report_and_marker_in_package(self):
         with tempfile.TemporaryDirectory() as tmp_name:
@@ -196,6 +199,7 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                 plan_hash=None,
                 report_file=None,
                 approval_consumed_marker=None,
+                include_live_config_overrides=False,
             )
 
             self.assertEqual(plan["mode"], "armed")
@@ -204,6 +208,30 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
             self.assertIn("--approval-consumed-marker", plan["command"])
             self.assertTrue(plan["report_file"].endswith("post-canary-report.json"))
             self.assertIn(str(package), plan["approval_consumed_marker"])
+            self.assertTrue(plan["requires_explicit_live_config_overrides"])
+            self.assertNotIn("--allow-live-submit-config", plan["command"])
+
+    def test_build_invocation_armed_requires_explicit_live_overrides_to_include_flags(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            package, env_file = self.package_fixture(tmp)
+            plan = self.module.build_invocation(
+                package_dir=package,
+                env_file=env_file,
+                mode="armed",
+                daily_used_notional_usd="0",
+                idempotency_key=None,
+                execution_id=None,
+                plan_hash=None,
+                report_file=None,
+                approval_consumed_marker=None,
+                include_live_config_overrides=True,
+            )
+
+            self.assertFalse(plan["requires_explicit_live_config_overrides"])
+            self.assertTrue(plan["includes_live_config_overrides"])
+            self.assertIn("--allow-live-submit-config", plan["command"])
+            self.assertIn("--allow-real-funds-canary-config", plan["command"])
 
     def test_build_invocation_rejects_consumed_package(self):
         with tempfile.TemporaryDirectory() as tmp_name:
@@ -222,6 +250,7 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                     plan_hash=None,
                     report_file=None,
                     approval_consumed_marker=None,
+                    include_live_config_overrides=False,
                 )
 
     def test_main_run_fails_closed_when_gate_env_vars_are_missing(self):
@@ -252,9 +281,42 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                     plan_hash=None,
                     report_file=None,
                     approval_consumed_marker=None,
+                    include_live_config_overrides=False,
                     run=True,
                 )
                 with self.assertRaisesRegex(SystemExit, "missing required gate env vars"):
+                    self.module.main()
+            finally:
+                self.module.parse_args = original_parse_args
+                os.environ.clear()
+                os.environ.update(original)
+
+    def test_main_run_rejects_armed_without_explicit_live_override_opt_in(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            package, env_file = self.package_fixture(tmp)
+            original = dict(os.environ)
+            try:
+                for key in self.module.REQUIRED_GATE_ENV_VARS:
+                    os.environ[key] = "1"
+                original_parse_args = self.module.parse_args
+                self.module.parse_args = lambda: self.module.argparse.Namespace(
+                    package_dir=package,
+                    env_file=env_file,
+                    mode="armed",
+                    daily_used_notional_usd="0",
+                    idempotency_key=None,
+                    execution_id=None,
+                    plan_hash=None,
+                    report_file=None,
+                    approval_consumed_marker=None,
+                    include_live_config_overrides=False,
+                    run=True,
+                )
+                with self.assertRaisesRegex(
+                    SystemExit,
+                    "requires --include-live-config-overrides before execution",
+                ):
                     self.module.main()
             finally:
                 self.module.parse_args = original_parse_args

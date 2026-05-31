@@ -74,6 +74,7 @@ def build_workflow_plan(
     release_zip: Path | None,
     daily_used_notional_usd: str,
     account_address: str | None,
+    include_live_config_overrides: bool,
 ) -> dict[str, Any]:
     package_dir = resolve(package_dir)
     env_file = require_file(resolve(env_file), "runtime env")
@@ -111,8 +112,10 @@ def build_workflow_plan(
         "armed",
         "--daily-used-notional-usd",
         daily_used_notional_usd,
-        "--run",
     ]
+    if include_live_config_overrides:
+        armed_cmd.append("--include-live-config-overrides")
+    armed_cmd.append("--run")
     order_query_output = package_dir / "order-status-query.json"
     order_query_cmd = [
         "cargo",
@@ -179,6 +182,7 @@ def build_workflow_plan(
         "market_id": market_id,
         "token_id": token_id,
         "daily_used_notional_usd": daily_used_notional_usd,
+        "includes_live_config_overrides": include_live_config_overrides,
         "steps": [
             {"name": "preflight", "command": preflight_cmd},
             {"name": "armed", "command": armed_cmd},
@@ -280,6 +284,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--daily-used-notional-usd", default="0")
     parser.add_argument("--account-address")
     parser.add_argument(
+        "--include-live-config-overrides",
+        action="store_true",
+        help=(
+            "Include the live-submit and real-funds config override flags in the armed "
+            "step. The closeout workflow keeps these disabled by default and requires "
+            "explicit opt-in."
+        ),
+    )
+    parser.add_argument(
         "--run",
         action="store_true",
         help="Execute preflight, armed canary, readback queries, and local closeout. Without this flag the script only prints the workflow plan.",
@@ -295,6 +308,7 @@ def main() -> int:
         release_zip=args.release_zip,
         daily_used_notional_usd=args.daily_used_notional_usd,
         account_address=args.account_address,
+        include_live_config_overrides=args.include_live_config_overrides,
     )
     if not args.run:
         print(json.dumps(plan, indent=2, sort_keys=True))

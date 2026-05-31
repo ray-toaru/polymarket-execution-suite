@@ -11,6 +11,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import stat
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -141,6 +142,10 @@ def write_runtime_env(output: Path, activated: dict[str, str]) -> None:
         )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text("\n".join(lines) + "\n")
+    try:
+        output.chmod(stat.S_IRUSR | stat.S_IWUSR)
+    except OSError as exc:
+        raise SystemExit(f"failed to set restrictive permissions on {output}: {exc}") from exc
 
 
 def parse_args() -> argparse.Namespace:

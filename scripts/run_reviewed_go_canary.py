@@ -128,6 +128,7 @@ def build_invocation(
     plan_hash: str | None,
     report_file: Path | None,
     approval_consumed_marker: Path | None,
+    include_live_config_overrides: bool,
 ) -> dict[str, Any]:
     pipeline = load_module(PIPELINE_SCRIPT, "run_controlled_canary_pipeline")
     env_check = load_module(ENV_CHECK_SCRIPT, "check_active_profile_consistency")
@@ -198,9 +199,14 @@ def build_invocation(
         plan,
         "--daily-used-notional-usd",
         daily_used_notional_usd,
-        "--allow-live-submit-config",
-        "--allow-real-funds-canary-config",
     ]
+    if include_live_config_overrides:
+        command.extend(
+            [
+                "--allow-live-submit-config",
+                "--allow-real-funds-canary-config",
+            ]
+        )
     if mode == "armed":
         command.extend(
             [
@@ -224,6 +230,8 @@ def build_invocation(
         "command": command,
         "required_gate_env_vars": REQUIRED_GATE_ENV_VARS,
         "missing_gate_env_vars": missing_gate_env(),
+        "includes_live_config_overrides": include_live_config_overrides,
+        "requires_explicit_live_config_overrides": mode == "armed" and not include_live_config_overrides,
         "report_file": str(report) if mode == "armed" else None,
         "approval_consumed_marker": str(marker) if mode == "armed" else None,
     }
@@ -240,6 +248,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--plan-hash")
     parser.add_argument("--report-file", type=Path)
     parser.add_argument("--approval-consumed-marker", type=Path)
+    parser.add_argument(
+        "--include-live-config-overrides",
+        action="store_true",
+        help=(
+            "Include the live-submit and real-funds config override flags in the generated "
+            "adapter command. Armed mode keeps these disabled by default and requires "
+            "explicit opt-in."
+        ),
+    )
     parser.add_argument(
         "--run",
         action="store_true",
@@ -262,10 +279,16 @@ def main() -> int:
         approval_consumed_marker=resolve(args.approval_consumed_marker)
         if args.approval_consumed_marker
         else None,
+        include_live_config_overrides=args.include_live_config_overrides,
     )
     if not args.run:
         print(json.dumps(invocation, indent=2, sort_keys=True))
         return 0
+
+    if invocation["requires_explicit_live_config_overrides"]:
+        raise SystemExit(
+            "armed reviewed-go canary requires --include-live-config-overrides before execution"
+        )
 
     missing = invocation["missing_gate_env_vars"]
     if missing:
