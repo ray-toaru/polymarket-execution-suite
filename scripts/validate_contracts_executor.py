@@ -138,6 +138,20 @@ def rust_async_fn_names(text: str) -> set[str]:
     return set(re.findall(r"(?m)^\s*pub(?:\([^)]*\))?\s+async\s+fn\s+([a-zA-Z_][a-zA-Z0-9_]*)", text))
 
 
+def rust_struct_field_names(text: str, struct_name: str) -> set[str]:
+    pattern = rf"(?s)struct\s+{re.escape(struct_name)}[^\{{]*\{{(.*?)\n\}}"
+    match = re.search(pattern, text)
+    if not match:
+        fail(f"missing Rust struct: {struct_name}")
+    body = match.group(1)
+    return set(
+        re.findall(
+            r"(?m)^\s*(?:pub\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\s*:",
+            body,
+        )
+    )
+
+
 def ensure_match_arms(text: str, label: str, fn_name: str, required_arms: list[str]) -> None:
     marker = f"async fn {fn_name}"
     start = text.find(marker)
@@ -451,15 +465,32 @@ def validate_v12_service_layer(spec: dict | None = None) -> None:
         "pmx-service Cargo",
         ['name = "pmx-service"'],
     )
-    require_file_tokens(
-        SERVICE_RS,
-        "pmx-service crate root",
-        ["mod binding;", "mod plan_flow;", "mod submit;", "pub use binding::*;", "pub use submit::*;"],
-    )
-    require_file_tokens(
-        SERVICE_SRC / "binding/hash_inputs.rs",
+    service_root_text = SERVICE_RS.read_text()
+    module_names = rust_module_names(service_root_text)
+    if not {"binding", "plan_flow", "submit"}.issubset(module_names):
+        fail("pmx-service crate root missing required modules")
+    pub_use_targets = rust_pub_use_targets(service_root_text)
+    if not {"binding", "submit"}.issubset(pub_use_targets):
+        fail("pmx-service crate root missing required pub use re-exports")
+    hash_inputs_text = (SERVICE_SRC / "binding/hash_inputs.rs").read_text()
+    try:
+        plan_hash_fields = rust_struct_field_names(hash_inputs_text, "PlanHashInput")
+        approval_hash_fields = rust_struct_field_names(hash_inputs_text, "ApprovalHashInput")
+    except SystemExit as exc:
+        fail(f"service binding hash inputs malformed: {exc}")
+    if not {
+        "approval_id",
+        "approval_hash",
+        "executor_version",
+        "contract_version",
+    }.issubset(plan_hash_fields):
+        fail("service binding hash inputs missing required PlanHashInput fields")
+    if "bound_snapshot_hash" not in approval_hash_fields:
+        fail("service binding hash inputs missing required ApprovalHashInput fields")
+    require_tokens(
+        hash_inputs_text,
         "service binding hash inputs",
-        ["pub(crate) struct PlanHashInput<'a>", "approval_id: &'a str", "approval_hash: &'a HashValue", "executor_version: &'a str", "contract_version: &'a str", "pub(crate) struct ApprovalHashInput<'a>", "bound_snapshot_hash: &'a HashValue"],
+        ["impl<'a> From<&'a ApprovalReceipt> for ApprovalHashInput<'a>", "impl<'a> From<&'a ExecutionPlanSummary> for PlanHashInput<'a>"],
     )
     require_file_tokens(
         SERVICE_SRC / "submit/blocked.rs",
@@ -473,10 +504,19 @@ def validate_v12_service_layer(spec: dict | None = None) -> None:
         "service flow tests",
         ["service_flow_persists_and_blocks_submit", "service_id_bound_flow_persists_and_blocks_submit", "service_rejects_object_graph_mismatch", "service_rejects_tampered_approval_hash"],
     )
-    require_file_tokens(
-        API_SRC / "routes/bootstrap.rs",
+    bootstrap_text = (API_SRC / "routes/bootstrap.rs").read_text()
+    route_paths = set(re.findall(r'\.route\(\s*"([^"]+)"', bootstrap_text))
+    if not {
+        "/v1/plans/compile",
+        "/v1/submissions",
+        "/v1/admin/cancel-order",
+        "/v1/admin/reconcile",
+    }.issubset(route_paths):
+        fail("API bootstrap routes missing required paths")
+    require_tokens(
+        bootstrap_text,
         "API bootstrap routes",
-        ['.route("/v1/plans/compile", post(flow::compile_plan))', '.route("/v1/submissions", post(flow::submit_plan))', '"/v1/admin/cancel-order"', '"/v1/admin/reconcile"', "pub async fn try_postgres_app(", "AppState::postgres(store)"],
+        ["pub async fn try_postgres_app(", "AppState::postgres(store)"],
     )
     for needle in [
         "pub enum ServiceBackend",
@@ -521,11 +561,17 @@ def validate_v15_admin_audit_and_runtime_provider(spec: dict | None = None) -> N
     for required_param in {"before_audit_id", "operation", "principal_subject", "result", "correlation_id"}:
         if required_param not in audit_params:
             fail(f"v0.15 admin audit query must expose {required_param}")
-    require_file_tokens(
-        STORE_SRC / "model/audit.rs",
-        "store admin audit model",
-        ["pub struct AdminAuditEvent", "pub trait AdminAuditStore", "pub struct AdminAuditQuery", "pub correlation_id: Option<String>"],
-    )
+    audit_model_text = (STORE_SRC / "model/audit.rs").read_text()
+    try:
+        audit_event_fields = rust_struct_field_names(audit_model_text, "AdminAuditEvent")
+        audit_query_fields = rust_struct_field_names(audit_model_text, "AdminAuditQuery")
+        audit_store_methods = rust_trait_method_signatures(audit_model_text, "AdminAuditStore")
+    except SystemExit as exc:
+        fail(f"store admin audit model malformed: {exc}")
+    if "correlation_id" not in audit_event_fields or "correlation_id" not in audit_query_fields:
+        fail("store admin audit model missing correlation_id fields")
+    if audit_store_methods != {"record_admin_audit_event", "list_admin_audit_events"}:
+        fail("store admin audit model missing AdminAuditStore methods")
     require_file_tokens(
         STORE_SRC / "memory/audit.rs",
         "in-memory admin audit store",
@@ -580,11 +626,33 @@ def validate_v16_postgres_runtime_provider(spec: dict | None = None) -> None:
     runtime_worker_ref = operation_response_ref(spec, "/v1/runtime/workers", "get", "200")
     if runtime_worker_ref != "#/components/schemas/RuntimeWorkerStatusReport":
         fail("v0.16 runtime workers response must reference RuntimeWorkerStatusReport")
-    require_file_tokens(
-        STORE_SRC / "model/runtime.rs",
-        "store runtime model",
-        ["pub struct RuntimeStateQuery", "pub trait RuntimeStateStore", "pub struct RuntimeWorkerStatusReport", "pub trait RuntimeWorkerStatusStore"],
-    )
+    runtime_model_text = (STORE_SRC / "model/runtime.rs").read_text()
+    try:
+        runtime_state_query_fields = rust_struct_field_names(runtime_model_text, "RuntimeStateQuery")
+        runtime_worker_status_report_fields = rust_struct_field_names(
+            runtime_model_text, "RuntimeWorkerStatusReport"
+        )
+        runtime_state_methods = rust_trait_method_signatures(runtime_model_text, "RuntimeStateStore")
+        runtime_worker_methods = rust_trait_method_signatures(
+            runtime_model_text, "RuntimeWorkerStatusStore"
+        )
+        runtime_control_methods = rust_trait_method_signatures(
+            runtime_model_text, "RuntimeControlStore"
+        )
+    except SystemExit as exc:
+        fail(f"store runtime model malformed: {exc}")
+    if not {"account_id", "condition_id", "collateral_profile_id", "required_capabilities"}.issubset(
+        runtime_state_query_fields
+    ):
+        fail("store runtime model missing RuntimeStateQuery fields")
+    if runtime_worker_status_report_fields != {"heartbeats", "observations"}:
+        fail("store runtime model missing RuntimeWorkerStatusReport fields")
+    if runtime_state_methods != {"load_runtime_state"}:
+        fail("store runtime model missing RuntimeStateStore methods")
+    if runtime_worker_methods != {"list_runtime_worker_status"}:
+        fail("store runtime model missing RuntimeWorkerStatusStore methods")
+    if runtime_control_methods != {"set_account_kill_switch", "set_global_kill_switch"}:
+        fail("store runtime model missing RuntimeControlStore methods")
     require_file_tokens(
         STORE_SRC / "memory/runtime/state.rs",
         "in-memory runtime state store",
