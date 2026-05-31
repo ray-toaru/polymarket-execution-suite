@@ -135,7 +135,12 @@ def rust_pub_use_targets(text: str) -> set[str]:
 
 
 def rust_async_fn_names(text: str) -> set[str]:
-    return set(re.findall(r"(?m)^\s*pub(?:\([^)]*\))?\s+async\s+fn\s+([a-zA-Z_][a-zA-Z0-9_]*)", text))
+    return set(
+        re.findall(
+            r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?async\s+fn\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+            text,
+        )
+    )
 
 
 def rust_fn_names(text: str) -> set[str]:
@@ -603,45 +608,80 @@ def validate_v15_admin_audit_and_runtime_provider(spec: dict | None = None) -> N
         if required_param not in audit_params:
             fail(f"v0.15 admin audit query must expose {required_param}")
     audit_model_text = (STORE_SRC / "model/audit.rs").read_text()
+    memory_audit_text = (STORE_SRC / "memory/audit.rs").read_text()
+    postgres_audit_text = (STORE_SRC / "postgres_audit/admin.rs").read_text()
+    service_audit_text = (SERVICE_SRC / "service/audit.rs").read_text()
+    api_backend_audit_text = (API_SRC / "backend/audit.rs").read_text()
+    api_route_audit_text = (API_SRC / "routes/admin/audit.rs").read_text()
+    api_support_audit_text = (API_SRC / "support/audit.rs").read_text()
     try:
         audit_event_fields = rust_struct_field_names(audit_model_text, "AdminAuditEvent")
         audit_query_fields = rust_struct_field_names(audit_model_text, "AdminAuditQuery")
         audit_store_methods = rust_trait_method_signatures(audit_model_text, "AdminAuditStore")
     except SystemExit as exc:
         fail(f"store admin audit model malformed: {exc}")
-    if "correlation_id" not in audit_event_fields or "correlation_id" not in audit_query_fields:
-        fail("store admin audit model missing correlation_id fields")
+    if not {
+        "audit_id",
+        "principal_subject",
+        "operation",
+        "request_fingerprint",
+        "correlation_id",
+        "result",
+        "created_at",
+    }.issubset(audit_event_fields):
+        fail("store admin audit model missing AdminAuditEvent fields")
+    if not {
+        "limit",
+        "before_audit_id",
+        "operation",
+        "principal_subject",
+        "result",
+        "correlation_id",
+    }.issubset(audit_query_fields):
+        fail("store admin audit model missing AdminAuditQuery fields")
     if audit_store_methods != {"record_admin_audit_event", "list_admin_audit_events"}:
         fail("store admin audit model missing AdminAuditStore methods")
-    require_file_tokens(
-        STORE_SRC / "memory/audit.rs",
+    if "record_admin_audit_event" not in rust_async_fn_names(service_audit_text):
+        fail("service admin audit bridge missing record_admin_audit_event")
+    if "list_admin_audit_events" not in rust_async_fn_names(service_audit_text):
+        fail("service admin audit bridge missing list_admin_audit_events")
+    if "record_admin_audit_event" not in rust_async_fn_names(api_backend_audit_text):
+        fail("API admin audit backend missing record_admin_audit_event")
+    if "list_admin_audit_events" not in rust_async_fn_names(api_backend_audit_text):
+        fail("API admin audit backend missing list_admin_audit_events")
+    if "list_admin_audit_events" not in rust_async_fn_names(api_route_audit_text):
+        fail("API admin audit routes missing list_admin_audit_events")
+    if "record_admin_audit" not in rust_async_fn_names(api_support_audit_text):
+        fail("API admin audit support missing record_admin_audit")
+    require_tokens(
+        memory_audit_text,
         "in-memory admin audit store",
         ["impl AdminAuditStore for InMemoryStore", "sanitize_admin_audit_event", "state.admin_audit.push(stored)", "correlation_id"],
     )
-    require_file_tokens(
-        STORE_SRC / "postgres_audit/admin.rs",
+    require_tokens(
+        postgres_audit_text,
         "postgres admin audit store",
         ["impl AdminAuditStore for PostgresStore", "INSERT INTO admin_audit_events", "FROM admin_audit_events", "AND ($6::text IS NULL OR correlation_id = $6)"],
     )
-    require_file_tokens(
-        SERVICE_SRC / "service/audit.rs",
+    require_tokens(
+        service_audit_text,
         "service admin audit bridge",
-        ["AdminAuditStore", "pub async fn record_admin_audit_event", "self.store.record_admin_audit_event(&event).await?", "pub async fn list_admin_audit_events"],
+        ["AdminAuditStore", "self.store.record_admin_audit_event(&event).await?", "pub async fn list_admin_audit_events"],
     )
-    require_file_tokens(
-        API_SRC / "backend/audit.rs",
+    require_tokens(
+        api_backend_audit_text,
         "API admin audit backend",
-        ["record_admin_audit_event", "list_admin_audit_events", "Self::InMemory(service) => service.record_admin_audit_event(event).await", "Self::Postgres(service) => service.list_admin_audit_events(query).await"],
+        ["Self::InMemory(service) => service.record_admin_audit_event(event).await", "Self::Postgres(service) => service.list_admin_audit_events(query).await"],
     )
-    require_file_tokens(
-        API_SRC / "routes/admin/audit.rs",
+    require_tokens(
+        api_route_audit_text,
         "API admin audit routes",
-        ["pub(crate) async fn list_admin_audit_events", "AdminAuditQuery", "correlation_id: query.correlation_id", "StatusCode::OK"],
+        ["AdminAuditQuery", "correlation_id: query.correlation_id", "StatusCode::OK"],
     )
-    require_file_tokens(
-        API_SRC / "support/audit.rs",
+    require_tokens(
+        api_support_audit_text,
         "API admin audit support",
-        ["pub(crate) async fn record_admin_audit", "operation: &'static str", "record_admin_audit_event(AdminAuditEvent", "principal_subject: principal.subject.clone()"],
+        ["operation: &'static str", "record_admin_audit_event(AdminAuditEvent", "principal_subject: principal.subject.clone()"],
     )
     require_file_tokens(
         API_SRC / "routes/health.rs",
@@ -664,6 +704,11 @@ def validate_v16_postgres_runtime_provider(spec: dict | None = None) -> None:
     health_text = (API_SRC / "routes/health.rs").read_text()
     pg_test_text = rust_file_with_modules_text(API_POSTGRES_E2E_TEST)
     spike_text = SDK_SPIKE_RS.read_text()
+    memory_runtime_state_text = (STORE_SRC / "memory/runtime/state.rs").read_text()
+    memory_runtime_support_text = (STORE_SRC / "memory/runtime/support.rs").read_text()
+    postgres_runtime_text = (STORE_SRC / "postgres_runtime.rs").read_text()
+    postgres_worker_status_text = (STORE_SRC / "postgres_worker/status.rs").read_text()
+    store_backed_runtime_text = (SERVICE_SRC / "runtime_state/store_backed.rs").read_text()
     runtime_worker_ref = operation_response_ref(spec, "/v1/runtime/workers", "get", "200")
     if runtime_worker_ref != "#/components/schemas/RuntimeWorkerStatusReport":
         fail("v0.16 runtime workers response must reference RuntimeWorkerStatusReport")
@@ -694,30 +739,40 @@ def validate_v16_postgres_runtime_provider(spec: dict | None = None) -> None:
         fail("store runtime model missing RuntimeWorkerStatusStore methods")
     if runtime_control_methods != {"set_account_kill_switch", "set_global_kill_switch"}:
         fail("store runtime model missing RuntimeControlStore methods")
-    require_file_tokens(
-        STORE_SRC / "memory/runtime/state.rs",
+    if "set_runtime_state_for_test" not in rust_fn_names(memory_runtime_support_text):
+        fail("in-memory runtime support missing set_runtime_state_for_test")
+    if "new" not in rust_fn_names(store_backed_runtime_text):
+        fail("service store-backed runtime provider missing constructor")
+    if "with_required_capabilities" not in rust_fn_names(store_backed_runtime_text):
+        fail("service store-backed runtime provider missing capability override constructor")
+    if not {"capture_runtime_state", "load_canary_runtime_truth"}.issubset(
+        rust_async_fn_names(store_backed_runtime_text) | rust_fn_names(store_backed_runtime_text)
+    ):
+        fail("service store-backed runtime provider missing runtime capture/canary truth methods")
+    require_tokens(
+        memory_runtime_state_text,
         "in-memory runtime state store",
         ["impl RuntimeStateStore for InMemoryStore", "apply_runtime_worker_observations", "worker_status_from_heartbeats", "global_kill_switch"],
     )
-    require_file_tokens(
-        STORE_SRC / "memory/runtime/support.rs",
+    require_tokens(
+        memory_runtime_support_text,
         "in-memory runtime support",
-        ["pub fn set_runtime_state_for_test(", "query.state_scope_key()", "runtime_observation_is_fresh", "observations_for_account"],
+        ["query.state_scope_key()", "runtime_observation_is_fresh", "observations_for_account"],
     )
-    require_file_tokens(
-        STORE_SRC / "postgres_runtime.rs",
+    require_tokens(
+        postgres_runtime_text,
         "postgres runtime state store",
         ["impl RuntimeStateStore for PostgresStore", "IsolationLevel::RepeatableRead", "account_collateral::load_account_state", "worker_rows::load_worker_rows", "apply_runtime_worker_observations", "impl RuntimeControlStore for PostgresStore"],
     )
-    require_file_tokens(
-        STORE_SRC / "postgres_worker/status.rs",
+    require_tokens(
+        postgres_worker_status_text,
         "postgres runtime worker status store",
         ["impl RuntimeWorkerStatusStore for PostgresStore", "FROM worker_health", "FROM runtime_worker_observations", "RuntimeWorkerStatusReport"],
     )
-    require_file_tokens(
-        SERVICE_SRC / "runtime_state/store_backed.rs",
+    require_tokens(
+        store_backed_runtime_text,
         "service store-backed runtime provider",
-        ["pub struct StoreBackedRuntimeStateProvider<S>", "pub fn new(store: S) -> Self", "async fn capture_runtime_state", "load_runtime_state(&query)", "fail_closed_runtime_state(query.required_capabilities)"],
+        ["pub struct StoreBackedRuntimeStateProvider<S>", "load_runtime_state(&query)", "fail_closed_runtime_state(query.required_capabilities)"],
     )
     require_file_tokens(
         SERVICE_SRC / "service_tests/flow.rs",

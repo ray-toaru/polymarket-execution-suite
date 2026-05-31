@@ -427,6 +427,58 @@ pub trait RuntimeWorkerStatusStore: Send + Sync {}
                 module.validate_v15_admin_audit_and_runtime_provider(spec)
         self.assertIn("API admin audit support", str(ctx.exception))
 
+    def test_v15_requires_backend_audit_async_method(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/admin/audit-events"]["get"]["parameters"] = [
+            {"name": "before_audit_id"},
+            {"name": "operation"},
+            {"name": "principal_subject"},
+            {"name": "result"},
+            {"name": "correlation_id"},
+        ]
+        spec["paths"]["/v1/admin/audit-events"]["get"]["responses"] = {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "schema": {"type": "array", "items": {"$ref": "#/components/schemas/AdminAuditEvent"}}
+                    }
+                }
+            }
+        }
+        spec["paths"]["/v1/admin/kill-switch"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/KillSwitchRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/KillSwitchReceipt"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/src/backend/audit.rs"):
+                return """
+use pmx_service::ServiceError;
+use pmx_store::{AdminAuditEvent, AdminAuditQuery};
+
+impl ServiceBackend {
+    pub(crate) async fn record_admin_audit_event(
+        &self,
+        event: AdminAuditEvent,
+    ) -> Result<(), ServiceError> {
+        match self {
+            Self::InMemory(service) => service.record_admin_audit_event(event).await,
+            Self::Postgres(service) => service.record_admin_audit_event(event).await,
+        }
+    }
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v15_admin_audit_and_runtime_provider(spec)
+        self.assertIn("API admin audit backend", str(ctx.exception))
+
     def test_v16_requires_store_backed_runtime_provider_tokens(self) -> None:
         spec = self._minimal_v23_spec()
         original_read_text = Path.read_text
@@ -441,6 +493,25 @@ pub trait RuntimeWorkerStatusStore: Send + Sync {}
             with self.assertRaises(SystemExit) as ctx:
                 module.validate_v16_postgres_runtime_provider(spec)
         self.assertIn("service store-backed runtime provider", str(ctx.exception))
+
+    def test_v16_requires_runtime_support_helper(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/memory/runtime/support.rs"):
+                return """
+pub fn some_other_helper() {}
+fn observations_for_account() {}
+fn runtime_observation_is_fresh() {}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v16_postgres_runtime_provider(spec)
+        self.assertIn("in-memory runtime support", str(ctx.exception))
 
     def test_v15_requires_admin_audit_query_filters(self) -> None:
         spec = self._minimal_v23_spec()
