@@ -12,6 +12,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 RUN_REVIEWED_GO = ROOT / "scripts" / "run_reviewed_go_canary.py"
+RUN_REVIEWED_GO_ARMED = ROOT / "scripts" / "run_reviewed_go_canary_armed.py"
 PREPARE_CLOSEOUT = ROOT / "scripts" / "prepare_canary_closeout.py"
 ADAPTER_MANIFEST = (
     ROOT
@@ -103,18 +104,14 @@ def build_workflow_plan(
     ]
     armed_cmd = [
         "python",
-        str(RUN_REVIEWED_GO),
+        str(RUN_REVIEWED_GO_ARMED),
         "--package-dir",
         str(package_dir),
         "--env-file",
         str(env_file),
-        "--mode",
-        "armed",
         "--daily-used-notional-usd",
         daily_used_notional_usd,
     ]
-    if include_live_config_overrides:
-        armed_cmd.append("--include-live-config-overrides")
     armed_cmd.append("--run")
     order_query_output = package_dir / "order-status-query.json"
     order_query_cmd = [
@@ -182,7 +179,8 @@ def build_workflow_plan(
         "market_id": market_id,
         "token_id": token_id,
         "daily_used_notional_usd": daily_used_notional_usd,
-        "includes_live_config_overrides": include_live_config_overrides,
+        "includes_live_config_overrides": False,
+        "uses_dedicated_armed_wrapper": True,
         "steps": [
             {"name": "preflight", "command": preflight_cmd},
             {"name": "armed", "command": armed_cmd},

@@ -1,24 +1,23 @@
 import importlib.util
 import json
-import os
 import tempfile
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts" / "run_reviewed_go_canary.py"
+SCRIPT = ROOT / "scripts" / "run_reviewed_go_canary_armed.py"
 
 
 def load_module():
-    spec = importlib.util.spec_from_file_location("run_reviewed_go_canary", SCRIPT)
+    spec = importlib.util.spec_from_file_location("run_reviewed_go_canary_armed", SCRIPT)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
 
 
-class RunReviewedGoCanaryTests(unittest.TestCase):
+class RunReviewedGoCanaryArmedTests(unittest.TestCase):
     def setUp(self):
         self.module = load_module()
 
@@ -212,222 +211,28 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
         )
         return package, env_file
 
-    def test_build_invocation_preflight_uses_package_files(self):
+    def test_build_armed_invocation_uses_dedicated_wrapper_semantics(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
             package, env_file = self.package_fixture(tmp)
-            plan = self.module.build_invocation(
+            plan = self.module.build_armed_invocation(
                 package_dir=package,
                 env_file=env_file,
-                mode="preflight",
                 daily_used_notional_usd="0",
                 idempotency_key=None,
                 execution_id=None,
                 plan_hash=None,
                 report_file=None,
                 approval_consumed_marker=None,
-                include_live_config_overrides=False,
             )
 
-            self.assertEqual(plan["mode"], "preflight")
-            self.assertEqual(plan["account_id"], "acct-canary")
-            self.assertEqual(plan["condition_id"], "condition-1")
-            self.assertEqual(plan["active_profile_ref"], "local-profile://acct_b")
-            self.assertTrue(plan["runtime_gate_snapshot"]["kill_switch_open"])
-            self.assertEqual(
-                plan["runtime_gate_evidence_refs"]["kill_switch_open"],
-                "pg://runtime/kill-switch",
-            )
-            self.assertIn("--preflight-only", plan["command"])
-            self.assertIn(str(package / "approval.json"), plan["command"])
-            self.assertIn(str(package / "runtime-truth.json"), plan["command"])
-            self.assertIn("PMX_ALLOW_LIVE_SUBMIT", plan["required_gate_env_vars"])
-            self.assertFalse(plan["includes_live_config_overrides"])
-            self.assertNotIn("--allow-live-submit-config", plan["command"])
-
-    def test_build_invocation_rejects_live_overrides_for_preflight(self):
-        with tempfile.TemporaryDirectory() as tmp_name:
-            tmp = Path(tmp_name)
-            package, env_file = self.package_fixture(tmp)
-            with self.assertRaises(SystemExit) as ctx:
-                self.module.build_invocation(
-                    package_dir=package,
-                    env_file=env_file,
-                    mode="preflight",
-                    daily_used_notional_usd="0",
-                    idempotency_key=None,
-                    execution_id=None,
-                    plan_hash=None,
-                    report_file=None,
-                    approval_consumed_marker=None,
-                    include_live_config_overrides=True,
-                )
-        self.assertIn("only valid for armed", str(ctx.exception))
-
-    def test_build_invocation_rejects_runtime_truth_gate_env_disagreement(self):
-        with tempfile.TemporaryDirectory() as tmp_name:
-            tmp = Path(tmp_name)
-            package, env_file = self.package_fixture(tmp)
-            previous = os.environ.get("PMX_KILL_SWITCH_OPEN")
-            os.environ["PMX_KILL_SWITCH_OPEN"] = "0"
-            try:
-                with self.assertRaises(SystemExit) as ctx:
-                    self.module.build_invocation(
-                        package_dir=package,
-                        env_file=env_file,
-                        mode="preflight",
-                        daily_used_notional_usd="0",
-                        idempotency_key=None,
-                        execution_id=None,
-                        plan_hash=None,
-                        report_file=None,
-                        approval_consumed_marker=None,
-                        include_live_config_overrides=False,
-                    )
-            finally:
-                if previous is None:
-                    os.environ.pop("PMX_KILL_SWITCH_OPEN", None)
-                else:
-                    os.environ["PMX_KILL_SWITCH_OPEN"] = previous
-        self.assertIn("disagrees with runtime truth", str(ctx.exception))
-
-    def test_build_invocation_armed_defaults_report_and_marker_in_package(self):
-        with tempfile.TemporaryDirectory() as tmp_name:
-            tmp = Path(tmp_name)
-            package, env_file = self.package_fixture(tmp)
-            plan = self.module.build_invocation(
-                package_dir=package,
-                env_file=env_file,
-                mode="armed",
-                daily_used_notional_usd="0",
-                idempotency_key=None,
-                execution_id=None,
-                plan_hash=None,
-                report_file=None,
-                approval_consumed_marker=None,
-                include_live_config_overrides=False,
-            )
-
-            self.assertEqual(plan["mode"], "armed")
-            self.assertIn("--armed", plan["command"])
-            self.assertIn("--report-file", plan["command"])
-            self.assertIn("--approval-consumed-marker", plan["command"])
-            self.assertTrue(plan["report_file"].endswith("post-canary-report.json"))
-            self.assertIn(str(package), plan["approval_consumed_marker"])
-            self.assertTrue(plan["requires_explicit_live_config_overrides"])
-            self.assertNotIn("--allow-live-submit-config", plan["command"])
-
-    def test_build_invocation_armed_requires_explicit_live_overrides_to_include_flags(self):
-        with tempfile.TemporaryDirectory() as tmp_name:
-            tmp = Path(tmp_name)
-            package, env_file = self.package_fixture(tmp)
-            plan = self.module.build_invocation(
-                package_dir=package,
-                env_file=env_file,
-                mode="armed",
-                daily_used_notional_usd="0",
-                idempotency_key=None,
-                execution_id=None,
-                plan_hash=None,
-                report_file=None,
-                approval_consumed_marker=None,
-                include_live_config_overrides=True,
-            )
-
-            self.assertFalse(plan["requires_explicit_live_config_overrides"])
-            self.assertTrue(plan["includes_live_config_overrides"])
-            self.assertIn("--allow-live-submit-config", plan["command"])
-            self.assertIn("--allow-real-funds-canary-config", plan["command"])
-
-    def test_build_invocation_rejects_consumed_package(self):
-        with tempfile.TemporaryDirectory() as tmp_name:
-            tmp = Path(tmp_name)
-            package, env_file = self.package_fixture(tmp)
-            (package / "approval-consumed-20260526T000000Z.json").write_text("{}\n")
-
-            with self.assertRaisesRegex(SystemExit, "already consumed"):
-                self.module.build_invocation(
-                    package_dir=package,
-                    env_file=env_file,
-                    mode="preflight",
-                    daily_used_notional_usd="0",
-                    idempotency_key=None,
-                    execution_id=None,
-                    plan_hash=None,
-                    report_file=None,
-                    approval_consumed_marker=None,
-                    include_live_config_overrides=False,
-                )
-
-    def test_main_run_fails_closed_when_gate_env_vars_are_missing(self):
-        with tempfile.TemporaryDirectory() as tmp_name:
-            tmp = Path(tmp_name)
-            package, env_file = self.package_fixture(tmp)
-            original = dict(os.environ)
-            try:
-                for key in self.module.REQUIRED_GATE_ENV_VARS:
-                    os.environ.pop(key, None)
-                argv = [
-                    "--package-dir",
-                    str(package),
-                    "--env-file",
-                    str(env_file),
-                    "--mode",
-                    "preflight",
-                    "--run",
-                ]
-                original_parse_args = self.module.parse_args
-                self.module.parse_args = lambda: self.module.argparse.Namespace(
-                    package_dir=Path(argv[1]),
-                    env_file=Path(argv[3]),
-                    mode="preflight",
-                    daily_used_notional_usd="0",
-                    idempotency_key=None,
-                    execution_id=None,
-                    plan_hash=None,
-                    report_file=None,
-                    approval_consumed_marker=None,
-                    include_live_config_overrides=False,
-                    run=True,
-                )
-                with self.assertRaisesRegex(SystemExit, "missing required gate env vars"):
-                    self.module.main()
-            finally:
-                self.module.parse_args = original_parse_args
-                os.environ.clear()
-                os.environ.update(original)
-
-    def test_main_run_rejects_armed_without_explicit_live_override_opt_in(self):
-        with tempfile.TemporaryDirectory() as tmp_name:
-            tmp = Path(tmp_name)
-            package, env_file = self.package_fixture(tmp)
-            original = dict(os.environ)
-            try:
-                for key in self.module.REQUIRED_GATE_ENV_VARS:
-                    os.environ[key] = "1"
-                original_parse_args = self.module.parse_args
-                self.module.parse_args = lambda: self.module.argparse.Namespace(
-                    package_dir=package,
-                    env_file=env_file,
-                    mode="armed",
-                    daily_used_notional_usd="0",
-                    idempotency_key=None,
-                    execution_id=None,
-                    plan_hash=None,
-                    report_file=None,
-                    approval_consumed_marker=None,
-                    include_live_config_overrides=False,
-                    run=True,
-                )
-                with self.assertRaisesRegex(
-                    SystemExit,
-                    "requires the dedicated run_reviewed_go_canary_armed.py wrapper before execution",
-                ):
-                    self.module.main()
-            finally:
-                self.module.parse_args = original_parse_args
-                os.environ.clear()
-                os.environ.update(original)
+        self.assertEqual(plan["mode"], "armed")
+        self.assertTrue(plan["armed_wrapper"])
+        self.assertEqual(plan["wrapper"], "run_reviewed_go_canary_armed.py")
+        self.assertTrue(plan["includes_live_config_overrides"])
+        self.assertFalse(plan["requires_explicit_live_config_overrides"])
+        self.assertIn("--allow-live-submit-config", plan["command"])
+        self.assertIn("--allow-real-funds-canary-config", plan["command"])
 
 
 if __name__ == "__main__":

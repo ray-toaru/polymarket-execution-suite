@@ -379,10 +379,7 @@ def validate_controlled_canary_release_decision_governance() -> None:
     rehearsal_text = rehearsal.read_text()
     for needle in [
         "blocked_real_funds_canary_armed_no_go",
-        "--mode",
-        "armed",
-        "run_reviewed_go_canary.py",
-        "--include-live-config-overrides",
+        "run_reviewed_go_canary_armed.py",
         "real-funds canary not allowed by release decision",
         "release_decision_gate",
         "remote_side_effects",

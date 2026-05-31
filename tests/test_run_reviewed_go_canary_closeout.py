@@ -68,7 +68,8 @@ class RunReviewedGoCanaryCloseoutTests(unittest.TestCase):
         self.assertEqual(plan["account_address"], "0x00000000000000000000000000000000000000b0")
         self.assertEqual(plan["steps"][2]["stdout_path"], str(package / "order-status-query.json"))
         self.assertIn("__REMOTE_ORDER_ID__", plan["steps"][2]["command"])
-        self.assertNotIn("--include-live-config-overrides", plan["steps"][1]["command"])
+        self.assertIn("run_reviewed_go_canary_armed.py", str(plan["steps"][1]["command"][1]))
+        self.assertTrue(plan["uses_dedicated_armed_wrapper"])
 
     def test_build_workflow_plan_requires_account_address_without_funder(self):
         with tempfile.TemporaryDirectory() as tmp_name:
@@ -84,7 +85,7 @@ class RunReviewedGoCanaryCloseoutTests(unittest.TestCase):
                     include_live_config_overrides=False,
                 )
 
-    def test_build_workflow_plan_only_adds_live_override_opt_in_when_requested(self):
+    def test_build_workflow_plan_always_uses_dedicated_armed_wrapper(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             package, env_file = self.package_fixture(Path(tmp_name))
             plan = self.module.build_workflow_plan(
@@ -95,8 +96,10 @@ class RunReviewedGoCanaryCloseoutTests(unittest.TestCase):
                 account_address=None,
                 include_live_config_overrides=True,
             )
-        self.assertIn("--include-live-config-overrides", plan["steps"][1]["command"])
-        self.assertTrue(plan["includes_live_config_overrides"])
+        self.assertIn("run_reviewed_go_canary_armed.py", str(plan["steps"][1]["command"][1]))
+        self.assertNotIn("--include-live-config-overrides", plan["steps"][1]["command"])
+        self.assertFalse(plan["includes_live_config_overrides"])
+        self.assertTrue(plan["uses_dedicated_armed_wrapper"])
 
     def test_execute_workflow_substitutes_remote_order_and_writes_readback_paths(self):
         with tempfile.TemporaryDirectory() as tmp_name:

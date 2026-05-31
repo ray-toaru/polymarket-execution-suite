@@ -29,7 +29,7 @@ class BlockedRehearsalPackageTests(unittest.TestCase):
     def setUp(self):
         self.module = load_module()
 
-    def test_blocked_rehearsal_uses_reviewed_go_wrapper_with_explicit_live_override(self):
+    def test_blocked_rehearsal_uses_dedicated_reviewed_go_armed_wrapper(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             output_dir = Path(tmp_name)
             (output_dir / "review.json").write_text(
@@ -97,8 +97,7 @@ class BlockedRehearsalPackageTests(unittest.TestCase):
             self.assertEqual(failures, [])
             wrapper_command, wrapper_cwd = calls[1]
             self.assertEqual(wrapper_command[0], self.module.sys.executable)
-            self.assertIn("run_reviewed_go_canary.py", str(wrapper_command[1]))
-            self.assertIn("--include-live-config-overrides", wrapper_command)
+            self.assertIn("run_reviewed_go_canary_armed.py", str(wrapper_command[1]))
             self.assertIn("--run", wrapper_command)
             self.assertEqual(wrapper_cwd, self.module.INTEGRATION_ROOT)
 

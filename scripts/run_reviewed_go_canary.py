@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare or run a reviewed-go canary CLI invocation from a fresh package."""
+"""Prepare or run the reviewed-go preflight invocation from a fresh package."""
 from __future__ import annotations
 
 import argparse
@@ -345,7 +345,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--package-dir", required=True, type=Path)
     parser.add_argument("--env-file", required=True, type=Path)
-    parser.add_argument("--mode", choices=["preflight", "armed"], default="preflight")
+    parser.add_argument("--mode", choices=["preflight"], default="preflight")
     parser.add_argument("--daily-used-notional-usd", default="0")
     parser.add_argument("--idempotency-key")
     parser.add_argument("--execution-id")
@@ -391,7 +391,7 @@ def main() -> int:
 
     if invocation["requires_explicit_live_config_overrides"]:
         raise SystemExit(
-            "armed reviewed-go canary requires --include-live-config-overrides before execution"
+            "armed reviewed-go canary requires the dedicated run_reviewed_go_canary_armed.py wrapper before execution"
         )
 
     missing = invocation["missing_gate_env_vars"]
