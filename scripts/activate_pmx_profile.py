@@ -102,7 +102,7 @@ def activate_profile(profile: str, source_values: dict[str, str]) -> dict[str, s
     return activated
 
 
-def write_runtime_env(output: Path, activated: dict[str, str]) -> None:
+def write_runtime_env(output: Path, activated: dict[str, str], *, write_secrets: bool) -> None:
     lines = [
         "# Generated runtime env for a single active Polymarket account profile.",
         "# This file is runtime-facing only; do not store PMX_PROFILE_* source inventory here.",
@@ -115,29 +115,42 @@ def write_runtime_env(output: Path, activated: dict[str, str]) -> None:
         "",
         "# Local non-secret profile reference.",
         f"PMX_ACTIVE_PROFILE_REF={activated['PMX_ACTIVE_PROFILE_REF']}",
-        "",
-        "# Generic runtime signer material.",
-        f"POLYMARKET_PRIVATE_KEY={activated['POLYMARKET_PRIVATE_KEY']}",
-        "",
-        "# Generic runtime L2 API key.",
-        f"POLY_API_KEY={activated['POLY_API_KEY']}",
-        "",
-        "# Generic runtime L2 API secret.",
-        f"POLY_API_SECRET={activated['POLY_API_SECRET']}",
-        "",
-        "# Generic runtime L2 API passphrase.",
-        f"POLY_API_PASSPHRASE={activated['POLY_API_PASSPHRASE']}",
-        "",
-        "# Generic runtime signature type for the active account.",
-        f"PMX_CLOB_SIGNATURE_TYPE={activated['PMX_CLOB_SIGNATURE_TYPE']}",
     ]
-    funder = activated.get("PMX_CLOB_FUNDER")
-    if funder:
+    if write_secrets:
         lines.extend(
             [
                 "",
-                "# Generic runtime CLOB funder for deposit-wallet / Poly1271 auth.",
-                f"PMX_CLOB_FUNDER={funder}",
+                "# Generic runtime signer material.",
+                f"POLYMARKET_PRIVATE_KEY={activated['POLYMARKET_PRIVATE_KEY']}",
+                "",
+                "# Generic runtime L2 API key.",
+                f"POLY_API_KEY={activated['POLY_API_KEY']}",
+                "",
+                "# Generic runtime L2 API secret.",
+                f"POLY_API_SECRET={activated['POLY_API_SECRET']}",
+                "",
+                "# Generic runtime L2 API passphrase.",
+                f"POLY_API_PASSPHRASE={activated['POLY_API_PASSPHRASE']}",
+                "",
+                "# Generic runtime signature type for the active account.",
+                f"PMX_CLOB_SIGNATURE_TYPE={activated['PMX_CLOB_SIGNATURE_TYPE']}",
+            ]
+        )
+        funder = activated.get("PMX_CLOB_FUNDER")
+        if funder:
+            lines.extend(
+                [
+                    "",
+                    "# Generic runtime CLOB funder for deposit-wallet / Poly1271 auth.",
+                    f"PMX_CLOB_FUNDER={funder}",
+                ]
+            )
+    else:
+        lines.extend(
+            [
+                "",
+                "# Secret-bearing runtime fields intentionally omitted.",
+                "# Re-run with --write-secrets only when a local runtime env must hold active credentials.",
             ]
         )
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -157,6 +170,14 @@ def parse_args() -> argparse.Namespace:
         help="optional local source inventory file containing PMX_PROFILE_<PROFILE>_* values",
     )
     parser.add_argument("--output", required=True, type=Path, help="runtime env output path")
+    parser.add_argument(
+        "--write-secrets",
+        action="store_true",
+        help=(
+            "Write secret-bearing runtime fields (private key and API credentials) into the "
+            "output env file. Without this flag the file contains only active identity fields."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -165,7 +186,7 @@ def main() -> int:
     source = load_profile_source(args.source_env_file)
     activated = activate_profile(args.profile, source)
     output = args.output if args.output.is_absolute() else ROOT / args.output
-    write_runtime_env(output, activated)
+    write_runtime_env(output, activated, write_secrets=args.write_secrets)
     print(
         json.dumps(
             {
@@ -173,6 +194,7 @@ def main() -> int:
                 "profile": activated["PMX_ACTIVE_ACCOUNT_PROFILE"],
                 "account_id": activated["PMX_ACTIVE_ACCOUNT_ID"],
                 "profile_ref": activated["PMX_ACTIVE_PROFILE_REF"],
+                "secret_material_written": args.write_secrets,
                 "output": str(output),
             },
             sort_keys=True,

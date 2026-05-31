@@ -67,7 +67,7 @@ def prepare_bundle(
     approval = load_module(APPROVAL_SCRIPT, "prepare_operator_approval_request")
     source_values = activate.load_profile_source(source_env_file)
     activated = activate.activate_profile(profile, source_values)
-    activate.write_runtime_env(runtime_env_output, activated)
+    activate.write_runtime_env(runtime_env_output, activated, write_secrets=True)
 
     account_id, active_profile_ref = approval.resolve_runtime_identity(
         runtime_env_file=runtime_env_output,

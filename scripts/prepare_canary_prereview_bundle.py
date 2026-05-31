@@ -194,7 +194,7 @@ def activate_runtime_profile_env(
     activate = load_module(ACTIVATE_PROFILE_SCRIPT, "activate_pmx_profile")
     source_values = activate.load_profile_source(source_env_file)
     activated = activate.activate_profile(profile, source_values)
-    activate.write_runtime_env(runtime_env_output, activated)
+    activate.write_runtime_env(runtime_env_output, activated, write_secrets=True)
     os.environ.update(activated)
     return {
         "profile": activated["PMX_ACTIVE_ACCOUNT_PROFILE"],

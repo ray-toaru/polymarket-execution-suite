@@ -205,6 +205,7 @@ variables before any preflight or armed command:
 python scripts/activate_pmx_profile.py \
   --profile <profile> \
   --source-env-file polymarket-execution-engine/.env.profiles \
+  --write-secrets \
   --output polymarket-execution-engine/.env.runtime
 
 python polymarket-execution-engine/validation/check_active_profile_consistency.py \
@@ -215,6 +216,9 @@ python polymarket-execution-engine/validation/check_active_profile_consistency.p
 Use `polymarket-execution-engine/.env.profiles.example` for the private source
 inventory shape and `polymarket-execution-engine/.env.runtime.example` for the
 runtime-facing output shape.
+
+`activate_pmx_profile.py` writes only active identity fields by default. Use
+`--write-secrets` only when the runtime env file must carry active credentials.
 
 The runtime-facing env file must expose only generic variables such as
 `POLYMARKET_PRIVATE_KEY`, `POLY_API_*`, `PMX_CLOB_FUNDER`,
