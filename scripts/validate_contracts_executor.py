@@ -1228,7 +1228,15 @@ def validate_v23_lifecycle_query_and_hardening(spec: dict | None = None) -> None
     policy = (EXECUTOR / "crates/pmx-policy/src/lib.rs").read_text()
     sql = SQL.read_text()
     gate = (EXECUTOR / "validation/run_current_gates_impl.sh").read_text()
+    core_redaction = (CORE_SRC / "domain/plan/redaction.rs").read_text()
+    core_sign_only = (CORE_SRC / "domain/lifecycle/sign_only.rs").read_text()
+    store_order_lifecycle = (STORE_SRC / "model/order_lifecycle.rs").read_text()
+    store_runtime = (STORE_SRC / "model/runtime.rs").read_text()
+    store_audit = (STORE_SRC / "model/audit.rs").read_text()
     api_runtime_read = (API_SRC / "routes/read/runtime.rs").read_text()
+    api_lifecycle_read = (API_SRC / "routes/read/lifecycle.rs").read_text()
+    api_sign_only_flow = (API_SRC / "routes/flow/sign_only.rs").read_text()
+    api_admin_audit = (API_SRC / "routes/admin/audit.rs").read_text()
     api_reconcile_local = (API_SRC / "routes/admin/reconcile/local.rs").read_text()
     api_support_error = (API_SRC / "support/error.rs").read_text()
     api_support_audit = (API_SRC / "support/audit.rs").read_text()
@@ -1290,17 +1298,155 @@ def validate_v23_lifecycle_query_and_hardening(spec: dict | None = None) -> None
 
     if "client_event_id" not in schema_property_names(spec, "SignOnlyLifecycleRecord"):
         fail("current OpenAPI SignOnlyLifecycleRecord must expose client_event_id")
+    try:
+        redacted_payload_fields = rust_struct_field_names(
+            core_redaction, "RedactedPayloadEnvelope"
+        )
+        sign_only_record_fields = rust_struct_field_names(
+            core_sign_only, "SignOnlyLifecycleRecord"
+        )
+        order_lifecycle_fields = rust_struct_field_names(
+            store_order_lifecycle, "OrderLifecycleRecord"
+        )
+        runtime_observation_fields = rust_struct_field_names(
+            store_runtime, "RuntimeWorkerObservation"
+        )
+        runtime_status_report_fields = rust_struct_field_names(
+            store_runtime, "RuntimeWorkerStatusReport"
+        )
+        admin_audit_event_fields = rust_struct_field_names(
+            store_audit, "AdminAuditEvent"
+        )
+        admin_audit_query_fields = rust_struct_field_names(
+            store_audit, "AdminAuditQuery"
+        )
+        order_lifecycle_store_methods = rust_trait_method_signatures(
+            store_order_lifecycle, "OrderLifecycleStore"
+        )
+        runtime_worker_health_methods = rust_trait_method_signatures(
+            store_runtime, "RuntimeWorkerHealthStore"
+        )
+        runtime_worker_status_methods = rust_trait_method_signatures(
+            store_runtime, "RuntimeWorkerStatusStore"
+        )
+    except SystemExit as exc:
+        fail(f"current lifecycle/runtime/store models malformed: {exc}")
+    if not {
+        "schema_version",
+        "kind",
+        "correlation_id",
+        "redacted_fields",
+        "body",
+    }.issubset(redacted_payload_fields):
+        fail("current RedactedPayloadEnvelope must expose redacted payload fields")
+    if not {
+        "execution_id",
+        "account_id",
+        "state",
+        "event",
+        "client_event_id",
+        "signed_order_ref",
+        "no_remote_side_effect",
+        "event_id",
+        "created_at",
+    }.issubset(sign_only_record_fields):
+        fail("current SignOnlyLifecycleRecord must expose replay-safe lifecycle fields")
+    if not {
+        "order_id",
+        "execution_id",
+        "account_id",
+        "condition_id",
+        "token_id",
+        "side",
+        "lifecycle_state",
+        "remote_order_id",
+        "remote_state",
+        "created_at",
+        "updated_at",
+    }.issubset(order_lifecycle_fields):
+        fail("current OrderLifecycleRecord must expose lifecycle persistence fields")
+    if not {
+        "account_id",
+        "capability",
+        "worker_kind",
+        "status",
+        "should_fail_closed",
+        "reason",
+        "observed_at",
+    }.issubset(runtime_observation_fields):
+        fail("current RuntimeWorkerObservation must expose observation freshness fields")
+    if runtime_status_report_fields != {"heartbeats", "observations"}:
+        fail("current RuntimeWorkerStatusReport must expose heartbeats and observations")
+    if not {
+        "audit_id",
+        "principal_subject",
+        "operation",
+        "request_fingerprint",
+        "correlation_id",
+        "result",
+        "created_at",
+    }.issubset(admin_audit_event_fields):
+        fail("current AdminAuditEvent must expose audit result and correlation fields")
+    if not {
+        "limit",
+        "before_audit_id",
+        "operation",
+        "principal_subject",
+        "result",
+        "correlation_id",
+    }.issubset(admin_audit_query_fields):
+        fail("current AdminAuditQuery must expose audit pagination and filters")
+    if order_lifecycle_store_methods != {
+        "upsert_order_lifecycle",
+        "record_order_lifecycle_event",
+        "load_order_lifecycle",
+        "list_order_lifecycle_events",
+    }:
+        fail("current OrderLifecycleStore must expose lifecycle persistence operations")
+    if runtime_worker_health_methods != {"record_worker_heartbeat"}:
+        fail("current RuntimeWorkerHealthStore must expose record_worker_heartbeat")
+    if runtime_worker_status_methods != {"list_runtime_worker_status"}:
+        fail("current RuntimeWorkerStatusStore must expose list_runtime_worker_status")
+    if "redacted_payload_envelope" not in rust_fn_names(core_redaction):
+        fail("current core redaction must expose redacted_payload_envelope")
+    if "sign_only_lifecycle_records_equivalent" not in rust_fn_names(core_sign_only):
+        fail("current sign-only lifecycle core must expose replay equivalence helper")
+    if "correlation_id_from_headers" not in rust_fn_names(api_support_error):
+        fail("current API error support must expose correlation_id_from_headers")
+    if "api_error_with_correlation" not in rust_fn_names(api_support_error):
+        fail("current API error support must expose api_error_with_correlation")
+    if "record_admin_audit" not in rust_async_fn_names(api_support_audit):
+        fail("current API audit support must expose async record_admin_audit")
+    if "list_runtime_worker_status" not in rust_async_fn_names(api_runtime_read):
+        fail("current API runtime read route must expose list_runtime_worker_status")
+    if "reconcile_order_local" not in rust_async_fn_names(api_reconcile_local):
+        fail("current API reconcile route must expose reconcile_order_local")
+    if "record_cancel_order_non_live" not in rust_async_fn_names(api_cancel_route):
+        fail("current API cancel route must expose record_cancel_order_non_live")
+    if "list_admin_audit_events" not in rust_async_fn_names(api_admin_audit):
+        fail("current API admin audit route must expose list_admin_audit_events")
+    if not {
+        "record_sign_only_lifecycle_event",
+        "record_standard_sign_only_construction",
+    }.issubset(rust_async_fn_names(api_sign_only_flow)):
+        fail("current API sign-only flow routes must expose persistence and construction endpoints")
+    if not {
+        "list_sign_only_lifecycle_events",
+        "list_execution_lifecycle_events",
+        "list_order_lifecycle_events",
+    }.issubset(rust_async_fn_names(api_lifecycle_read)):
+        fail("current API lifecycle read routes must expose list endpoints")
     required_by_file = {
-        "core": (core, ["pub struct RedactedPayloadEnvelope", "redacted_payload_envelope", "redacted_fields", "WorkerDegraded", "pub struct SignOnlyLifecycleRecord", "pub client_event_id: Option<String>", "left.client_event_id == right.client_event_id"]),
-        "store": (store, ["OrderLifecycleRecord", "OrderLifecycleStore", "record_order_lifecycle_event", "in_memory_order_lifecycle_records_cancel_requested", "RuntimeWorkerHeartbeat", "RuntimeWorkerHealthStore", "RuntimeWorkerStatusReport", "RuntimeWorkerStatusStore", "list_runtime_worker_status", "record_worker_heartbeat", "in_memory_worker_heartbeat_informs_runtime_state", "principal_subject: Option<String>", "result: Option<String>", "sign_only_lifecycle_record_is_replay", "client_event_id reused with different event payload", "PMX_RUNTIME_OBSERVATION_TTL_SECONDS", "runtime_observation_ttl_seconds", "execution_id={}"]),
+        "core": (core, ["WorkerDegraded", "left.client_event_id == right.client_event_id"]),
+        "store": (store, ["in_memory_order_lifecycle_records_cancel_requested", "in_memory_worker_heartbeat_informs_runtime_state", "sign_only_lifecycle_record_is_replay", "client_event_id reused with different event payload", "PMX_RUNTIME_OBSERVATION_TTL_SECONDS", "runtime_observation_ttl_seconds", "execution_id={}"]),
         "postgres": (postgres, ["impl OrderLifecycleStore for PostgresStore", "postgres_records_order_lifecycle_event", "impl RuntimeWorkerHealthStore for PostgresStore", "impl RuntimeWorkerStatusStore for PostgresStore", "postgres_records_worker_heartbeat", "postgres_lists_runtime_worker_status", "principal_subject = $4", "result = $5", "pg_advisory_xact_lock", "sign_only_lifecycle_record_is_replay", "runtime_observation_ttl_seconds", "FOREIGN_KEY_VIOLATION", "CHECK_VIOLATION"]),
         "sql": (sql, ["CREATE TABLE IF NOT EXISTS orders", "CREATE TABLE IF NOT EXISTS order_events", "idx_order_events_order_created", "client_event_id TEXT", "uq_sign_only_lifecycle_client_event", "WHERE client_event_id IS NOT NULL", "ADD COLUMN IF NOT EXISTS client_event_id", "ADD COLUMN IF NOT EXISTS observed_at", "ADD COLUMN IF NOT EXISTS correlation_id"]),
-        "service": (service, ["candidate.client_event_id.as_deref()", "record.event_id = None", "record.created_at = None", "record_standard_sign_only_construction", "account_id does not match request"]),
+        "service": (service, ["candidate.client_event_id.as_deref()", "record.event_id = None", "record.created_at = None", "account_id does not match request"]),
         "policy": (policy, ["WorkerStatus::Degraded => reasons.push(BlockReason::WorkerDegraded)", "degraded_worker_blocks_pre_live"]),
-        "api runtime read route": (api_runtime_read, ["pub(crate) async fn list_runtime_worker_status", "Query(query): Query<RuntimeWorkerStatusListQuery>", "list_runtime_worker_status(RuntimeWorkerStatusQuery", "StatusCode::OK"]),
-        "api reconcile local route": (api_reconcile_local, ["pub(crate) async fn reconcile_order_local", "api_error_with_correlation", "record_admin_audit(", "ReconcileOrderLocalResponse", "no_remote_side_effect: true"]),
-        "api support error": (api_support_error, ["correlation_id_from_headers", "api_error_with_correlation"]),
-        "api support audit": (api_support_audit, ["pub(crate) async fn record_admin_audit", "operation: &'static str", "AdminAuditEvent"]),
+        "api runtime read route": (api_runtime_read, ["Query(query): Query<RuntimeWorkerStatusListQuery>", "list_runtime_worker_status(RuntimeWorkerStatusQuery", "StatusCode::OK"]),
+        "api reconcile local route": (api_reconcile_local, ["api_error_with_correlation", "record_admin_audit(", "ReconcileOrderLocalResponse", "no_remote_side_effect: true"]),
+        "api support error": (api_support_error, []),
+        "api support audit": (api_support_audit, ["operation: &'static str", "AdminAuditEvent"]),
         "api cancel route": (api_cancel_route, ["redacted_payload_envelope", "payload: redacted_payload_envelope(", "CancelReceipt"]),
         "gate": (gate, ["run_current_gates.sh", "check_current_lifecycle_api.py", "check_version_consistency.py", "check_docs_evidence_governance.py", "write_current_evidence_manifest.py", "check_runtime_worker_status_query.py", "42-runtime-worker-status-query.log", "evidence/current"]),
     }

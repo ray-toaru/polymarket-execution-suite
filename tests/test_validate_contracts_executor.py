@@ -171,6 +171,94 @@ class ValidateContractsExecutorTests(unittest.TestCase):
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("before_audit_id", str(ctx.exception))
 
+    def test_v23_requires_redacted_payload_fields(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-core/src/domain/plan/redaction.rs"):
+                return """
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RedactedPayloadEnvelope {
+    pub schema_version: u32,
+    pub kind: String,
+    pub body: Value,
+}
+
+pub fn redacted_payload_envelope() {}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("RedactedPayloadEnvelope", str(ctx.exception))
+
+    def test_v23_requires_runtime_worker_status_trait_method(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/model/runtime.rs"):
+                return """
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeWorkerObservation {
+    pub account_id: String,
+    pub capability: String,
+    pub worker_kind: String,
+    pub status: String,
+    pub should_fail_closed: bool,
+    pub reason: String,
+    pub observed_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeWorkerHeartbeat {
+    pub worker_id: String,
+    pub role: String,
+    pub capability: String,
+    pub status: String,
+    pub last_heartbeat_at: DateTime<Utc>,
+    pub last_error: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RuntimeWorkerStatusQuery {
+    pub account_id: String,
+    pub limit: usize,
+    pub before_observed_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeWorkerStatusReport {
+    pub heartbeats: Vec<RuntimeWorkerHeartbeat>,
+    pub observations: Vec<RuntimeWorkerObservation>,
+}
+
+#[async_trait]
+pub trait RuntimeWorkerHealthStore: Send + Sync {
+    async fn record_worker_heartbeat(&self, heartbeat: &RuntimeWorkerHeartbeat) -> Result<(), StoreError>;
+}
+
+#[async_trait]
+pub trait RuntimeWorkerStatusStore: Send + Sync {}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("RuntimeWorkerStatusStore", str(ctx.exception))
+
     def test_v12_requires_compile_request_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
