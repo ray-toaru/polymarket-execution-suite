@@ -214,13 +214,14 @@ def classify_dist_entry(name: str, *, is_dir: bool, child_names: set[str] | None
 
 
 ARCHIVED_MANIFEST_BINDING_KIND = "archive_normalized_current_manifest"
-WORKSPACE_MANIFEST_BINDING_KIND = "post_package_workspace_binding"
+WORKSPACE_MANIFEST_BINDING_KIND = "post_package_workspace_snapshot"
 
 
 def write_dist_index(
     artifact_sha256: str,
     archived_manifest_sha256: str | None,
     workspace_manifest_sha256: str | None,
+    workspace_manifest_snapshot_path: str | None,
 ) -> None:
     current_release_files = {OUT.name, OUT.with_suffix(OUT.suffix + ".sha256").name, OUT.with_suffix(OUT.suffix + ".evidence.json").name}
     local_material = []
@@ -247,6 +248,7 @@ def write_dist_index(
             "path": "polymarket-execution-engine/evidence/current/manifest.json",
             "archived_manifest_sha256": archived_manifest_sha256,
             "workspace_manifest_sha256": workspace_manifest_sha256,
+            "workspace_manifest_snapshot_path": workspace_manifest_snapshot_path,
             "archived_manifest_binding_kind": ARCHIVED_MANIFEST_BINDING_KIND,
             "workspace_manifest_binding_kind": WORKSPACE_MANIFEST_BINDING_KIND,
         },
@@ -277,9 +279,9 @@ def write_dist_index(
     )
 
 
-def bind_workspace_manifest(evidence_manifest: Path, artifact_sha256: str) -> None:
+def workspace_manifest_snapshot_bytes(evidence_manifest: Path, artifact_sha256: str) -> bytes | None:
     if not evidence_manifest.exists():
-        return
+        return None
     data = json.loads(evidence_manifest.read_text())
     external = data.setdefault("external_artifact_sidecar", {})
     if isinstance(external, dict):
@@ -308,7 +310,20 @@ def bind_workspace_manifest(evidence_manifest: Path, artifact_sha256: str) -> No
             ),
         }
     )
-    evidence_manifest.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+    return (json.dumps(data, indent=2, sort_keys=True) + "\n").encode()
+
+
+def write_workspace_manifest_snapshot(
+    *,
+    evidence_manifest: Path,
+    artifact_sha256: str,
+    snapshot_path: Path,
+) -> str | None:
+    data = workspace_manifest_snapshot_bytes(evidence_manifest, artifact_sha256)
+    if data is None:
+        return None
+    snapshot_path.write_bytes(data)
+    return hashlib.sha256(data).hexdigest()
 
 
 def archived_manifest_sha256(evidence_manifest: Path) -> str | None:
@@ -344,12 +359,16 @@ def main() -> int:
 
     # The archived manifest copy is normalized and does not depend on the outer
     # artifact hash. Build the zip once, derive its final hash, then bind that
-    # hash back into the workspace manifest exactly once.
+    # hash into a dist-local workspace manifest snapshot without mutating the
+    # canonical current-evidence manifest.
     build_release_zip()
     artifact_sha256 = sha256(OUT)
-    bind_workspace_manifest(evidence_manifest, artifact_sha256)
-
-    workspace_manifest_sha256 = sha256(evidence_manifest) if evidence_manifest.exists() else None
+    workspace_snapshot = DIST / f"polymarket-execution-suite-v{VERSION}.workspace-manifest.json"
+    workspace_manifest_sha256 = write_workspace_manifest_snapshot(
+        evidence_manifest=evidence_manifest,
+        artifact_sha256=artifact_sha256,
+        snapshot_path=workspace_snapshot,
+    )
     manifest_sha256 = archived_manifest_sha256(evidence_manifest)
     sidecar.write_text(f"{artifact_sha256}  {OUT.name}\n")
     evidence_sidecar = OUT.with_suffix(OUT.suffix + ".evidence.json")
@@ -375,13 +394,14 @@ def main() -> int:
                     "manifest_sha256": manifest_sha256,
                     "archived_manifest_sha256": manifest_sha256,
                     "workspace_manifest_sha256": workspace_manifest_sha256,
+                    "workspace_manifest_snapshot_path": workspace_snapshot.name,
                     "archived_manifest_binding_kind": ARCHIVED_MANIFEST_BINDING_KIND,
                     "workspace_manifest_binding_kind": WORKSPACE_MANIFEST_BINDING_KIND,
                     "contract_validation_report": contract_validation_report_metadata(),
                     "manifest_sha256_alias_note": (
                         "Deprecated compatibility alias for archived_manifest_sha256. "
                         "Use archived_manifest_sha256 for the archive-normalized manifest "
-                        "and workspace_manifest_sha256 for the post-package workspace manifest."
+                        "and workspace_manifest_sha256 for the post-package workspace manifest snapshot."
                     ),
                 },
                 "release_decision_path": "RELEASE_DECISION.md",
@@ -392,7 +412,12 @@ def main() -> int:
         )
         + "\n"
     )
-    write_dist_index(artifact_sha256, manifest_sha256, workspace_manifest_sha256)
+    write_dist_index(
+        artifact_sha256,
+        manifest_sha256,
+        workspace_manifest_sha256,
+        workspace_snapshot.name if workspace_manifest_sha256 else None,
+    )
     print(OUT)
     return 0
 

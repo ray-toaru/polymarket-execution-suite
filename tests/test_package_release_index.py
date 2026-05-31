@@ -166,7 +166,7 @@ class PackageReleaseIndexTests(unittest.TestCase):
         )
         self.assertEqual(metadata["sha256"], expected_sha256)
 
-    def test_package_release_main_builds_archive_once_and_binds_workspace_once(self):
+    def test_package_release_main_builds_archive_once_and_writes_workspace_snapshot(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
             root = tmp / "root"
@@ -199,8 +199,6 @@ class PackageReleaseIndexTests(unittest.TestCase):
                 self.package_release.VERSION = "0.28.0"
 
                 with mock.patch.object(self.package_release, "build_release_zip") as build_zip, mock.patch.object(
-                    self.package_release, "bind_workspace_manifest", wraps=self.package_release.bind_workspace_manifest
-                ) as bind_manifest, mock.patch.object(
                     self.package_release, "sha256", side_effect=lambda path: "a" * 64 if path == out else "b" * 64
                 ), mock.patch.object(
                     self.package_release, "archived_manifest_sha256", return_value="c" * 64
@@ -220,7 +218,10 @@ class PackageReleaseIndexTests(unittest.TestCase):
 
                 self.assertEqual(rc, 0)
                 build_zip.assert_called_once()
-                bind_manifest.assert_called_once_with(evidence_manifest, "a" * 64)
+                snapshot = dist / "polymarket-execution-suite-v0.28.0.workspace-manifest.json"
+                self.assertTrue(snapshot.exists())
+                snapshot_json = json.loads(snapshot.read_text())
+                self.assertEqual(snapshot_json["external_artifact_sidecar"]["sha256"], "a" * 64)
             finally:
                 self.package_release.ROOT = original_root
                 self.package_release.DIST = original_dist
@@ -244,7 +245,7 @@ class PackageReleaseIndexTests(unittest.TestCase):
                 self.package_release.DIST = dist
                 self.package_release.OUT = artifact
                 self.package_release.VERSION = "0.28.0"
-                self.package_release.write_dist_index("a" * 64, "b" * 64, "c" * 64)
+                self.package_release.write_dist_index("a" * 64, "b" * 64, "c" * 64, "workspace-manifest.json")
                 index = json.loads((dist / "INDEX.json").read_text())
             finally:
                 self.package_release.DIST = original_dist
@@ -254,8 +255,9 @@ class PackageReleaseIndexTests(unittest.TestCase):
         canonical = index["canonical_evidence"]
         self.assertEqual(canonical["archived_manifest_sha256"], "b" * 64)
         self.assertEqual(canonical["workspace_manifest_sha256"], "c" * 64)
+        self.assertEqual(canonical["workspace_manifest_snapshot_path"], "workspace-manifest.json")
         self.assertEqual(canonical["archived_manifest_binding_kind"], "archive_normalized_current_manifest")
-        self.assertEqual(canonical["workspace_manifest_binding_kind"], "post_package_workspace_binding")
+        self.assertEqual(canonical["workspace_manifest_binding_kind"], "post_package_workspace_snapshot")
 
 
 if __name__ == "__main__":

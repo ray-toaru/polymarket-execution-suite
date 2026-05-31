@@ -52,8 +52,9 @@ class CheckReleaseArtifactTests(unittest.TestCase):
                         "canonical_evidence": {
                             "manifest_path": "polymarket-execution-engine/evidence/current/manifest.json",
                             "archived_manifest_sha256": "a" * 64,
+                            "workspace_manifest_snapshot_path": "artifact.workspace-manifest.json",
                             "archived_manifest_binding_kind": "archive_normalized_current_manifest",
-                            "workspace_manifest_binding_kind": "post_package_workspace_binding",
+                            "workspace_manifest_binding_kind": "post_package_workspace_snapshot",
                         },
                     }
                 )
@@ -65,6 +66,7 @@ class CheckReleaseArtifactTests(unittest.TestCase):
             )
             self.assertIsNotNone(evidence)
             self.assertTrue(any("workspace_manifest_sha256 is missing" in item for item in failures))
+            self.assertFalse(any("workspace_manifest_snapshot_path is missing" in item for item in failures))
 
     def test_validate_sidecars_rejects_invalid_manifest_binding_kinds(self):
         with tempfile.TemporaryDirectory() as tmp_name:
@@ -97,6 +99,7 @@ class CheckReleaseArtifactTests(unittest.TestCase):
                             "manifest_path": "polymarket-execution-engine/evidence/current/manifest.json",
                             "archived_manifest_sha256": "a" * 64,
                             "workspace_manifest_sha256": "b" * 64,
+                            "workspace_manifest_snapshot_path": "artifact.workspace-manifest.json",
                             "archived_manifest_binding_kind": "wrong",
                             "workspace_manifest_binding_kind": "wrong",
                         },

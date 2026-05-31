@@ -39,12 +39,14 @@ class DistIndexGuardTests(unittest.TestCase):
                         "manifest_sha256": "a" * 64,
                         "archived_manifest_sha256": "a" * 64,
                         "workspace_manifest_sha256": "b" * 64,
+                        "workspace_manifest_snapshot_path": "polymarket-execution-suite-v0.26.0.workspace-manifest.json",
                         "archived_manifest_binding_kind": "archive_normalized_current_manifest",
-                        "workspace_manifest_binding_kind": "post_package_workspace_binding",
+                        "workspace_manifest_binding_kind": "post_package_workspace_snapshot",
                     },
                 }
             )
         )
+        (self.dist / "polymarket-execution-suite-v0.26.0.workspace-manifest.json").write_text("{}\n")
         (self.dist / "pmx-canary-review-v0.26-current-no-go").mkdir()
         (self.dist / "pmx-canary-reviewed-go-v0.26-closed").mkdir()
 
@@ -182,6 +184,7 @@ class DistIndexGuardTests(unittest.TestCase):
                         "manifest_path": "polymarket-execution-engine/evidence/current/manifest.json",
                         "archived_manifest_sha256": "a" * 64,
                         "workspace_manifest_sha256": "b" * 64,
+                        "workspace_manifest_snapshot_path": "polymarket-execution-suite-v0.26.0.workspace-manifest.json",
                     },
                 }
             )

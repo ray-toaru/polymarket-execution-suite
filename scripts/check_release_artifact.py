@@ -143,9 +143,11 @@ def validate_sidecars(
         failures.append("evidence sidecar canonical_evidence.archived_manifest_sha256 is missing")
     if not canonical_evidence.get("workspace_manifest_sha256"):
         failures.append("evidence sidecar canonical_evidence.workspace_manifest_sha256 is missing")
+    if not canonical_evidence.get("workspace_manifest_snapshot_path"):
+        failures.append("evidence sidecar canonical_evidence.workspace_manifest_snapshot_path is missing")
     if canonical_evidence.get("archived_manifest_binding_kind") != "archive_normalized_current_manifest":
         failures.append("evidence sidecar canonical_evidence.archived_manifest_binding_kind is invalid")
-    if canonical_evidence.get("workspace_manifest_binding_kind") != "post_package_workspace_binding":
+    if canonical_evidence.get("workspace_manifest_binding_kind") != "post_package_workspace_snapshot":
         failures.append("evidence sidecar canonical_evidence.workspace_manifest_binding_kind is invalid")
     manifest_alias = canonical_evidence.get("manifest_sha256")
     if manifest_alias is not None and manifest_alias != canonical_evidence.get("archived_manifest_sha256"):

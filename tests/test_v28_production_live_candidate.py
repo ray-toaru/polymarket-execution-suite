@@ -70,7 +70,6 @@ class V028ProductionLiveCandidateTests(unittest.TestCase):
             json.dumps(
                 {
                     "version": "0.28.0",
-                    "external_artifact_sidecar": {"sha256": "a" * 64},
                     "release_decision": {
                         "validated_release": False,
                         "production_ready": False,
@@ -96,9 +95,21 @@ class V028ProductionLiveCandidateTests(unittest.TestCase):
         for suffix, body in [
             ("", "zip"),
             (".sha256", "a" * 64 + "  polymarket-execution-suite-v0.28.0.zip\n"),
-            (".evidence.json", json.dumps({"source": {"version": "0.28.0"}, "artifact": {"sha256": "a" * 64}})),
+            (
+                ".evidence.json",
+                json.dumps(
+                    {
+                        "source": {"version": "0.28.0"},
+                        "artifact": {"sha256": "a" * 64},
+                        "canonical_evidence": {
+                            "workspace_manifest_snapshot_path": "polymarket-execution-suite-v0.28.0.workspace-manifest.json"
+                        },
+                    }
+                ),
+            ),
         ]:
             self.write(f"dist/polymarket-execution-suite-v0.28.0.zip{suffix}", body)
+        self.write("dist/polymarket-execution-suite-v0.28.0.workspace-manifest.json", "{}")
 
     def test_ready_tree_passes_when_candidate_boundary_is_explicit(self):
         self.write_ready_tree()

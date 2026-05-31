@@ -66,7 +66,6 @@ class V027ReleaseReadinessTests(unittest.TestCase):
                 {
                     "version": "0.27.3",
                     "artifact": {"sha256": "a" * 64},
-                    "external_artifact_sidecar": {"sha256": "a" * 64},
                     "release_decision": {
                         "validated_release": False,
                         "production_ready": False,
@@ -78,9 +77,21 @@ class V027ReleaseReadinessTests(unittest.TestCase):
         for suffix, body in [
             ("", "zip"),
             (".sha256", "a" * 64 + "  polymarket-execution-suite-v0.27.3.zip\n"),
-            (".evidence.json", json.dumps({"source": {"version": "0.27.3"}, "artifact": {"sha256": "a" * 64}})),
+            (
+                ".evidence.json",
+                json.dumps(
+                    {
+                        "source": {"version": "0.27.3"},
+                        "artifact": {"sha256": "a" * 64},
+                        "canonical_evidence": {
+                            "workspace_manifest_snapshot_path": "polymarket-execution-suite-v0.27.3.workspace-manifest.json"
+                        },
+                    }
+                ),
+            ),
         ]:
             self.write(f"dist/polymarket-execution-suite-v0.27.3.zip{suffix}", body)
+        self.write("dist/polymarket-execution-suite-v0.27.3.workspace-manifest.json", "{}")
 
     def test_incomplete_tree_is_not_release_ready_until_artifact_is_bound(self):
         self.write_ready_tree()
@@ -91,7 +102,6 @@ class V027ReleaseReadinessTests(unittest.TestCase):
                 {
                     "version": "0.27.3",
                     "artifact": {"sha256": None},
-                    "external_artifact_sidecar": {"sha256": None},
                     "release_decision": {
                         "validated_release": False,
                         "production_ready": False,
@@ -105,7 +115,7 @@ class V027ReleaseReadinessTests(unittest.TestCase):
         self.assertEqual(report["status"], "not_ready")
         blockers = "\n".join(report["blockers"])
         self.assertIn("release artifact zip missing", blockers)
-        self.assertIn("current evidence manifest must bind final external_artifact_sidecar.sha256", blockers)
+        self.assertIn("release artifact sha256 sidecar missing", blockers)
 
     def test_ready_tree_passes_when_all_release_material_matches_target(self):
         self.write_ready_tree()

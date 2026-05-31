@@ -116,10 +116,6 @@ def evaluate(root: Path = ROOT, target_version: str = TARGET_VERSION) -> dict[st
     evidence_manifest = load_json(root / "polymarket-execution-engine/evidence/current/manifest.json")
     if evidence_manifest.get("version") != target_version:
         blockers.append("current evidence manifest version must match v0.28 target")
-    external_artifact = evidence_manifest.get("external_artifact_sidecar", {})
-    external_artifact_sha = external_artifact.get("sha256") if isinstance(external_artifact, dict) else None
-    if not isinstance(external_artifact_sha, str) or not HEX64.match(external_artifact_sha):
-        blockers.append("current evidence manifest must bind final external_artifact_sidecar.sha256")
     decision = evidence_manifest.get("release_decision", {})
     if not isinstance(decision, dict):
         blockers.append("current evidence manifest release_decision must be an object")
@@ -150,6 +146,12 @@ def evaluate(root: Path = ROOT, target_version: str = TARGET_VERSION) -> dict[st
     sidecar_artifact_sha = sidecar.get("artifact", {}).get("sha256") if sidecar else None
     if sidecar and (not isinstance(sidecar_artifact_sha, str) or not HEX64.match(sidecar_artifact_sha)):
         blockers.append("release artifact evidence sidecar must bind artifact.sha256")
+    canonical = sidecar.get("canonical_evidence", {}) if sidecar else {}
+    workspace_snapshot_path = canonical.get("workspace_manifest_snapshot_path") if isinstance(canonical, dict) else None
+    if sidecar and (not isinstance(workspace_snapshot_path, str) or not workspace_snapshot_path):
+        blockers.append("release artifact evidence sidecar must bind canonical_evidence.workspace_manifest_snapshot_path")
+    elif isinstance(workspace_snapshot_path, str) and not (root / "dist" / workspace_snapshot_path).exists():
+        blockers.append("workspace manifest snapshot referenced by release artifact evidence sidecar is missing")
 
     dist_index = load_json(root / "dist/INDEX.json")
     indexed_artifact = dist_index.get("current_release_artifact", {}) if dist_index else {}

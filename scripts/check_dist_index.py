@@ -110,13 +110,18 @@ def validate(dist: Path, expected_version: str) -> list[str]:
                 failures.append("evidence sidecar canonical_evidence.manifest_path is not canonical")
             archived_sha = canonical.get("archived_manifest_sha256")
             workspace_sha = canonical.get("workspace_manifest_sha256")
+            workspace_snapshot_path = canonical.get("workspace_manifest_snapshot_path")
             if not isinstance(archived_sha, str) or len(archived_sha) != 64:
                 failures.append("evidence sidecar canonical_evidence.archived_manifest_sha256 must be a sha256 hex string")
             if not isinstance(workspace_sha, str) or len(workspace_sha) != 64:
                 failures.append("evidence sidecar canonical_evidence.workspace_manifest_sha256 must be a sha256 hex string")
+            if not isinstance(workspace_snapshot_path, str) or not workspace_snapshot_path:
+                failures.append("evidence sidecar canonical_evidence.workspace_manifest_snapshot_path is required")
+            elif not (dist / workspace_snapshot_path).exists():
+                failures.append("evidence sidecar canonical_evidence.workspace_manifest_snapshot_path is missing from dist/")
             if canonical.get("archived_manifest_binding_kind") != "archive_normalized_current_manifest":
                 failures.append("evidence sidecar canonical_evidence.archived_manifest_binding_kind is invalid")
-            if canonical.get("workspace_manifest_binding_kind") != "post_package_workspace_binding":
+            if canonical.get("workspace_manifest_binding_kind") != "post_package_workspace_snapshot":
                 failures.append("evidence sidecar canonical_evidence.workspace_manifest_binding_kind is invalid")
             manifest_alias = canonical.get("manifest_sha256")
             if manifest_alias is not None and manifest_alias != archived_sha:
