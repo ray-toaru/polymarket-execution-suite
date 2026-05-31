@@ -232,8 +232,9 @@ class RunReviewedGoCanaryArmedTests(unittest.TestCase):
         self.assertEqual(plan["wrapper"], "run_reviewed_go_canary_armed.py")
         self.assertTrue(plan["includes_live_config_overrides"])
         self.assertFalse(plan["requires_explicit_live_config_overrides"])
-        self.assertIn("--allow-live-submit-config", plan["command"])
-        self.assertIn("--allow-real-funds-canary-config", plan["command"])
+        self.assertIn("pmx-real-funds-canary-armed", plan["command"])
+        self.assertNotIn("--allow-live-submit-config", plan["command"])
+        self.assertNotIn("--allow-real-funds-canary-config", plan["command"])
 
 
 if __name__ == "__main__":

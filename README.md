@@ -383,8 +383,7 @@ For armed execution, pass the canonical approval file plus an explicit env file:
 
 ```bash
 cargo run --manifest-path polymarket-execution-engine/adapters/pmx-official-sdk-adapter/Cargo.toml \
-  --features live-submit --bin pmx-real-funds-canary -- \
-  --armed \
+  --features live-submit --bin pmx-real-funds-canary-armed -- \
   --env-file polymarket-execution-engine/.env.runtime \
   --approval-file <reviewed-go-package>/approval.json \
   --release-decision-file <reviewed-go-package>/release-decision.json \

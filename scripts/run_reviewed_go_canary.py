@@ -253,11 +253,11 @@ def build_invocation(
     if approval["archived_manifest_sha256"] != runtime_truth_summary["archived_manifest_sha256"]:
         raise SystemExit("approval archived_manifest_sha256 does not match runtime truth")
 
-    mode_flag = {
-        "preflight": "--preflight-only",
-        "armed": "--armed",
+    mode_bin = {
+        "preflight": "pmx-real-funds-canary-preflight",
+        "armed": "pmx-real-funds-canary-armed",
     }.get(mode)
-    if mode_flag is None:
+    if mode_bin is None:
         raise SystemExit(f"unsupported mode: {mode}")
 
     idempotency = idempotency_key or f"canary-{approval['approval_hash'][:12]}-{mode}"
@@ -274,9 +274,8 @@ def build_invocation(
         "--features",
         "live-submit",
         "--bin",
-        "pmx-real-funds-canary",
+        mode_bin,
         "--",
-        mode_flag,
         "--env-file",
         str(env_file),
         "--approval-file",
@@ -302,7 +301,7 @@ def build_invocation(
         "--daily-used-notional-usd",
         daily_used_notional_usd,
     ]
-    if include_live_config_overrides:
+    if include_live_config_overrides and mode == "preflight":
         command.extend(
             [
                 "--allow-live-submit-config",

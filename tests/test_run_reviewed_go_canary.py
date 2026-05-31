@@ -239,7 +239,7 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                 plan["runtime_gate_evidence_refs"]["kill_switch_open"],
                 "pg://runtime/kill-switch",
             )
-            self.assertIn("--preflight-only", plan["command"])
+            self.assertIn("pmx-real-funds-canary-preflight", plan["command"])
             self.assertIn(str(package / "approval.json"), plan["command"])
             self.assertIn(str(package / "runtime-truth.json"), plan["command"])
             self.assertIn("PMX_ALLOW_LIVE_SUBMIT", plan["required_gate_env_vars"])
@@ -310,7 +310,7 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
             )
 
             self.assertEqual(plan["mode"], "armed")
-            self.assertIn("--armed", plan["command"])
+            self.assertIn("pmx-real-funds-canary-armed", plan["command"])
             self.assertIn("--report-file", plan["command"])
             self.assertIn("--approval-consumed-marker", plan["command"])
             self.assertTrue(plan["report_file"].endswith("post-canary-report.json"))
@@ -337,8 +337,9 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
 
             self.assertFalse(plan["requires_explicit_live_config_overrides"])
             self.assertTrue(plan["includes_live_config_overrides"])
-            self.assertIn("--allow-live-submit-config", plan["command"])
-            self.assertIn("--allow-real-funds-canary-config", plan["command"])
+            self.assertIn("pmx-real-funds-canary-armed", plan["command"])
+            self.assertNotIn("--allow-live-submit-config", plan["command"])
+            self.assertNotIn("--allow-real-funds-canary-config", plan["command"])
 
     def test_build_invocation_rejects_consumed_package(self):
         with tempfile.TemporaryDirectory() as tmp_name:
