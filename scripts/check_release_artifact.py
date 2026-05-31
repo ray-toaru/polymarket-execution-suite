@@ -14,7 +14,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from check_dist_index import validate as validate_dist_index
 from package_release import release_source_files, command_output, submodule_records
-from release_policy import is_forbidden_release_member
+from release_policy import is_allowed_release_source_path, is_forbidden_release_member
 
 STALE_ROOT_DOCS = [
     re.compile(r"^V0_.*\.md$"),
@@ -32,6 +32,10 @@ VERSION_SPECIFIC_AGENT_PATTERN = re.compile(
 
 def forbidden(member: str, expected_root: str | None = None) -> bool:
     return is_forbidden_release_member(member, expected_root=expected_root)
+
+
+def outside_release_allowlist(member: str, expected_root: str | None = None) -> bool:
+    return not is_allowed_release_source_path(member, expected_root=expected_root)
 
 
 def sha256(path: Path) -> str:
@@ -188,6 +192,9 @@ def validate_archive_members(
     bad = sorted({name for name in names if forbidden(name, expected_root)})
     if bad:
         failures.append("forbidden archive members: " + ", ".join(bad[:20]))
+    outside_allowlist = sorted({name for name in names if outside_release_allowlist(name, expected_root)})
+    if outside_allowlist:
+        failures.append("archive members outside explicit release allowlist: " + ", ".join(outside_allowlist[:20]))
     stale_docs = sorted({name for name in names if stale_root_doc(name, expected_root)})
     if stale_docs:
         failures.append("stale root docs in archive: " + ", ".join(stale_docs[:20]))

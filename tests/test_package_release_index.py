@@ -101,6 +101,10 @@ class PackageReleaseIndexTests(unittest.TestCase):
         for path in forbidden:
             self.assertFalse(self.package_release.allowed(ROOT / path))
 
+    def test_release_policy_rejects_tracked_files_outside_explicit_release_roots(self):
+        self.assertFalse(self.package_release.allowed(ROOT / ".claude" / "notes.md"))
+        self.assertFalse(self.package_release.allowed(ROOT / ".agents" / "scratch.txt"))
+
     def test_release_policy_allows_examples_and_rejects_logs(self):
         allowed = [
             ROOT / ".env.example",
@@ -137,6 +141,21 @@ class PackageReleaseIndexTests(unittest.TestCase):
             ]
             for name in names:
                 self.assertTrue(self.checker.forbidden(name, expected_root))
+
+    def test_artifact_checker_rejects_members_outside_explicit_release_allowlist(self):
+        expected_root = "polymarket_execution_suite_v0_28_0"
+        self.assertTrue(
+            self.checker.outside_release_allowlist(
+                f"{expected_root}/.claude/local-note.md",
+                expected_root,
+            )
+        )
+        self.assertFalse(
+            self.checker.outside_release_allowlist(
+                f"{expected_root}/README.md",
+                expected_root,
+            )
+        )
 
     def test_release_source_files_uses_tracked_files_not_workspace_rglob(self):
         tracked_root = ROOT / "README.md"

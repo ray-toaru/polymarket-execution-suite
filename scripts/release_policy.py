@@ -41,6 +41,62 @@ EXCLUDED_PREFIXES = {
     "polymarket-execution-engine/evidence/archive",
     "polymarket-execution-engine/docs/archive",
 }
+ALLOWED_ROOT_FILES = {
+    ".env.example",
+    ".github",
+    ".gitignore",
+    ".gitmodules",
+    "AGENTS.md",
+    "COMPONENT_COMPATIBILITY.md",
+    "CONTROLLED_CANARY_CLOSEOUT.md",
+    "CURRENT_PROGRESS.md",
+    "DEPENDENCY_POLICY.md",
+    "DESIGN_DECISION_RECORD.md",
+    "DEVELOPMENT_HANDOFF.md",
+    "DOC_STATUS.md",
+    "IMPLEMENTATION_STATUS.md",
+    "NO_LOCAL_ACTIONS_REMAINING.md",
+    "PROJECT_ARCHITECTURE.md",
+    "README.md",
+    "RELEASE_DECISION.md",
+    "REVIEW_AUDIT.md",
+    "ROADMAP.md",
+    "TASKS.md",
+    "VALIDATION_REPORT.md",
+    "VERSION",
+    "constraints-ci.txt",
+    "requirements-ci.txt",
+}
+ALLOWED_ROOT_DIRS = {
+    ".github",
+    "docs",
+    "hermes-polymarket-executor-adapter",
+    "polymarket-execution-engine",
+    "scripts",
+    "tests",
+}
+
+
+def is_allowed_release_source_path(path: str | Path, *, expected_root: str | None = None) -> bool:
+    raw = path.as_posix() if isinstance(path, Path) else str(path)
+    normalized = raw.rstrip("/")
+    rel = normalized
+    if expected_root:
+        prefix = expected_root + "/"
+        if rel.startswith(prefix):
+            rel = rel[len(prefix) :]
+        elif rel == expected_root:
+            rel = ""
+    if not rel:
+        return False
+    rel_path = Path(rel)
+    parts = rel_path.parts
+    if not parts:
+        return False
+    top = parts[0]
+    if len(parts) == 1:
+        return top in ALLOWED_ROOT_FILES or top in ALLOWED_ROOT_DIRS
+    return top in ALLOWED_ROOT_DIRS
 
 
 def is_forbidden_release_member(path: str | Path, *, expected_root: str | None = None) -> bool:

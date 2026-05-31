@@ -14,7 +14,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from release_policy import is_forbidden_release_member
+from release_policy import is_allowed_release_source_path, is_forbidden_release_member
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "VERSION").read_text().strip()
@@ -184,7 +184,8 @@ def release_source_files() -> list[Path]:
 
 
 def allowed(path: Path) -> bool:
-    return not is_forbidden_release_member(path.relative_to(ROOT))
+    rel = path.relative_to(ROOT)
+    return is_allowed_release_source_path(rel) and not is_forbidden_release_member(rel)
 
 
 def executable_in_archive(path: Path) -> bool:
