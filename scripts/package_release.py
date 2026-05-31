@@ -300,6 +300,12 @@ def bind_workspace_manifest(evidence_manifest: Path, artifact_sha256: str) -> No
     evidence_manifest.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
 
 
+def archived_manifest_sha256(evidence_manifest: Path) -> str | None:
+    if not evidence_manifest.exists():
+        return None
+    return hashlib.sha256(archive_bytes(evidence_manifest)).hexdigest()
+
+
 def contract_validation_report_metadata() -> dict[str, str] | None:
     report = (
         ROOT
@@ -325,23 +331,15 @@ def main() -> int:
     evidence_manifest = ROOT / "polymarket-execution-engine" / "evidence" / "current" / "manifest.json"
     sidecar = OUT.with_suffix(OUT.suffix + ".sha256")
 
-    # First pass discovers the artifact hash needed for workspace-side binding.
-    build_release_zip()
-    artifact_sha256 = sha256(OUT)
-    bind_workspace_manifest(evidence_manifest, artifact_sha256)
-
-    # Second pass rebuilds the archive with the bound workspace manifest. The archived
-    # copy remains stable because archive_bytes() normalizes the self-referential hash.
+    # The archived manifest copy is normalized and does not depend on the outer
+    # artifact hash. Build the zip once, derive its final hash, then bind that
+    # hash back into the workspace manifest exactly once.
     build_release_zip()
     artifact_sha256 = sha256(OUT)
     bind_workspace_manifest(evidence_manifest, artifact_sha256)
 
     workspace_manifest_sha256 = sha256(evidence_manifest) if evidence_manifest.exists() else None
-    manifest_sha256 = (
-        hashlib.sha256(archive_bytes(evidence_manifest)).hexdigest()
-        if evidence_manifest.exists()
-        else None
-    )
+    manifest_sha256 = archived_manifest_sha256(evidence_manifest)
     sidecar.write_text(f"{artifact_sha256}  {OUT.name}\n")
     evidence_sidecar = OUT.with_suffix(OUT.suffix + ".evidence.json")
     evidence_sidecar.write_text(

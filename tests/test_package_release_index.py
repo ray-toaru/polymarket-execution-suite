@@ -4,6 +4,8 @@ from pathlib import Path
 import tempfile
 from unittest import mock
 import json
+import contextlib
+import io
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -163,6 +165,67 @@ class PackageReleaseIndexTests(unittest.TestCase):
             "polymarket-execution-engine/evidence/current/logs/25-contract-validation.report.json",
         )
         self.assertEqual(metadata["sha256"], expected_sha256)
+
+    def test_package_release_main_builds_archive_once_and_binds_workspace_once(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            root = tmp / "root"
+            dist = root / "dist"
+            dist.mkdir(parents=True)
+            evidence_manifest = root / "polymarket-execution-engine" / "evidence" / "current" / "manifest.json"
+            evidence_manifest.parent.mkdir(parents=True)
+            evidence_manifest.write_text(
+                json.dumps(
+                    {
+                        "external_artifact_sidecar": {"sha256": None},
+                        "artifact": {},
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            out = dist / "artifact.zip"
+            out.write_bytes(b"zip-bytes")
+
+            original_root = self.package_release.ROOT
+            original_dist = self.package_release.DIST
+            original_out = self.package_release.OUT
+            original_version = self.package_release.VERSION
+            try:
+                self.package_release.ROOT = root
+                self.package_release.DIST = dist
+                self.package_release.OUT = out
+                self.package_release.VERSION = "0.28.0"
+
+                with mock.patch.object(self.package_release, "build_release_zip") as build_zip, mock.patch.object(
+                    self.package_release, "bind_workspace_manifest", wraps=self.package_release.bind_workspace_manifest
+                ) as bind_manifest, mock.patch.object(
+                    self.package_release, "sha256", side_effect=lambda path: "a" * 64 if path == out else "b" * 64
+                ), mock.patch.object(
+                    self.package_release, "archived_manifest_sha256", return_value="c" * 64
+                ), mock.patch.object(
+                    self.package_release, "write_dist_index"
+                ), mock.patch.object(
+                    self.package_release, "command_output", return_value="deadbeef"
+                ), mock.patch.object(
+                    self.package_release, "git_branch", return_value="branch"
+                ), mock.patch.object(
+                    self.package_release, "submodule_records", return_value=[]
+                ), mock.patch.object(
+                    self.package_release, "contract_validation_report_metadata", return_value=None
+                ):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        rc = self.package_release.main()
+
+                self.assertEqual(rc, 0)
+                build_zip.assert_called_once()
+                bind_manifest.assert_called_once_with(evidence_manifest, "a" * 64)
+            finally:
+                self.package_release.ROOT = original_root
+                self.package_release.DIST = original_dist
+                self.package_release.OUT = original_out
+                self.package_release.VERSION = original_version
 
 
 if __name__ == "__main__":
