@@ -138,6 +138,14 @@ def rust_async_fn_names(text: str) -> set[str]:
     return set(re.findall(r"(?m)^\s*pub(?:\([^)]*\))?\s+async\s+fn\s+([a-zA-Z_][a-zA-Z0-9_]*)", text))
 
 
+def rust_fn_names(text: str) -> set[str]:
+    return set(re.findall(r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?fn\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(", text))
+
+
+def rust_const_names(text: str) -> set[str]:
+    return set(re.findall(r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?const\s+([A-Z][A-Z0-9_]*)\s*:", text))
+
+
 def rust_struct_field_names(text: str, struct_name: str) -> set[str]:
     pattern = rf"(?s)struct\s+{re.escape(struct_name)}[^\{{]*\{{(.*?)\n\}}"
     match = re.search(pattern, text)
@@ -162,6 +170,25 @@ def rust_enum_variant_names(text: str, enum_name: str) -> set[str]:
         re.findall(
             r"(?m)^\s*([A-Z][a-zA-Z0-9_]*)\s*(?:,|\(|\{|$)",
             body,
+        )
+    )
+
+
+def rust_enum_variant_field_names(text: str, enum_name: str, variant_name: str) -> set[str]:
+    pattern = rf"(?s)enum\s+{re.escape(enum_name)}[^\{{]*\{{(.*?)\n\}}"
+    match = re.search(pattern, text)
+    if not match:
+        fail(f"missing Rust enum: {enum_name}")
+    body = match.group(1)
+    variant_pattern = rf"(?s)\b{re.escape(variant_name)}\s*\{{(.*?)\}}"
+    variant_match = re.search(variant_pattern, body)
+    if not variant_match:
+        fail(f"missing Rust enum variant: {enum_name}::{variant_name}")
+    variant_body = variant_match.group(1)
+    return set(
+        re.findall(
+            r"(?m)^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:",
+            variant_body,
         )
     )
 
@@ -753,26 +780,56 @@ def validate_v19_redaction_and_live_guard(spec: dict | None = None) -> None:
     for token in forbidden_public_tokens:
         if token in public_strings:
             fail(f"v0.19 public contract exposes forbidden live/signed term: {token}")
-    require_file_tokens(
-        SDK_ADAPTER_SRC / "redaction.rs",
-        "v0.19 adapter redaction",
-        ["pub fn redact_sensitive_text", "pub fn redact_normalized_error", "gateway_error_from_normalized_sdk_error", "looks_like_hex_private_key", "redact_assignment_value"],
-    )
-    require_file_tokens(
-        SDK_ADAPTER_SRC / "model/constants.rs",
-        "v0.19 adapter constants",
-        ['pub const REDACTED: &str = "[REDACTED]";'],
-    )
-    require_file_tokens(
-        SDK_ADAPTER_SRC / "liveness/error_normalization.rs",
-        "v0.19 liveness error normalization",
-        ["pub fn normalize_sdk_error", "OfficialSdkErrorCategory::RemoteRejected", "OfficialSdkErrorCategory::WebSocketFailed", "OfficialSdkErrorCategory::AuthenticationFailed"],
-    )
-    require_file_tokens(
-        SDK_ADAPTER_SRC / "tests/liveness_errors.rs",
-        "v0.19 adapter redaction tests",
-        ["gateway_error_conversion_redacts_sensitive_message", "normalized_error_redaction_covers_remote_unknown_messages", "redacts_private_key_like_hex_tokens", "redacts_named_secret_assignments"],
-    )
+    redaction_text = (SDK_ADAPTER_SRC / "redaction.rs").read_text()
+    redaction_fn_names = rust_fn_names(redaction_text)
+    if not {
+        "gateway_error_from_normalized_sdk_error",
+        "redact_sensitive_text",
+        "redact_normalized_error",
+        "looks_like_hex_private_key",
+        "redact_assignment_value",
+    }.issubset(redaction_fn_names):
+        fail("v0.19 adapter redaction missing required redaction function set")
+    constants_text = (SDK_ADAPTER_SRC / "model/constants.rs").read_text()
+    if "REDACTED" not in rust_const_names(constants_text):
+        fail("v0.19 adapter constants missing REDACTED constant")
+    sdk_error_text = (SDK_ADAPTER_SRC / "model/sdk_error.rs").read_text()
+    sdk_error_categories = rust_enum_variant_names(sdk_error_text, "OfficialSdkErrorCategory")
+    if not {
+        "RemoteRejected",
+        "RemoteUnknown",
+        "AuthenticationFailed",
+        "ValidationFailed",
+        "Geoblocked",
+        "WebSocketFailed",
+        "Internal",
+    }.issubset(sdk_error_categories):
+        fail("v0.19 SDK error categories missing required variants")
+    normalized_error_fields = rust_struct_field_names(sdk_error_text, "OfficialSdkNormalizedError")
+    if not {
+        "category",
+        "retryable",
+        "message",
+        "http_status",
+        "geoblock_country",
+        "geoblock_region",
+    }.issubset(normalized_error_fields):
+        fail("v0.19 normalized SDK error missing required fields")
+    error_normalization_text = (SDK_ADAPTER_SRC / "liveness/error_normalization.rs").read_text()
+    if "normalize_sdk_error" not in rust_fn_names(error_normalization_text):
+        fail("v0.19 liveness error normalization missing normalize_sdk_error")
+    for category in ["RemoteRejected", "WebSocketFailed", "AuthenticationFailed"]:
+        if f"OfficialSdkErrorCategory::{category}" not in error_normalization_text:
+            fail(f"v0.19 liveness error normalization missing category mapping: {category}")
+    liveness_error_tests = (SDK_ADAPTER_SRC / "tests/liveness_errors.rs").read_text()
+    liveness_error_test_names = rust_fn_names(liveness_error_tests)
+    if not {
+        "gateway_error_conversion_redacts_sensitive_message",
+        "normalized_error_redaction_covers_remote_unknown_messages",
+        "redacts_private_key_like_hex_tokens",
+        "redacts_named_secret_assignments",
+    }.issubset(liveness_error_test_names):
+        fail("v0.19 adapter redaction tests missing redaction coverage")
     if not LIVE_SUBMIT_GUARD.exists():
         fail("missing v0.19 live-submit static guard")
     guard_text = LIVE_SUBMIT_GUARD.read_text()
@@ -799,41 +856,61 @@ def validate_v20_plan_storage_and_packaging(spec: dict | None = None) -> None:
         fail("v0.20 compile plan request must reference CompilePlanRequest")
     if compile_response_ref != "#/components/schemas/ExecutionPlanSummary":
         fail("v0.20 compile plan response must reference ExecutionPlanSummary")
-    for needle in ["DROP TABLE IF EXISTS plan_summaries", "execution_plans.summary_json as canonical plan summary storage"]:
-        if needle not in migration:
-            fail(f"v0.20 migration plan storage missing token: {needle}")
+    create_tables = set(re.findall(r"CREATE TABLE IF NOT EXISTS ([a-z_]+)", migration))
+    if "execution_plans" not in create_tables:
+        fail("v0.20 migration must create canonical execution_plans table")
+    if "DROP TABLE IF EXISTS plan_summaries" not in migration:
+        fail("v0.20 migration plan storage missing token: DROP TABLE IF EXISTS plan_summaries")
+    if "execution_plans.summary_json as canonical plan summary storage" not in migration:
+        fail("v0.20 migration plan storage missing canonical summary_json note")
+    execution_plans_body = re.search(r"(?s)CREATE TABLE IF NOT EXISTS execution_plans \((.*?)\);", migration)
+    if not execution_plans_body:
+        fail("v0.20 migration missing execution_plans table body")
+    execution_plan_columns = set(
+        re.findall(r"(?m)^\s*([a-z_]+)\s+[A-Z]", execution_plans_body.group(1))
+    )
+    if not {"execution_id", "plan_hash", "status", "summary_json"}.issubset(execution_plan_columns):
+        fail("v0.20 execution_plans table missing canonical summary_json columns")
     validate_absent_tokens(migration, "v0.20 migration", ["CREATE TABLE IF NOT EXISTS plan_summaries"])
     validate_absent_tokens(postgres, "v0.20 PostgresStore", ["INSERT INTO plan_summaries", '"plan_summaries"'])
-    require_file_tokens(
-        SDK_ADAPTER_SRC / "mapping/validation.rs",
-        "v0.20 SDK mapping validation",
-        ["validate_token_id", "validate_limit_price_for_sdk", "validate_positive_quantity_for_sdk"],
-    )
-    require_file_tokens(
-        SDK_ADAPTER_SRC / "tests/liveness_errors.rs",
-        "v0.20 SDK liveness tests",
-        ["normalized_error_redaction_covers_remote_unknown_messages"],
-    )
-    require_file_tokens(
-        EXECUTOR / "crates/pmx-runtime/src/health/signal/model.rs",
-        "v0.20 runtime signal model",
-        ["pub enum RuntimeSignal", "ReconcileBacklog", "remote_unknown_orders: u32"],
-    )
-    require_file_tokens(
-        EXECUTOR / "crates/pmx-runtime/src/health/signal/breakdown.rs",
-        "v0.20 runtime breakdown",
-        ["pub fn runtime_breakdown_from_signals", "RuntimeSignal::Geoblock", "RuntimeSignal::ReconcileBacklog"],
-    )
-    require_file_tokens(
-        EXECUTOR / "crates/pmx-runtime/src/runtime_tests/breakdown_loop/capabilities/blocking.rs",
-        "v0.20 runtime evaluation tests",
-        ["geoblock_unknown_and_reconcile_backlog_block_submit"],
-    )
-    require_file_tokens(
-        CORE_SRC / "domain/lifecycle/order.rs",
-        "v0.20 core order lifecycle",
-        ["cancel_state_from_lifecycle", "lifecycle_requires_reconcile", "OrderLifecycleState::RemoteUnknown", "OrderLifecycleState::PartialRemoteUnknown"],
-    )
+    mapping_validation_text = (SDK_ADAPTER_SRC / "mapping/validation.rs").read_text()
+    mapping_validation_fns = rust_fn_names(mapping_validation_text)
+    if not {
+        "validate_token_id",
+        "validate_limit_price_for_sdk",
+        "validate_positive_quantity_for_sdk",
+    }.issubset(mapping_validation_fns):
+        fail("v0.20 SDK mapping validation missing required validation helpers")
+    liveness_error_tests = (SDK_ADAPTER_SRC / "tests/liveness_errors.rs").read_text()
+    if "normalized_error_redaction_covers_remote_unknown_messages" not in rust_fn_names(liveness_error_tests):
+        fail("v0.20 SDK liveness tests missing remote unknown redaction coverage")
+    runtime_signal_model_text = (EXECUTOR / "crates/pmx-runtime/src/health/signal/model.rs").read_text()
+    runtime_signal_variants = rust_enum_variant_names(runtime_signal_model_text, "RuntimeSignal")
+    if not {"Geoblock", "ReconcileBacklog"}.issubset(runtime_signal_variants):
+        fail("v0.20 runtime signal model missing blocking runtime signal variants")
+    if "remote_unknown_orders" not in rust_enum_variant_field_names(
+        runtime_signal_model_text, "RuntimeSignal", "ReconcileBacklog"
+    ):
+        fail("v0.20 runtime signal model missing remote_unknown_orders backlog field")
+    runtime_breakdown_text = (EXECUTOR / "crates/pmx-runtime/src/health/signal/breakdown.rs").read_text()
+    if "runtime_breakdown_from_signals" not in rust_fn_names(runtime_breakdown_text):
+        fail("v0.20 runtime breakdown missing runtime_breakdown_from_signals")
+    for needle in ["RuntimeSignal::Geoblock", "RuntimeSignal::ReconcileBacklog"]:
+        if needle not in runtime_breakdown_text:
+            fail(f"v0.20 runtime breakdown missing blocking signal handling: {needle}")
+    runtime_blocking_tests = (
+        EXECUTOR / "crates/pmx-runtime/src/runtime_tests/breakdown_loop/capabilities/blocking.rs"
+    ).read_text()
+    if "geoblock_unknown_and_reconcile_backlog_block_submit" not in rust_fn_names(runtime_blocking_tests):
+        fail("v0.20 runtime evaluation tests missing geoblock/backlog blocking test")
+    order_lifecycle_text = (CORE_SRC / "domain/lifecycle/order.rs").read_text()
+    if not {"cancel_state_from_lifecycle", "lifecycle_requires_reconcile"}.issubset(
+        rust_fn_names(order_lifecycle_text)
+    ):
+        fail("v0.20 core order lifecycle missing reconcile/cancel helper functions")
+    order_lifecycle_states = rust_enum_variant_names(order_lifecycle_text, "OrderLifecycleState")
+    if not {"RemoteUnknown", "PartialRemoteUnknown"}.issubset(order_lifecycle_states):
+        fail("v0.20 core order lifecycle missing remote unknown states")
     for doc in [
         ROOT / "scripts/package_release.py",
         ROOT / "scripts/check_release_artifact.py",

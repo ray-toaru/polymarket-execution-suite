@@ -400,6 +400,50 @@ class ValidateContractsExecutorTests(unittest.TestCase):
             module.validate_v20_plan_storage_and_packaging(spec)
         self.assertIn("ExecutionPlanSummary", str(ctx.exception))
 
+    def test_v19_requires_redacted_constant(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("adapters/pmx-official-sdk-adapter/src/model/constants.rs"):
+                return 'pub const OTHER: &str = "x";\n'
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v19_redaction_and_live_guard(self._minimal_v23_spec())
+        self.assertIn("REDACTED", str(ctx.exception))
+
+    def test_v20_requires_reconcile_backlog_remote_unknown_field(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-runtime/src/health/signal/model.rs"):
+                return """
+pub enum RuntimeSignal {
+    ReconcileBacklog {
+        count: u32,
+    },
+    Geoblock {
+        status: GeoblockStatus,
+    },
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v20_plan_storage_and_packaging(spec)
+        self.assertIn("remote_unknown_orders", str(ctx.exception))
+
     def test_v21_requires_lifecycle_record_binding(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/sign-only/lifecycle-events"] = {
