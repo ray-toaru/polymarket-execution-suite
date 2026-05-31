@@ -98,6 +98,16 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                     "cancel_only_fallback_ready": True,
                     "balance_allowance_checked": True,
                 },
+                "runtime_gate_evidence_refs": {
+                    "kill_switch_open": "pg://runtime/kill-switch",
+                    "runtime_worker_healthy": "pg://runtime/runtime-worker",
+                    "geoblock_allowed": "pg://runtime/geoblock",
+                    "repository_reservation_exists": "pg://runtime/reservation",
+                    "idempotency_key_written": "pg://runtime/idempotency",
+                    "reconcile_worker_healthy": "pg://runtime/reconcile",
+                    "cancel_only_fallback_ready": "pg://runtime/cancel-only-fallback",
+                    "balance_allowance_checked": "pg://runtime/allowance",
+                },
             },
         )
         self.write_json(
@@ -181,6 +191,16 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                     "reconcile_worker_healthy": True,
                     "cancel_only_fallback_ready": True,
                     "balance_allowance_checked": True,
+                    "gate_evidence_refs": {
+                        "kill_switch_open": "pg://runtime/kill-switch",
+                        "runtime_worker_healthy": "pg://runtime/runtime-worker",
+                        "geoblock_allowed": "pg://runtime/geoblock",
+                        "repository_reservation_exists": "pg://runtime/reservation",
+                        "idempotency_key_written": "pg://runtime/idempotency",
+                        "reconcile_worker_healthy": "pg://runtime/reconcile",
+                        "cancel_only_fallback_ready": "pg://runtime/cancel-only-fallback",
+                        "balance_allowance_checked": "pg://runtime/allowance",
+                    },
                 },
                 "references_only_no_secret_values": True,
                 "live_submit_allowed": False,
@@ -214,6 +234,10 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
             self.assertEqual(plan["condition_id"], "condition-1")
             self.assertEqual(plan["active_profile_ref"], "local-profile://acct_b")
             self.assertTrue(plan["runtime_gate_snapshot"]["kill_switch_open"])
+            self.assertEqual(
+                plan["runtime_gate_evidence_refs"]["kill_switch_open"],
+                "pg://runtime/kill-switch",
+            )
             self.assertIn("--preflight-only", plan["command"])
             self.assertIn(str(package / "approval.json"), plan["command"])
             self.assertIn(str(package / "runtime-truth.json"), plan["command"])

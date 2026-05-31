@@ -97,6 +97,7 @@ def prepare_bundle(
         candidate_market_file=candidate_market_file,
         runtime_truth_file=runtime_truth_file,
         runtime_gate_snapshot=runtime_summary["gate_snapshot"],
+        runtime_gate_evidence_refs=runtime_summary["gate_evidence_refs"],
         sidecar=sidecar,
         candidate_limits=candidate_limits,
         max_order_notional=max_order_notional,

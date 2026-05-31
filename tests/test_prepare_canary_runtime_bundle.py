@@ -86,6 +86,16 @@ class PrepareCanaryRuntimeBundleTests(unittest.TestCase):
                         "reconcile_worker_healthy": True,
                         "cancel_only_fallback_ready": True,
                         "balance_allowance_checked": True,
+                        "gate_evidence_refs": {
+                            "kill_switch_open": "pg://runtime/kill-switch",
+                            "runtime_worker_healthy": "pg://runtime/runtime-worker",
+                            "geoblock_allowed": "pg://runtime/geoblock",
+                            "repository_reservation_exists": "pg://runtime/reservation",
+                            "idempotency_key_written": "pg://runtime/idempotency",
+                            "reconcile_worker_healthy": "pg://runtime/reconcile",
+                            "cancel_only_fallback_ready": "pg://runtime/cancel-only-fallback",
+                            "balance_allowance_checked": "pg://runtime/allowance",
+                        },
                     },
                     "remote_side_effects": False,
                 },
@@ -138,6 +148,10 @@ class PrepareCanaryRuntimeBundleTests(unittest.TestCase):
 
             self.assertEqual(request["account_id"], "acct-canary")
             self.assertEqual(request["active_profile_ref"], "local-profile://acct_b")
+            self.assertEqual(
+                request["runtime_gate_evidence_refs"]["kill_switch_open"],
+                "pg://runtime/kill-switch",
+            )
             self.assertEqual(result["profile"], "acct_b")
             self.assertIn("POLYMARKET_PRIVATE_KEY=0xabc123", runtime_env.read_text())
 

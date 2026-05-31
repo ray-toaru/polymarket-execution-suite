@@ -88,6 +88,16 @@ class PrepareCanaryReviewBundleTests(unittest.TestCase):
                         "reconcile_worker_healthy": True,
                         "cancel_only_fallback_ready": True,
                         "balance_allowance_checked": True,
+                        "gate_evidence_refs": {
+                            "kill_switch_open": "pg://runtime/kill-switch",
+                            "runtime_worker_healthy": "pg://runtime/runtime-worker",
+                            "geoblock_allowed": "pg://runtime/geoblock",
+                            "repository_reservation_exists": "pg://runtime/reservation",
+                            "idempotency_key_written": "pg://runtime/idempotency",
+                            "reconcile_worker_healthy": "pg://runtime/reconcile",
+                            "cancel_only_fallback_ready": "pg://runtime/cancel-only-fallback",
+                            "balance_allowance_checked": "pg://runtime/allowance",
+                        },
                     },
                     "remote_side_effects": False,
                 },
@@ -151,6 +161,10 @@ class PrepareCanaryReviewBundleTests(unittest.TestCase):
             packet = json.loads((review_packet_dir / "packet.json").read_text())
             self.assertEqual(approval_doc["account_id"], "acct-canary")
             self.assertEqual(approval_doc["active_profile_ref"], "local-profile://acct_b")
+            self.assertEqual(
+                approval_doc["runtime_gate_evidence_refs"]["kill_switch_open"],
+                "pg://runtime/kill-switch",
+            )
             self.assertEqual(packet["active_profile_ref"], "local-profile://acct_b")
             self.assertEqual(packet["status"], "dual_control_review_packet_not_authorization")
 

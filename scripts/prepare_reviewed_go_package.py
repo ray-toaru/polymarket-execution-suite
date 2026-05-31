@@ -68,6 +68,9 @@ def build_cli_approval(approval_request: dict[str, Any]) -> dict[str, Any]:
     runtime_gate_snapshot = approval_request.get("runtime_gate_snapshot")
     if not isinstance(runtime_gate_snapshot, dict):
         raise SystemExit("approval request runtime_gate_snapshot must be an object to build canonical approval.json")
+    runtime_gate_evidence_refs = approval_request.get("runtime_gate_evidence_refs")
+    if not isinstance(runtime_gate_evidence_refs, dict):
+        raise SystemExit("approval request runtime_gate_evidence_refs must be an object to build canonical approval.json")
     return {
         "approval_id": approval_request["approval_id"],
         "approval_hash": approval_request["approval_hash"],
@@ -85,6 +88,7 @@ def build_cli_approval(approval_request: dict[str, Any]) -> dict[str, Any]:
         "execution_style": approval_request["execution_style"],
         "operator_identity_ref": approval_request["operator_identity_ref"],
         "runtime_gate_snapshot": runtime_gate_snapshot,
+        "runtime_gate_evidence_refs": runtime_gate_evidence_refs,
     }
 
 
@@ -146,6 +150,19 @@ def build_package(
     if gate_mismatches:
         raise SystemExit(
             "reviewed-go package runtime gate snapshot mismatch: " + ", ".join(sorted(gate_mismatches))
+        )
+    approval_gate_evidence_refs = approval_doc.get("runtime_gate_evidence_refs")
+    runtime_gate_evidence_refs = runtime_report.get("gate_evidence_refs")
+    if not isinstance(approval_gate_evidence_refs, dict) or not isinstance(runtime_gate_evidence_refs, dict):
+        raise SystemExit("reviewed-go package requires runtime gate evidence refs in approval request and runtime truth")
+    evidence_mismatches = [
+        field
+        for field, value in approval_gate_evidence_refs.items()
+        if runtime_gate_evidence_refs.get(field) != value
+    ]
+    if evidence_mismatches:
+        raise SystemExit(
+            "reviewed-go package runtime gate evidence mismatch: " + ", ".join(sorted(evidence_mismatches))
         )
 
     decision = reviewed_go.build_decision(

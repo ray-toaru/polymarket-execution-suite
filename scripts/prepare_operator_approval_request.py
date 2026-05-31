@@ -32,6 +32,16 @@ PREFLIGHT_GATE_FIELDS = (
     "cancel_only_fallback_ready",
     "balance_allowance_checked",
 )
+PREFLIGHT_GATE_EVIDENCE_FIELDS = (
+    "kill_switch_open",
+    "runtime_worker_healthy",
+    "geoblock_allowed",
+    "repository_reservation_exists",
+    "idempotency_key_written",
+    "reconcile_worker_healthy",
+    "cancel_only_fallback_ready",
+    "balance_allowance_checked",
+)
 
 
 def sha256(path: Path) -> str:
@@ -104,10 +114,20 @@ def validate_runtime_truth(
         if preflight_report.get(field) is not True:
             raise SystemExit(f"runtime truth preflight_report.{field} must be true")
         gate_snapshot[field] = True
+    gate_evidence_refs = preflight_report.get("gate_evidence_refs")
+    if not isinstance(gate_evidence_refs, dict):
+        raise SystemExit("runtime truth preflight_report.gate_evidence_refs must be an object")
+    validated_gate_evidence_refs: dict[str, str] = {}
+    for field in PREFLIGHT_GATE_EVIDENCE_FIELDS:
+        evidence_ref = gate_evidence_refs.get(field)
+        if not isinstance(evidence_ref, str) or not evidence_ref.strip() or "REPLACE_WITH" in evidence_ref:
+            raise SystemExit(f"runtime truth preflight_report.gate_evidence_refs.{field} must be a concrete string")
+        validated_gate_evidence_refs[field] = evidence_ref.strip()
     return {
         "account_id": account_id,
         "condition_id": condition_id,
         "gate_snapshot": gate_snapshot,
+        "gate_evidence_refs": validated_gate_evidence_refs,
     }
 
 
@@ -150,6 +170,7 @@ def build_request(
     candidate_market_file: Path,
     runtime_truth_file: Path,
     runtime_gate_snapshot: dict[str, bool],
+    runtime_gate_evidence_refs: dict[str, str],
     sidecar: dict[str, str],
     candidate_limits: dict[str, str],
     max_order_notional: Decimal,
@@ -188,6 +209,7 @@ def build_request(
         "market_candidate_sha256": sha256(candidate_market_file),
         "runtime_truth_sha256": sha256(runtime_truth_file),
         "runtime_gate_snapshot": runtime_gate_snapshot,
+        "runtime_gate_evidence_refs": runtime_gate_evidence_refs,
         "github_evidence": {
             "root_ci_run_id": root_ci_run_id,
             "hermes_ci_run_id": hermes_ci_run_id,
@@ -356,6 +378,7 @@ def main() -> int:
         candidate_market_file=candidate_path,
         runtime_truth_file=runtime_truth_path,
         runtime_gate_snapshot=runtime_summary["gate_snapshot"],
+        runtime_gate_evidence_refs=runtime_summary["gate_evidence_refs"],
         sidecar=sidecar,
         candidate_limits=candidate_limits,
         max_order_notional=max_order_notional,

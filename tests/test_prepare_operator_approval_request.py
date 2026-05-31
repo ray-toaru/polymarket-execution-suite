@@ -117,11 +117,25 @@ class PrepareOperatorApprovalRequestTests(unittest.TestCase):
                 "reconcile_worker_healthy": True,
                 "cancel_only_fallback_ready": True,
                 "balance_allowance_checked": True,
+                "gate_evidence_refs": {
+                    "kill_switch_open": "pg://runtime/kill-switch",
+                    "runtime_worker_healthy": "pg://runtime/runtime-worker",
+                    "geoblock_allowed": "pg://runtime/geoblock",
+                    "repository_reservation_exists": "pg://runtime/reservation",
+                    "idempotency_key_written": "pg://runtime/idempotency",
+                    "reconcile_worker_healthy": "pg://runtime/reconcile",
+                    "cancel_only_fallback_ready": "pg://runtime/cancel-only-fallback",
+                    "balance_allowance_checked": "pg://runtime/allowance",
+                },
             },
         }
         summary = self.module.validate_runtime_truth(runtime_truth, expected_account_id="acct-canary")
         self.assertEqual(summary["condition_id"], "condition-1")
         self.assertTrue(summary["gate_snapshot"]["kill_switch_open"])
+        self.assertEqual(
+            summary["gate_evidence_refs"]["kill_switch_open"],
+            "pg://runtime/kill-switch",
+        )
 
 
 if __name__ == "__main__":

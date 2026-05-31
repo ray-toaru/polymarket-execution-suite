@@ -107,6 +107,15 @@ def validate_approval(path: Path) -> dict[str, Any]:
     ]:
         if gate_snapshot.get(report_field) is not True:
             raise SystemExit(f"approval runtime_gate_snapshot.{report_field} must be true")
+    gate_evidence_refs = data.get("runtime_gate_evidence_refs")
+    if not isinstance(gate_evidence_refs, dict):
+        raise SystemExit("approval runtime_gate_evidence_refs must be an object")
+    for report_field in RUNTIME_TRUTH_PREFLIGHT_ENV_BINDINGS.values():
+        evidence_ref = gate_evidence_refs.get(report_field)
+        if not isinstance(evidence_ref, str) or not evidence_ref.strip():
+            raise SystemExit(
+                f"approval runtime_gate_evidence_refs.{report_field} must be a non-empty string"
+            )
     return data
 
 
@@ -162,7 +171,7 @@ def require_runtime_truth_gate_alignment(runtime_truth_summary: dict[str, Any]) 
 def require_approval_runtime_gate_alignment(
     approval: dict[str, Any],
     runtime_truth_summary: dict[str, Any],
-) -> dict[str, bool]:
+) -> tuple[dict[str, bool], dict[str, str]]:
     approval_snapshot = approval.get("runtime_gate_snapshot")
     report = runtime_truth_summary.get("preflight_report")
     if not isinstance(approval_snapshot, dict) or not isinstance(report, dict):
@@ -176,7 +185,26 @@ def require_approval_runtime_gate_alignment(
         if approval_snapshot.get(report_field) is not True or report.get(report_field) is not True:
             raise SystemExit(f"approval/runtime truth gate snapshot {report_field} must be true")
         gate_snapshot[report_field] = True
-    return gate_snapshot
+    approval_evidence_refs = approval.get("runtime_gate_evidence_refs")
+    runtime_evidence_refs = report.get("gate_evidence_refs")
+    if not isinstance(approval_evidence_refs, dict) or not isinstance(runtime_evidence_refs, dict):
+        raise SystemExit("approval/runtime truth gate evidence refs must both be objects")
+    gate_evidence_refs: dict[str, str] = {}
+    for report_field in RUNTIME_TRUTH_PREFLIGHT_ENV_BINDINGS.values():
+        approval_ref = approval_evidence_refs.get(report_field)
+        runtime_ref = runtime_evidence_refs.get(report_field)
+        if not isinstance(approval_ref, str) or not approval_ref.strip():
+            raise SystemExit(f"approval runtime_gate_evidence_refs.{report_field} must be a non-empty string")
+        if not isinstance(runtime_ref, str) or not runtime_ref.strip():
+            raise SystemExit(
+                f"runtime truth preflight_report.gate_evidence_refs.{report_field} must be a non-empty string"
+            )
+        if approval_ref != runtime_ref:
+            raise SystemExit(
+                f"approval/runtime truth gate evidence ref mismatch for {report_field}"
+            )
+        gate_evidence_refs[report_field] = approval_ref
+    return gate_snapshot, gate_evidence_refs
 
 
 def build_invocation(
@@ -213,7 +241,9 @@ def build_invocation(
     pipeline.validate_candidate_file(market_file)
     env_summary = env_check.evaluate_env_file(env_file, expected_account_id=approval["account_id"])
     require_runtime_truth_gate_alignment(runtime_truth_summary)
-    gate_snapshot = require_approval_runtime_gate_alignment(approval, runtime_truth_summary)
+    gate_snapshot, gate_evidence_refs = require_approval_runtime_gate_alignment(
+        approval, runtime_truth_summary
+    )
 
     if approval["artifact_sha256"] != runtime_truth_summary["artifact_sha256"]:
         raise SystemExit("approval artifact_sha256 does not match runtime truth artifact_sha256")
@@ -300,6 +330,7 @@ def build_invocation(
         "decision_id": decision_summary["decision_id"],
         "runtime_truth_sha256": runtime_truth_summary["sha256"],
         "runtime_gate_snapshot": gate_snapshot,
+        "runtime_gate_evidence_refs": gate_evidence_refs,
         "command": command,
         "required_gate_env_vars": REQUIRED_GATE_ENV_VARS,
         "missing_gate_env_vars": missing_gate_env(),

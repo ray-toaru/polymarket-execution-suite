@@ -24,6 +24,16 @@ PREFLIGHT_GATE_FIELDS = (
     "cancel_only_fallback_ready",
     "balance_allowance_checked",
 )
+PREFLIGHT_GATE_EVIDENCE_FIELDS = (
+    "kill_switch_open",
+    "runtime_worker_healthy",
+    "geoblock_allowed",
+    "repository_reservation_exists",
+    "idempotency_key_written",
+    "reconcile_worker_healthy",
+    "cancel_only_fallback_ready",
+    "balance_allowance_checked",
+)
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -100,6 +110,13 @@ def validate_runtime_truth(path: Path) -> dict[str, Any]:
     for field in PREFLIGHT_GATE_FIELDS:
         if report.get(field) is not True:
             raise SystemExit(f"runtime truth must keep preflight_report.{field}=true")
+    gate_evidence_refs = report.get("gate_evidence_refs")
+    if not isinstance(gate_evidence_refs, dict):
+        raise SystemExit("runtime truth must keep preflight_report.gate_evidence_refs as an object")
+    for field in PREFLIGHT_GATE_EVIDENCE_FIELDS:
+        evidence_ref = gate_evidence_refs.get(field)
+        if not isinstance(evidence_ref, str) or not evidence_ref.strip():
+            raise SystemExit(f"runtime truth must keep preflight_report.gate_evidence_refs.{field} as a non-empty string")
     if data.get("remote_side_effects") is not False:
         raise SystemExit("runtime truth must keep remote_side_effects=false")
     return data
@@ -119,6 +136,13 @@ def validate_approval_request(path: Path) -> dict[str, Any]:
     for field in PREFLIGHT_GATE_FIELDS:
         if gate_snapshot.get(field) is not True:
             raise SystemExit(f"approval request runtime_gate_snapshot.{field} must be true")
+    gate_evidence_refs = data.get("runtime_gate_evidence_refs")
+    if not isinstance(gate_evidence_refs, dict):
+        raise SystemExit("approval request runtime_gate_evidence_refs must be an object")
+    for field in PREFLIGHT_GATE_EVIDENCE_FIELDS:
+        evidence_ref = gate_evidence_refs.get(field)
+        if not isinstance(evidence_ref, str) or not evidence_ref.strip():
+            raise SystemExit(f"approval request runtime_gate_evidence_refs.{field} must be a non-empty string")
     if data.get("live_submit_authorized") is not False:
         raise SystemExit("approval request must not authorize live submit")
     if data.get("remote_side_effects_authorized") is not False:
@@ -184,6 +208,19 @@ def build_packet(
     ]
     if mismatches:
         raise SystemExit("review packet binding mismatch: " + "; ".join(mismatches))
+    runtime_gate_evidence_refs = runtime_doc["preflight_report"].get("gate_evidence_refs")
+    approval_gate_evidence_refs = approval_doc.get("runtime_gate_evidence_refs")
+    if not isinstance(runtime_gate_evidence_refs, dict) or not isinstance(approval_gate_evidence_refs, dict):
+        raise SystemExit("review packet requires runtime gate evidence refs in runtime truth and approval request")
+    evidence_mismatches = [
+        field
+        for field in PREFLIGHT_GATE_EVIDENCE_FIELDS
+        if runtime_gate_evidence_refs.get(field) != approval_gate_evidence_refs.get(field)
+    ]
+    if evidence_mismatches:
+        raise SystemExit(
+            "review packet runtime gate evidence mismatch: " + ", ".join(sorted(evidence_mismatches))
+        )
 
     output_dir.mkdir(parents=True, exist_ok=True)
     copied = {
