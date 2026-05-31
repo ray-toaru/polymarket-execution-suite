@@ -13,6 +13,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from check_dist_index import validate as validate_dist_index
+from package_release import release_source_files, command_output, submodule_records
 from release_policy import is_forbidden_release_member
 
 STALE_ROOT_DOCS = [
@@ -80,11 +81,17 @@ def load_json_object(path: Path) -> dict:
     return data
 
 
+def git_head(path: Path) -> str | None:
+    return command_output(["git", "-C", str(path), "rev-parse", "HEAD"])
+
+
 def validate_sidecars(
     zip_path: Path,
     *,
     expected_version: str,
     expected_hash: str,
+    expected_git_head: str | None = None,
+    expected_submodules: list[dict[str, str]] | None = None,
 ) -> tuple[list[str], dict | None]:
     failures: list[str] = []
     sidecar = zip_path.with_suffix(zip_path.suffix + ".sha256")
@@ -123,8 +130,11 @@ def validate_sidecars(
     source = evidence.get("source", {})
     if source.get("version") != expected_version:
         failures.append("evidence sidecar source.version does not match expected version")
-    if not source.get("git_head"):
+    actual_git_head = source.get("git_head")
+    if not actual_git_head:
         failures.append("evidence sidecar source.git_head is missing")
+    elif expected_git_head is not None and actual_git_head != expected_git_head:
+        failures.append("evidence sidecar source.git_head does not match current workspace HEAD")
     submodules = source.get("submodules")
     if not isinstance(submodules, list) or not submodules:
         failures.append("evidence sidecar source.submodules must be a structured non-empty list")
@@ -136,6 +146,8 @@ def validate_sidecars(
             for field in ["path", "commit", "checkout_status", "checkout_ref"]:
                 if field not in record:
                     failures.append(f"evidence sidecar submodule record missing {field}")
+        if expected_submodules is not None and submodules != expected_submodules:
+            failures.append("evidence sidecar source.submodules do not match current workspace submodule pins")
     canonical_evidence = evidence.get("canonical_evidence", {})
     if canonical_evidence.get("manifest_path") != "polymarket-execution-engine/evidence/current/manifest.json":
         failures.append("evidence sidecar canonical_evidence.manifest_path is not current manifest")
@@ -195,6 +207,32 @@ def validate_archive_members(
             "non-canonical evidence version directory in archive: "
             + ", ".join(forbidden_evidence_templates[:20])
         )
+    return failures
+
+
+def validate_workspace_source_coverage(
+    zf: zipfile.ZipFile,
+    *,
+    expected_root: str,
+) -> list[str]:
+    failures: list[str] = []
+    names = {
+        name
+        for name in zf.namelist()
+        if name
+        and not name.endswith("/")
+        and name != f"{expected_root}/"
+    }
+    expected = {
+        f"{expected_root}/{path.relative_to(Path(__file__).resolve().parents[1]).as_posix()}"
+        for path in release_source_files()
+    }
+    missing = sorted(expected - names)
+    extra = sorted(names - expected)
+    if missing:
+        failures.append("archive is missing tracked release source files: " + ", ".join(missing[:20]))
+    if extra:
+        failures.append("archive contains files outside tracked release source set: " + ", ".join(extra[:20]))
     return failures
 
 
@@ -311,10 +349,14 @@ def main() -> int:
     failures.extend(validate_dist_index(zip_path.parent, expected_version))
     expected_root = f"polymarket_execution_suite_v{expected_version.replace('.', '_')}"
     expected_hash = sha256(zip_path)
+    expected_git = git_head(Path(__file__).resolve().parents[1])
+    expected_subs = submodule_records()
     sidecar_failures, evidence = validate_sidecars(
         zip_path,
         expected_version=expected_version,
         expected_hash=expected_hash,
+        expected_git_head=expected_git,
+        expected_submodules=expected_subs,
     )
     failures.extend(sidecar_failures)
     with zipfile.ZipFile(zip_path) as zf:
@@ -323,6 +365,12 @@ def main() -> int:
                 zf,
                 expected_root=expected_root,
                 expected_version=expected_version,
+            )
+        )
+        failures.extend(
+            validate_workspace_source_coverage(
+                zf,
+                expected_root=expected_root,
             )
         )
         failures.extend(validate_shebang_modes(zf))

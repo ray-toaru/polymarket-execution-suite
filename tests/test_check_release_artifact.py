@@ -4,6 +4,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -130,6 +131,125 @@ class CheckReleaseArtifactTests(unittest.TestCase):
                 )
             self.assertTrue(any("forbidden archive members" in item for item in failures))
             self.assertTrue(any("stale root docs in archive" in item for item in failures))
+
+    def test_validate_sidecars_rejects_git_head_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            artifact = tmp / "artifact.zip"
+            artifact.write_bytes(b"zip-bytes")
+            sha = self.module.sha256(artifact)
+            artifact.with_suffix(".zip.sha256").write_text(f"{sha}  {artifact.name}\n")
+            artifact.with_suffix(".zip.evidence.json").write_text(
+                json.dumps(
+                    {
+                        "artifact": {
+                            "name": artifact.name,
+                            "sha256": sha,
+                            "sha256_sidecar": artifact.with_suffix(".zip.sha256").name,
+                        },
+                        "source": {
+                            "version": "0.28.0",
+                            "git_head": "deadbeef",
+                            "submodules": [
+                                {
+                                    "path": "polymarket-execution-engine",
+                                    "commit": "abc",
+                                    "checkout_status": "clean",
+                                    "checkout_ref": "HEAD",
+                                }
+                            ],
+                        },
+                        "canonical_evidence": {
+                            "manifest_path": "polymarket-execution-engine/evidence/current/manifest.json",
+                            "archived_manifest_sha256": "a" * 64,
+                            "workspace_manifest_sha256": "b" * 64,
+                            "workspace_manifest_snapshot_path": "artifact.workspace-manifest.json",
+                            "archived_manifest_binding_kind": "archive_normalized_current_manifest",
+                            "workspace_manifest_binding_kind": "post_package_workspace_snapshot",
+                        },
+                    }
+                )
+            )
+            failures, _ = self.module.validate_sidecars(
+                artifact,
+                expected_version="0.28.0",
+                expected_hash=sha,
+                expected_git_head="cafebabe",
+                expected_submodules=None,
+            )
+        self.assertTrue(any("source.git_head does not match" in item for item in failures))
+
+    def test_validate_sidecars_rejects_submodule_pin_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            artifact = tmp / "artifact.zip"
+            artifact.write_bytes(b"zip-bytes")
+            sha = self.module.sha256(artifact)
+            artifact.with_suffix(".zip.sha256").write_text(f"{sha}  {artifact.name}\n")
+            artifact.with_suffix(".zip.evidence.json").write_text(
+                json.dumps(
+                    {
+                        "artifact": {
+                            "name": artifact.name,
+                            "sha256": sha,
+                            "sha256_sidecar": artifact.with_suffix(".zip.sha256").name,
+                        },
+                        "source": {
+                            "version": "0.28.0",
+                            "git_head": "abc",
+                            "submodules": [
+                                {
+                                    "path": "polymarket-execution-engine",
+                                    "commit": "abc",
+                                    "checkout_status": "clean",
+                                    "checkout_ref": "HEAD",
+                                }
+                            ],
+                        },
+                        "canonical_evidence": {
+                            "manifest_path": "polymarket-execution-engine/evidence/current/manifest.json",
+                            "archived_manifest_sha256": "a" * 64,
+                            "workspace_manifest_sha256": "b" * 64,
+                            "workspace_manifest_snapshot_path": "artifact.workspace-manifest.json",
+                            "archived_manifest_binding_kind": "archive_normalized_current_manifest",
+                            "workspace_manifest_binding_kind": "post_package_workspace_snapshot",
+                        },
+                    }
+                )
+            )
+            failures, _ = self.module.validate_sidecars(
+                artifact,
+                expected_version="0.28.0",
+                expected_hash=sha,
+                expected_git_head=None,
+                expected_submodules=[
+                    {
+                        "path": "polymarket-execution-engine",
+                        "commit": "def",
+                        "checkout_status": "clean",
+                        "checkout_ref": "HEAD",
+                    }
+                ],
+            )
+        self.assertTrue(any("source.submodules do not match" in item for item in failures))
+
+    def test_validate_workspace_source_coverage_rejects_missing_member(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            zip_path = tmp / "artifact.zip"
+            with zipfile.ZipFile(zip_path, "w") as zf:
+                zf.writestr("polymarket_execution_suite_v0_28_0/README.md", "ok\n")
+            with zipfile.ZipFile(zip_path) as zf:
+                with mock.patch.object(
+                    self.module,
+                    "release_source_files",
+                    return_value=[ROOT / "README.md", ROOT / "VERSION"],
+                ):
+                    failures = self.module.validate_workspace_source_coverage(
+                        zf,
+                        expected_root="polymarket_execution_suite_v0_28_0",
+                    )
+        self.assertTrue(any("missing tracked release source files" in item for item in failures))
 
 
 if __name__ == "__main__":
