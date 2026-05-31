@@ -379,18 +379,18 @@ def validate_controlled_canary_release_decision_governance() -> None:
     rehearsal_text = rehearsal.read_text()
     for needle in [
         "blocked_real_funds_canary_armed_no_go",
-        "--armed",
-        "--allow-live-submit-config",
-        "--allow-real-funds-canary-config",
+        "--mode",
+        "armed",
+        "run_reviewed_go_canary.py",
+        "--include-live-config-overrides",
         "real-funds canary not allowed by release decision",
         "release_decision_gate",
         "remote_side_effects",
         "raw_signed_order_exposed",
         "--output-dir",
         "blocked-rehearsal.report.json",
-        "--artifact-sha256",
-        "--evidence-manifest-sha256",
-        "--market-file",
+        "--package-dir",
+        "--env-file",
     ]:
         if needle not in rehearsal_text:
             fail(f"blocked real-funds canary rehearsal script missing token: {needle}")
