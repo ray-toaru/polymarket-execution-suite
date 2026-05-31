@@ -100,7 +100,11 @@ def validate_approval(path: Path) -> dict[str, Any]:
     gate_snapshot = data.get("runtime_gate_snapshot")
     if not isinstance(gate_snapshot, dict):
         raise SystemExit("approval runtime_gate_snapshot must be an object")
-    for report_field in ["live_submit_allowed", "real_funds_canary_allowed", *RUNTIME_TRUTH_PREFLIGHT_ENV_BINDINGS.values()]:
+    for report_field in [
+        "preconditions_live_submit_would_pass",
+        "preconditions_real_funds_canary_would_pass",
+        *RUNTIME_TRUTH_PREFLIGHT_ENV_BINDINGS.values(),
+    ]:
         if gate_snapshot.get(report_field) is not True:
             raise SystemExit(f"approval runtime_gate_snapshot.{report_field} must be true")
     return data
@@ -138,7 +142,11 @@ def require_runtime_truth_gate_alignment(runtime_truth_summary: dict[str, Any]) 
     report = runtime_truth_summary.get("preflight_report")
     if not isinstance(report, dict):
         raise SystemExit("runtime truth preflight_report must be an object")
-    for field in ["live_submit_allowed", "real_funds_canary_allowed"]:
+    if report.get("live_submit_allowed") is not False:
+        raise SystemExit("runtime truth preflight_report.live_submit_allowed must remain false for reviewed-go wrapper use")
+    if report.get("real_funds_canary_allowed") is not False:
+        raise SystemExit("runtime truth preflight_report.real_funds_canary_allowed must remain false for reviewed-go wrapper use")
+    for field in ["preconditions_live_submit_would_pass", "preconditions_real_funds_canary_would_pass"]:
         if report.get(field) is not True:
             raise SystemExit(f"runtime truth preflight_report.{field} must be true for reviewed-go wrapper use")
     for env_name, report_field in RUNTIME_TRUTH_PREFLIGHT_ENV_BINDINGS.items():
@@ -160,7 +168,11 @@ def require_approval_runtime_gate_alignment(
     if not isinstance(approval_snapshot, dict) or not isinstance(report, dict):
         raise SystemExit("approval/runtime truth gate snapshots must both be objects")
     gate_snapshot: dict[str, bool] = {}
-    for report_field in ["live_submit_allowed", "real_funds_canary_allowed", *RUNTIME_TRUTH_PREFLIGHT_ENV_BINDINGS.values()]:
+    for report_field in [
+        "preconditions_live_submit_would_pass",
+        "preconditions_real_funds_canary_would_pass",
+        *RUNTIME_TRUTH_PREFLIGHT_ENV_BINDINGS.values(),
+    ]:
         if approval_snapshot.get(report_field) is not True or report.get(report_field) is not True:
             raise SystemExit(f"approval/runtime truth gate snapshot {report_field} must be true")
         gate_snapshot[report_field] = True

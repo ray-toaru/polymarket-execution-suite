@@ -105,8 +105,10 @@ class PrepareOperatorApprovalRequestTests(unittest.TestCase):
             "condition_id": "condition-1",
             "preflight_report": {
                 "status": "preflight_ready",
-                "live_submit_allowed": True,
-                "real_funds_canary_allowed": True,
+                "live_submit_allowed": False,
+                "real_funds_canary_allowed": False,
+                "preconditions_live_submit_would_pass": True,
+                "preconditions_real_funds_canary_would_pass": True,
                 "kill_switch_open": True,
                 "runtime_worker_healthy": True,
                 "geoblock_allowed": True,

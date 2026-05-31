@@ -13,8 +13,8 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 PREFLIGHT_GATE_FIELDS = (
-    "live_submit_allowed",
-    "real_funds_canary_allowed",
+    "preconditions_live_submit_would_pass",
+    "preconditions_real_funds_canary_would_pass",
     "kill_switch_open",
     "runtime_worker_healthy",
     "geoblock_allowed",

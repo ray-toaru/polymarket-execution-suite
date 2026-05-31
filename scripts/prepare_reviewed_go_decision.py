@@ -48,8 +48,8 @@ REQUIRED_DUAL_CONTROL_CHECKS = [
     "reconcile_and_cancel_fallback_reviewed",
 ]
 PREFLIGHT_GATE_FIELDS = [
-    "live_submit_allowed",
-    "real_funds_canary_allowed",
+    "preconditions_live_submit_would_pass",
+    "preconditions_real_funds_canary_would_pass",
     "kill_switch_open",
     "runtime_worker_healthy",
     "geoblock_allowed",

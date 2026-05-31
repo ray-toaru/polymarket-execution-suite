@@ -21,8 +21,8 @@ VERSION = (ROOT / "VERSION").read_text().strip()
 DEFAULT_RELEASE_ZIP = ROOT / "dist" / f"polymarket-execution-suite-v{VERSION}.zip"
 ACTIVE_PROFILE_CHECK = ROOT / "polymarket-execution-engine" / "validation" / "check_active_profile_consistency.py"
 PREFLIGHT_GATE_FIELDS = (
-    "live_submit_allowed",
-    "real_funds_canary_allowed",
+    "preconditions_live_submit_would_pass",
+    "preconditions_real_funds_canary_would_pass",
     "kill_switch_open",
     "runtime_worker_healthy",
     "geoblock_allowed",

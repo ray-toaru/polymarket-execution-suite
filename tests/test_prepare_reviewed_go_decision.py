@@ -40,8 +40,8 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
             "market_candidate_sha256": "e" * 64,
             "runtime_truth_sha256": "f" * 64,
             "runtime_gate_snapshot": {
-                "live_submit_allowed": True,
-                "real_funds_canary_allowed": True,
+                "preconditions_live_submit_would_pass": True,
+                "preconditions_real_funds_canary_would_pass": True,
                 "kill_switch_open": True,
                 "runtime_worker_healthy": True,
                 "geoblock_allowed": True,
