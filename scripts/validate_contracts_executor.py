@@ -152,6 +152,20 @@ def rust_struct_field_names(text: str, struct_name: str) -> set[str]:
     )
 
 
+def rust_enum_variant_names(text: str, enum_name: str) -> set[str]:
+    pattern = rf"(?s)enum\s+{re.escape(enum_name)}[^\{{]*\{{(.*?)\n\}}"
+    match = re.search(pattern, text)
+    if not match:
+        fail(f"missing Rust enum: {enum_name}")
+    body = match.group(1)
+    return set(
+        re.findall(
+            r"(?m)^\s*([A-Z][a-zA-Z0-9_]*)\s*(?:,|\(|\{|$)",
+            body,
+        )
+    )
+
+
 def ensure_match_arms(text: str, label: str, fn_name: str, required_arms: list[str]) -> None:
     marker = f"async fn {fn_name}"
     start = text.find(marker)
@@ -874,10 +888,56 @@ def validate_v21_sign_only_and_runtime_models(spec: dict | None = None) -> None:
     runtime_worker_props = schema_property_names(spec, "RuntimeWorkerStatusReport")
     if runtime_worker_props != {"heartbeats", "observations"}:
         fail(f"v0.21 RuntimeWorkerStatusReport properties changed unexpectedly: {sorted(runtime_worker_props)}")
-    require_file_tokens(
-        CORE_SRC / "domain/lifecycle/sign_only.rs",
+    sign_only_core_text = (CORE_SRC / "domain/lifecycle/sign_only.rs").read_text()
+    try:
+        sign_only_state_variants = rust_enum_variant_names(
+            sign_only_core_text, "SignOnlyLifecycleState"
+        )
+        sign_only_event_variants = rust_enum_variant_names(
+            sign_only_core_text, "SignOnlyLifecycleEventKind"
+        )
+        sign_only_record_fields = rust_struct_field_names(
+            sign_only_core_text, "SignOnlyLifecycleRecord"
+        )
+    except SystemExit as exc:
+        fail(f"v0.21 sign-only lifecycle core malformed: {exc}")
+    if sign_only_state_variants != {
+        "Planned",
+        "ReservationPrepared",
+        "SigningRequested",
+        "SignedDryRun",
+        "Failed",
+        "Abandoned",
+    }:
+        fail("v0.21 sign-only lifecycle core missing SignOnlyLifecycleState variants")
+    if sign_only_event_variants != {
+        "PrepareReservation",
+        "RequestSigning",
+        "SignedWithoutPost",
+        "SigningFailed",
+        "Abandon",
+    }:
+        fail("v0.21 sign-only lifecycle core missing SignOnlyLifecycleEventKind variants")
+    if not {
+        "execution_id",
+        "account_id",
+        "state",
+        "event",
+        "client_event_id",
+        "signed_order_ref",
+        "no_remote_side_effect",
+        "event_id",
+        "created_at",
+    }.issubset(sign_only_record_fields):
+        fail("v0.21 sign-only lifecycle core missing SignOnlyLifecycleRecord fields")
+    require_tokens(
+        sign_only_core_text,
         "v0.21 sign-only lifecycle core",
-        ["pub enum SignOnlyLifecycleState", "transition_sign_only_lifecycle", "sign_only_lifecycle_has_remote_side_effect", "pub client_event_id: Option<String>"],
+        [
+            "transition_sign_only_lifecycle",
+            "sign_only_lifecycle_has_remote_side_effect",
+            "sign_only_lifecycle_records_equivalent",
+        ],
     )
     require_file_tokens(
         SDK_ADAPTER_SRC / "lifecycle.rs",
@@ -889,15 +949,57 @@ def validate_v21_sign_only_and_runtime_models(spec: dict | None = None) -> None:
         "v0.21 sign-only lifecycle tests",
         ["sign_only_lifecycle_records_are_persistable_and_non_mutating", "sign_only_lifecycle_rejects_posted_receipt", "standard_sign_only_construction_emits_only_digest_ref_and_lifecycle"],
     )
-    require_file_tokens(
-        EXECUTOR / "crates/pmx-runtime/src/health/action.rs",
+    runtime_action_text = (
+        EXECUTOR / "crates/pmx-runtime/src/health/action.rs"
+    ).read_text()
+    runtime_worker_text = (
+        EXECUTOR / "crates/pmx-runtime/src/health/worker.rs"
+    ).read_text()
+    try:
+        worker_action_fields = rust_struct_field_names(
+            runtime_action_text, "RuntimeWorkerAction"
+        )
+        worker_store_write_fields = rust_struct_field_names(
+            runtime_action_text, "RuntimeWorkerStoreWrite"
+        )
+        runtime_worker_kind_variants = rust_enum_variant_names(
+            runtime_worker_text, "RuntimeWorkerKind"
+        )
+    except SystemExit as exc:
+        fail(f"v0.21 runtime worker models malformed: {exc}")
+    if worker_action_fields != {
+        "kind",
+        "capability",
+        "should_fail_closed",
+        "should_update_runtime_store",
+        "reason",
+    }:
+        fail("v0.21 runtime worker action model missing RuntimeWorkerAction fields")
+    if worker_store_write_fields != {
+        "account_id",
+        "capability",
+        "worker_kind",
+        "status",
+        "should_fail_closed",
+        "reason",
+    }:
+        fail("v0.21 runtime worker action model missing RuntimeWorkerStoreWrite fields")
+    if runtime_worker_kind_variants != {
+        "WebSocketLiveness",
+        "HeartbeatLease",
+        "Geoblock",
+        "ResourceRefresh",
+        "ReconcileBacklog",
+    }:
+        fail("v0.21 runtime worker kinds missing RuntimeWorkerKind variants")
+    require_tokens(
+        runtime_action_text,
         "v0.21 runtime worker action model",
-        ["pub struct RuntimeWorkerAction", "worker_actions_from_runtime_signals", "should_fail_closed: health.blocks_submit()", "pub struct RuntimeWorkerStoreWrite"],
-    )
-    require_file_tokens(
-        EXECUTOR / "crates/pmx-runtime/src/health/worker.rs",
-        "v0.21 runtime worker kinds",
-        ["pub enum RuntimeWorkerKind"],
+        [
+            "worker_actions_from_runtime_signals",
+            "runtime_worker_store_writes",
+            "should_fail_closed: health.blocks_submit()",
+        ],
     )
     require_file_tokens(
         EXECUTOR / "crates/pmx-runtime/src/runtime_tests/breakdown_loop/capabilities/groups.rs",
