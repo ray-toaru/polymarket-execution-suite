@@ -512,12 +512,19 @@ def validate_v12_service_layer(spec: dict | None = None) -> None:
         ['name = "pmx-service"'],
     )
     service_root_text = SERVICE_RS.read_text()
+    plan_route_text = (API_SRC / "routes/flow/plan.rs").read_text()
     module_names = rust_module_names(service_root_text)
     if not {"binding", "plan_flow", "submit"}.issubset(module_names):
         fail("pmx-service crate root missing required modules")
     pub_use_targets = rust_pub_use_targets(service_root_text)
     if not {"binding", "submit"}.issubset(pub_use_targets):
         fail("pmx-service crate root missing required pub use re-exports")
+    backend_variants = rust_enum_variant_names(backend_text, "ServiceBackend")
+    if backend_variants != {"InMemory", "Postgres"}:
+        fail("pmx-api backend structure missing ServiceBackend variants")
+    app_state_fns = rust_fn_names(backend_text)
+    if not {"in_memory", "in_memory_with_store", "postgres"}.issubset(app_state_fns):
+        fail("pmx-api backend structure missing AppState constructors")
     hash_inputs_text = (SERVICE_SRC / "binding/hash_inputs.rs").read_text()
     try:
         plan_hash_fields = rust_struct_field_names(hash_inputs_text, "PlanHashInput")
@@ -538,6 +545,8 @@ def validate_v12_service_layer(spec: dict | None = None) -> None:
         "service binding hash inputs",
         ["impl<'a> From<&'a ApprovalReceipt> for ApprovalHashInput<'a>", "impl<'a> From<&'a ExecutionPlanSummary> for PlanHashInput<'a>"],
     )
+    if not {"compile_plan", "submit_plan"}.issubset(rust_async_fn_names(plan_route_text)):
+        fail("API plan flow routes missing compile/submit handlers")
     require_file_tokens(
         SERVICE_SRC / "submit/blocked.rs",
         "blocked submit path",
@@ -1199,6 +1208,18 @@ def validate_store_and_backend_structure() -> None:
     for module_name in ["runtime_state", "runtime_worker", "sign_only", "submit"]:
         if module_name not in service_reexports:
             fail(f"pmx-service module boundary missing token: pub use {module_name}::*;")
+    if not {"record_admin_audit_event", "list_admin_audit_events"}.issubset(
+        rust_async_fn_names(api_backend_audit)
+    ):
+        fail("pmx-api audit backend bridge missing async backend methods")
+    if not {"record_standard_sign_only_construction", "list_sign_only_lifecycle_events"}.issubset(
+        rust_async_fn_names(api_backend_sign_only)
+    ):
+        fail("pmx-api sign-only backend bridge missing async backend methods")
+    if not {"list_runtime_worker_status", "set_account_kill_switch", "set_global_kill_switch"}.issubset(
+        rust_async_fn_names(api_backend_runtime)
+    ):
+        fail("pmx-api runtime backend bridge missing async backend methods")
 
     ensure_match_arms(
         api_backend_audit,

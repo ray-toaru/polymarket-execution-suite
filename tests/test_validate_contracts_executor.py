@@ -376,6 +376,50 @@ pub trait RuntimeWorkerStatusStore: Send + Sync {}
                 module.validate_v12_service_layer(spec)
         self.assertIn("service binding hash inputs", str(ctx.exception))
 
+    def test_v12_requires_service_backend_variants(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        spec["paths"]["/v1/submissions"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/SubmitRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/SubmitReceipt"}}}}},
+            }
+        }
+        spec["paths"]["/v1/admin/cancel-order"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CancelOrderRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CancelReceipt"}}}}},
+            }
+        }
+        spec["paths"]["/v1/admin/reconcile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReconcileRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReconcileReport"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/src/backend.rs"):
+                return """
+#[derive(Clone)]
+pub enum ServiceBackend {
+    InMemory(ExecutorService<InMemoryStore>),
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v12_service_layer(spec)
+        self.assertIn("ServiceBackend variants", str(ctx.exception))
+
     def test_v09_requires_feature_gated_adapter_tests(self) -> None:
         original_read_text = Path.read_text
 
@@ -764,6 +808,80 @@ pub enum RuntimeSignal {
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
             module.validate_store_and_backend_structure()
+
+    def test_store_and_backend_structure_requires_runtime_backend_async_methods(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/lib.rs"):
+                return (
+                    "mod helpers;\nmod memory;\nmod model;\npub mod postgres;\n"
+                    "mod postgres_audit;\nmod postgres_execution;\nmod postgres_idempotency;\n"
+                    "mod postgres_runtime;\nmod postgres_sign_only;\nmod postgres_worker;\n"
+                    "pub use postgres::PostgresStore;\n"
+                )
+            if path.endswith("crates/pmx-store/src/postgres.rs"):
+                return (
+                    "pub struct PostgresStore { database_url: String }\n"
+                    "impl PostgresStore {\n"
+                    "pub async fn connect() {}\n"
+                    "pub async fn apply_schema() {}\n"
+                    "pub async fn applied_schema_migrations() {}\n"
+                    "pub(crate) async fn client() {}\n"
+                    "tokio_postgres::connect(&self.database_url, NoTls)\n"
+                    "simple_query(\"SELECT 1\")\n"
+                    "client.batch_execute(\"ROLLBACK\")\n"
+                    "}\n"
+                )
+            if path.endswith("crates/pmx-service/src/lib.rs"):
+                return (
+                    "mod runtime_state;\nmod runtime_worker;\nmod sign_only;\nmod submit;\n"
+                    "pub use runtime_state::*;\npub use runtime_worker::*;\npub use sign_only::*;\npub use submit::*;\n"
+                )
+            if path.endswith("crates/pmx-api/src/backend/audit.rs"):
+                return (
+                    "impl ServiceBackend {\n"
+                    "pub(crate) async fn record_admin_audit_event(&self, event: AdminAuditEvent) -> Result<(), ServiceError> {\n"
+                    "match self {\n"
+                    "Self::InMemory(service) => service.record_admin_audit_event(event).await,\n"
+                    "Self::Postgres(service) => service.record_admin_audit_event(event).await,\n"
+                    "}\n}\n"
+                    "pub(crate) async fn list_admin_audit_events(&self, query: AdminAuditQuery) -> Result<Vec<AdminAuditEvent>, ServiceError> {\n"
+                    "match self {\n"
+                    "Self::InMemory(service) => service.list_admin_audit_events(query).await,\n"
+                    "Self::Postgres(service) => service.list_admin_audit_events(query).await,\n"
+                    "}\n}\n}\n"
+                )
+            if path.endswith("crates/pmx-api/src/backend/sign_only.rs"):
+                return (
+                    "impl ServiceBackend {\n"
+                    "pub(crate) async fn record_standard_sign_only_construction(&self, req: StandardSignOnlyConstructionRequest) -> Result<StandardSignOnlyConstructionReceipt, ServiceError> {\n"
+                    "match self {\n"
+                    "Self::InMemory(service) => service.record_standard_sign_only_construction(req).await,\n"
+                    "Self::Postgres(service) => service.record_standard_sign_only_construction(req).await,\n"
+                    "}\n}\n"
+                    "pub(crate) async fn list_sign_only_lifecycle_events(&self, query: SignOnlyLifecycleQuery) -> Result<Vec<SignOnlyLifecycleRecord>, ServiceError> {\n"
+                    "match self {\n"
+                    "Self::InMemory(service) => service.list_sign_only_lifecycle_events(query).await,\n"
+                    "Self::Postgres(service) => service.list_sign_only_lifecycle_events(query).await,\n"
+                    "}\n}\n}\n"
+                )
+            if path.endswith("crates/pmx-api/src/backend/runtime.rs"):
+                return (
+                    "impl ServiceBackend {\n"
+                    "pub(crate) async fn list_runtime_worker_status(&self, query: RuntimeWorkerStatusQuery) -> Result<RuntimeWorkerStatusReport, ServiceError> {\n"
+                    "match self {\n"
+                    "Self::InMemory(service) => service.list_runtime_worker_status(query).await,\n"
+                    "Self::Postgres(service) => service.list_runtime_worker_status(query).await,\n"
+                    "}\n}\n"
+                )
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_store_and_backend_structure()
+        self.assertIn("runtime backend bridge missing async backend methods", str(ctx.exception))
 
 
 if __name__ == "__main__":
