@@ -100,6 +100,32 @@ def tracked_git_files(repo_root: Path) -> list[Path]:
     return paths
 
 
+def git_status_lines(repo_root: Path) -> list[str]:
+    raw = command_output(["git", "-C", str(repo_root), "status", "--short"])
+    if raw is None:
+        raise SystemExit(f"git status failed for release packaging: {repo_root}")
+    return [line for line in raw.splitlines() if line.strip()]
+
+
+def ensure_clean_release_submodules() -> None:
+    dirty: list[str] = []
+    for record in submodule_records():
+        path = record["path"]
+        if record["checkout_status"] != "clean":
+            dirty.append(
+                f"{path}: checkout_status={record['checkout_status']} checkout_ref={record['checkout_ref']}"
+            )
+            continue
+        submodule_root = ROOT / path
+        status_lines = git_status_lines(submodule_root)
+        if status_lines:
+            dirty.append(f"{path}: dirty worktree ({status_lines[0]})")
+    if dirty:
+        raise SystemExit(
+            "release packaging requires clean pinned submodules: " + "; ".join(dirty)
+        )
+
+
 def release_source_files() -> list[Path]:
     seen: set[Path] = set()
     files: list[Path] = []
@@ -353,6 +379,7 @@ def main() -> int:
     if not VERSION:
         print("VERSION file is empty", file=sys.stderr)
         return 1
+    ensure_clean_release_submodules()
     DIST.mkdir(exist_ok=True)
     evidence_manifest = ROOT / "polymarket-execution-engine" / "evidence" / "current" / "manifest.json"
     sidecar = OUT.with_suffix(OUT.suffix + ".sha256")

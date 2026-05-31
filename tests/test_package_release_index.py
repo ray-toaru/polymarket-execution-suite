@@ -82,20 +82,24 @@ class PackageReleaseIndexTests(unittest.TestCase):
         for path in forbidden:
             self.assertFalse(self.package_release.allowed(ROOT / path))
 
-    def test_release_policy_allows_examples_and_canonical_evidence_logs(self):
+    def test_release_policy_allows_examples_and_rejects_logs(self):
         allowed = [
             ROOT / ".env.example",
             ROOT / "polymarket-execution-engine" / ".env.example",
-            ROOT
-            / "polymarket-execution-engine"
-            / "evidence"
-            / "current"
-            / "logs"
-            / "01-cargo-fmt.log",
         ]
         for path in allowed:
             self.assertTrue(self.package_release.allowed(path))
 
+        self.assertFalse(
+            self.package_release.allowed(
+                ROOT
+                / "polymarket-execution-engine"
+                / "evidence"
+                / "current"
+                / "logs"
+                / "01-cargo-fmt.log"
+            )
+        )
         self.assertFalse(self.package_release.allowed(ROOT / "logs" / "scratch.log"))
 
     def test_artifact_checker_forbidden_matches_packager_policy(self):
@@ -108,6 +112,9 @@ class PackageReleaseIndexTests(unittest.TestCase):
                 f"{expected_root}/.env.shadow",
                 f"{expected_root}/config/runtime.local.json",
                 f"{expected_root}/secrets/token.txt",
+                f"{expected_root}/certs/client.p12",
+                f"{expected_root}/vault/reviewer.kdbx",
+                f"{expected_root}/polymarket-execution-engine/evidence/current/logs/25-contract-validation.report.json",
             ]
             for name in names:
                 self.assertTrue(self.checker.forbidden(name, expected_root))
@@ -227,6 +234,48 @@ class PackageReleaseIndexTests(unittest.TestCase):
                 self.package_release.DIST = original_dist
                 self.package_release.OUT = original_out
                 self.package_release.VERSION = original_version
+
+    def test_package_release_main_fails_closed_for_dirty_submodule_checkout(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            root = tmp / "root"
+            dist = root / "dist"
+            dist.mkdir(parents=True)
+            evidence_manifest = root / "polymarket-execution-engine" / "evidence" / "current" / "manifest.json"
+            evidence_manifest.parent.mkdir(parents=True)
+            evidence_manifest.write_text("{}\n")
+
+            original_root = self.package_release.ROOT
+            original_dist = self.package_release.DIST
+            original_out = self.package_release.OUT
+            original_version = self.package_release.VERSION
+            try:
+                self.package_release.ROOT = root
+                self.package_release.DIST = dist
+                self.package_release.OUT = dist / "artifact.zip"
+                self.package_release.VERSION = "0.28.0"
+
+                with mock.patch.object(
+                    self.package_release,
+                    "submodule_records",
+                    return_value=[
+                        {
+                            "path": "polymarket-execution-engine",
+                            "commit": "deadbeef",
+                            "checkout_status": "+",
+                            "checkout_ref": "HEAD",
+                        }
+                    ],
+                ):
+                    with self.assertRaises(SystemExit) as ctx:
+                        self.package_release.main()
+            finally:
+                self.package_release.ROOT = original_root
+                self.package_release.DIST = original_dist
+                self.package_release.OUT = original_out
+                self.package_release.VERSION = original_version
+
+        self.assertIn("clean pinned submodules", str(ctx.exception))
 
     def test_write_dist_index_records_explicit_manifest_binding_kinds(self):
         with tempfile.TemporaryDirectory() as tmp_name:

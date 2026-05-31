@@ -14,7 +14,22 @@ FORBIDDEN_PARTS = {
     "dist",
     "secrets",
 }
-FORBIDDEN_SUFFIXES = {".pyc", ".pyo", ".db", ".sqlite", ".sqlite3", ".pem", ".key", ".crt"}
+FORBIDDEN_SUFFIXES = {
+    ".pyc",
+    ".pyo",
+    ".db",
+    ".sqlite",
+    ".sqlite3",
+    ".pem",
+    ".key",
+    ".crt",
+    ".p12",
+    ".pfx",
+    ".asc",
+    ".gpg",
+    ".age",
+    ".kdbx",
+}
 FORBIDDEN_FILENAMES = {".env", "config/secrets.json"}
 FORBIDDEN_NAME_PREFIXES = (".env.",)
 FORBIDDEN_NAME_SUFFIXES = (".local.json",)
@@ -44,12 +59,7 @@ def is_forbidden_release_member(path: str | Path, *, expected_root: str | None =
 
     if any(part in FORBIDDEN_PARTS for part in parts):
         return True
-    if "logs" in parts and parts[:4] != (
-        "polymarket-execution-engine",
-        "evidence",
-        "current",
-        "logs",
-    ):
+    if "logs" in parts:
         return True
     if any(part.endswith(".egg-info") for part in parts):
         return True
