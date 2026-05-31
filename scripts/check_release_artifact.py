@@ -139,12 +139,17 @@ def validate_sidecars(
     canonical_evidence = evidence.get("canonical_evidence", {})
     if canonical_evidence.get("manifest_path") != "polymarket-execution-engine/evidence/current/manifest.json":
         failures.append("evidence sidecar canonical_evidence.manifest_path is not current manifest")
-    if not canonical_evidence.get("manifest_sha256"):
-        failures.append("evidence sidecar canonical_evidence.manifest_sha256 is missing")
-    if canonical_evidence.get("archived_manifest_sha256") != canonical_evidence.get("manifest_sha256"):
-        failures.append("evidence sidecar canonical_evidence.archived_manifest_sha256 must match manifest_sha256")
+    if not canonical_evidence.get("archived_manifest_sha256"):
+        failures.append("evidence sidecar canonical_evidence.archived_manifest_sha256 is missing")
     if not canonical_evidence.get("workspace_manifest_sha256"):
         failures.append("evidence sidecar canonical_evidence.workspace_manifest_sha256 is missing")
+    if canonical_evidence.get("archived_manifest_binding_kind") != "archive_normalized_current_manifest":
+        failures.append("evidence sidecar canonical_evidence.archived_manifest_binding_kind is invalid")
+    if canonical_evidence.get("workspace_manifest_binding_kind") != "post_package_workspace_binding":
+        failures.append("evidence sidecar canonical_evidence.workspace_manifest_binding_kind is invalid")
+    manifest_alias = canonical_evidence.get("manifest_sha256")
+    if manifest_alias is not None and manifest_alias != canonical_evidence.get("archived_manifest_sha256"):
+        failures.append("evidence sidecar canonical_evidence.manifest_sha256 alias must match archived_manifest_sha256")
     return failures, evidence
 
 
@@ -276,12 +281,13 @@ def validate_manifest_bindings(
                     "canonical evidence manifest carries a stale external_artifact_sidecar.sha256"
                 )
         if evidence is not None:
-            sidecar_manifest_sha = evidence.get("canonical_evidence", {}).get("manifest_sha256")
+            canonical = evidence.get("canonical_evidence", {})
             archive_manifest_sha = hashlib.sha256(manifest_bytes).hexdigest()
-            if sidecar_manifest_sha != archive_manifest_sha:
-                failures.append("evidence sidecar manifest_sha256 does not match archived manifest")
-            if evidence.get("canonical_evidence", {}).get("archived_manifest_sha256") != archive_manifest_sha:
+            if canonical.get("archived_manifest_sha256") != archive_manifest_sha:
                 failures.append("evidence sidecar archived_manifest_sha256 does not match archived manifest")
+            sidecar_manifest_sha = canonical.get("manifest_sha256")
+            if sidecar_manifest_sha is not None and sidecar_manifest_sha != archive_manifest_sha:
+                failures.append("evidence sidecar manifest_sha256 alias does not match archived manifest")
 
     release_manifest = f"{expected_root}/polymarket-execution-engine/release/manifest.json"
     if release_manifest not in names:

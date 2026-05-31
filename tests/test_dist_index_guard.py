@@ -37,6 +37,10 @@ class DistIndexGuardTests(unittest.TestCase):
                     "canonical_evidence": {
                         "manifest_path": "polymarket-execution-engine/evidence/current/manifest.json",
                         "manifest_sha256": "a" * 64,
+                        "archived_manifest_sha256": "a" * 64,
+                        "workspace_manifest_sha256": "b" * 64,
+                        "archived_manifest_binding_kind": "archive_normalized_current_manifest",
+                        "workspace_manifest_binding_kind": "post_package_workspace_binding",
                     },
                 }
             )
@@ -158,7 +162,7 @@ class DistIndexGuardTests(unittest.TestCase):
                 {
                     "schema_version": 0,
                     "artifact": {"name": self.artifact.name, "sha256": self.sha},
-                    "canonical_evidence": {"manifest_path": "wrong", "manifest_sha256": "bad"},
+                    "canonical_evidence": {"manifest_path": "wrong", "archived_manifest_sha256": "bad"},
                 }
             )
         )
@@ -166,7 +170,26 @@ class DistIndexGuardTests(unittest.TestCase):
         failures = self.guard.validate(self.dist, "0.26.0")
         self.assertTrue(any("schema_version must be 1" in failure for failure in failures))
         self.assertTrue(any("manifest_path is not canonical" in failure for failure in failures))
-        self.assertTrue(any("manifest_sha256 must be a sha256 hex string" in failure for failure in failures))
+        self.assertTrue(any("archived_manifest_sha256 must be a sha256 hex string" in failure for failure in failures))
+
+    def test_rejects_evidence_sidecar_without_manifest_binding_kinds(self):
+        (self.dist / "polymarket-execution-suite-v0.26.0.zip.evidence.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "artifact": {"name": self.artifact.name, "sha256": self.sha},
+                    "canonical_evidence": {
+                        "manifest_path": "polymarket-execution-engine/evidence/current/manifest.json",
+                        "archived_manifest_sha256": "a" * 64,
+                        "workspace_manifest_sha256": "b" * 64,
+                    },
+                }
+            )
+        )
+        self.write_index()
+        failures = self.guard.validate(self.dist, "0.26.0")
+        self.assertTrue(any("archived_manifest_binding_kind is invalid" in failure for failure in failures))
+        self.assertTrue(any("workspace_manifest_binding_kind is invalid" in failure for failure in failures))
 
 
 if __name__ == "__main__":

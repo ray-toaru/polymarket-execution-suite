@@ -227,6 +227,36 @@ class PackageReleaseIndexTests(unittest.TestCase):
                 self.package_release.OUT = original_out
                 self.package_release.VERSION = original_version
 
+    def test_write_dist_index_records_explicit_manifest_binding_kinds(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            dist = tmp / "dist"
+            dist.mkdir()
+            artifact = dist / "polymarket-execution-suite-v0.28.0.zip"
+            artifact.write_bytes(b"artifact")
+            (dist / "polymarket-execution-suite-v0.28.0.zip.sha256").write_text("x" * 64 + "  " + artifact.name + "\n")
+            (dist / "polymarket-execution-suite-v0.28.0.zip.evidence.json").write_text("{}")
+
+            original_dist = self.package_release.DIST
+            original_out = self.package_release.OUT
+            original_version = self.package_release.VERSION
+            try:
+                self.package_release.DIST = dist
+                self.package_release.OUT = artifact
+                self.package_release.VERSION = "0.28.0"
+                self.package_release.write_dist_index("a" * 64, "b" * 64, "c" * 64)
+                index = json.loads((dist / "INDEX.json").read_text())
+            finally:
+                self.package_release.DIST = original_dist
+                self.package_release.OUT = original_out
+                self.package_release.VERSION = original_version
+
+        canonical = index["canonical_evidence"]
+        self.assertEqual(canonical["archived_manifest_sha256"], "b" * 64)
+        self.assertEqual(canonical["workspace_manifest_sha256"], "c" * 64)
+        self.assertEqual(canonical["archived_manifest_binding_kind"], "archive_normalized_current_manifest")
+        self.assertEqual(canonical["workspace_manifest_binding_kind"], "post_package_workspace_binding")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -108,8 +108,19 @@ def validate(dist: Path, expected_version: str) -> list[str]:
             canonical = evidence.get("canonical_evidence", {})
             if canonical.get("manifest_path") != "polymarket-execution-engine/evidence/current/manifest.json":
                 failures.append("evidence sidecar canonical_evidence.manifest_path is not canonical")
-            if not isinstance(canonical.get("manifest_sha256"), str) or len(canonical["manifest_sha256"]) != 64:
-                failures.append("evidence sidecar canonical_evidence.manifest_sha256 must be a sha256 hex string")
+            archived_sha = canonical.get("archived_manifest_sha256")
+            workspace_sha = canonical.get("workspace_manifest_sha256")
+            if not isinstance(archived_sha, str) or len(archived_sha) != 64:
+                failures.append("evidence sidecar canonical_evidence.archived_manifest_sha256 must be a sha256 hex string")
+            if not isinstance(workspace_sha, str) or len(workspace_sha) != 64:
+                failures.append("evidence sidecar canonical_evidence.workspace_manifest_sha256 must be a sha256 hex string")
+            if canonical.get("archived_manifest_binding_kind") != "archive_normalized_current_manifest":
+                failures.append("evidence sidecar canonical_evidence.archived_manifest_binding_kind is invalid")
+            if canonical.get("workspace_manifest_binding_kind") != "post_package_workspace_binding":
+                failures.append("evidence sidecar canonical_evidence.workspace_manifest_binding_kind is invalid")
+            manifest_alias = canonical.get("manifest_sha256")
+            if manifest_alias is not None and manifest_alias != archived_sha:
+                failures.append("evidence sidecar canonical_evidence.manifest_sha256 alias must match archived_manifest_sha256")
 
     local_material = index.get("local_material")
     if not isinstance(local_material, list):

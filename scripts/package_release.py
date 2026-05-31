@@ -213,7 +213,15 @@ def classify_dist_entry(name: str, *, is_dir: bool, child_names: set[str] | None
     }
 
 
-def write_dist_index(artifact_sha256: str, manifest_sha256: str | None) -> None:
+ARCHIVED_MANIFEST_BINDING_KIND = "archive_normalized_current_manifest"
+WORKSPACE_MANIFEST_BINDING_KIND = "post_package_workspace_binding"
+
+
+def write_dist_index(
+    artifact_sha256: str,
+    archived_manifest_sha256: str | None,
+    workspace_manifest_sha256: str | None,
+) -> None:
     current_release_files = {OUT.name, OUT.with_suffix(OUT.suffix + ".sha256").name, OUT.with_suffix(OUT.suffix + ".evidence.json").name}
     local_material = []
     for path in sorted(DIST.iterdir()):
@@ -237,7 +245,10 @@ def write_dist_index(artifact_sha256: str, manifest_sha256: str | None) -> None:
         },
         "canonical_evidence": {
             "path": "polymarket-execution-engine/evidence/current/manifest.json",
-            "sha256": manifest_sha256,
+            "archived_manifest_sha256": archived_manifest_sha256,
+            "workspace_manifest_sha256": workspace_manifest_sha256,
+            "archived_manifest_binding_kind": ARCHIVED_MANIFEST_BINDING_KIND,
+            "workspace_manifest_binding_kind": WORKSPACE_MANIFEST_BINDING_KIND,
         },
         "local_material": local_material,
         "operator_warning": (
@@ -364,7 +375,14 @@ def main() -> int:
                     "manifest_sha256": manifest_sha256,
                     "archived_manifest_sha256": manifest_sha256,
                     "workspace_manifest_sha256": workspace_manifest_sha256,
+                    "archived_manifest_binding_kind": ARCHIVED_MANIFEST_BINDING_KIND,
+                    "workspace_manifest_binding_kind": WORKSPACE_MANIFEST_BINDING_KIND,
                     "contract_validation_report": contract_validation_report_metadata(),
+                    "manifest_sha256_alias_note": (
+                        "Deprecated compatibility alias for archived_manifest_sha256. "
+                        "Use archived_manifest_sha256 for the archive-normalized manifest "
+                        "and workspace_manifest_sha256 for the post-package workspace manifest."
+                    ),
                 },
                 "release_decision_path": "RELEASE_DECISION.md",
                 "note": "This external sidecar binds the final zip hash; files inside the zip do not self-assert the final containing-archive hash.",
@@ -374,7 +392,7 @@ def main() -> int:
         )
         + "\n"
     )
-    write_dist_index(artifact_sha256, manifest_sha256)
+    write_dist_index(artifact_sha256, manifest_sha256, workspace_manifest_sha256)
     print(OUT)
     return 0
 
