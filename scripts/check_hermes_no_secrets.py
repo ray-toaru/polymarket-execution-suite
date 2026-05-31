@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -21,6 +22,8 @@ FORBIDDEN = [
     "post_orders(",
 ]
 
+FORBIDDEN_PATTERNS = [re.compile(re.escape(token), re.IGNORECASE) for token in FORBIDDEN]
+
 ALLOWLIST = {
     Path("AGENTS.md"),
     Path("README.md"),
@@ -38,11 +41,11 @@ def main() -> int:
             continue
         if any(part.startswith(".") or part == "__pycache__" for part in rel.parts):
             continue
-        if path.suffix not in {".py", ".md", ".toml", ".txt"}:
+        if path.suffix not in {".py", ".md", ".toml", ".txt", ".json"}:
             continue
         text = path.read_text(errors="ignore")
-        for token in FORBIDDEN:
-            if token in text:
+        for token, pattern in zip(FORBIDDEN, FORBIDDEN_PATTERNS, strict=True):
+            if pattern.search(text):
                 failures.append(f"{rel}: forbidden token {token}")
     if failures:
         for failure in failures:

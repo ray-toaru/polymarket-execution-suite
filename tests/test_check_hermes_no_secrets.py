@@ -47,6 +47,20 @@ class CheckHermesNoSecretsTests(unittest.TestCase):
             finally:
                 self.module.CONTROL = original_control
 
+    def test_scan_is_case_insensitive_and_includes_json(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            control = tmp / "adapter"
+            fixtures = control / "fixtures"
+            fixtures.mkdir(parents=True)
+            (fixtures / "sample.json").write_text('{"Raw_Signed_Payload": "x"}')
+            original_control = self.module.CONTROL
+            try:
+                self.module.CONTROL = control
+                self.assertEqual(self.module.main(), 1)
+            finally:
+                self.module.CONTROL = original_control
+
 
 if __name__ == "__main__":
     unittest.main()
