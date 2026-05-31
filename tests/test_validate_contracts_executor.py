@@ -434,6 +434,64 @@ pub enum ServiceBackend {
                 module.validate_v09_official_adapter_boundary()
         self.assertIn("official SDK feature-gated tests", str(ctx.exception))
 
+    def test_v09_requires_structured_adapter_config_fields(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("adapters/pmx-official-sdk-adapter/src/model/config.rs"):
+                return """
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OfficialSdkAdapterConfig {
+    pub clob_host: String,
+    pub allow_read_only_smoke: bool,
+    pub allow_authenticated_non_trading_smoke: bool,
+    pub allow_sign_only_dry_run: bool,
+    pub allow_live_submit: bool,
+    pub allow_real_funds_canary: bool,
+    pub require_kill_switch_open_for_live_submit: bool,
+    pub require_reconcile_worker_for_live_submit: bool,
+}
+
+impl Default for OfficialSdkAdapterConfig {
+    fn default() -> Self {
+        Self {
+            clob_host: String::new(),
+            allow_read_only_smoke: true,
+            allow_authenticated_non_trading_smoke: false,
+            allow_sign_only_dry_run: false,
+            allow_live_submit: false,
+            allow_real_funds_canary: false,
+            require_kill_switch_open_for_live_submit: true,
+            require_reconcile_worker_for_live_submit: true,
+        }
+    }
+}
+
+pub struct OfficialSdkStandardSignOnlyProfile {
+    pub clob_host: String,
+    pub collateral_symbol: String,
+    pub signing_protocol: String,
+    pub uses_deposit_wallet_order_path: bool,
+    pub supports_builder_attribution: bool,
+    pub supports_fee_metadata: bool,
+    pub exposes_raw_signed_order: bool,
+    pub may_post_order: bool,
+    pub may_cancel_order: bool,
+}
+may_post_order: false
+may_cancel_order: false
+exposes_raw_signed_order: false
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v09_official_adapter_boundary()
+        self.assertIn("OfficialSdkAdapterConfig fields", str(ctx.exception))
+
     def test_v15_requires_api_admin_audit_support_tokens(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/admin/audit-events"]["get"]["parameters"] = [
@@ -698,6 +756,127 @@ pub enum RuntimeSignal {
         with self.assertRaises(SystemExit) as ctx:
             module.validate_v21_sign_only_and_runtime_models(spec)
         self.assertIn("SignOnlyLifecycleRecord", str(ctx.exception))
+
+    def test_v21_requires_lifecycle_adapter_function(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/sign-only/lifecycle-events"] = {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {"$ref": "#/components/schemas/SignOnlyLifecycleRecord"}
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/SignOnlyLifecycleRecord"}
+                            }
+                        }
+                    }
+                },
+            }
+        }
+        spec["paths"]["/v1/sign-only/standard-constructions"] = {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StandardSignOnlyConstructionRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardSignOnlyConstructionReceipt"
+                                }
+                            }
+                        }
+                    }
+                },
+            }
+        }
+        spec["paths"]["/v1/sign-only/lifecycle-events/{execution_id}"]["get"]["responses"] = {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "array",
+                            "items": {"$ref": "#/components/schemas/SignOnlyLifecycleRecord"},
+                        }
+                    }
+                }
+            }
+        }
+        spec["components"]["schemas"]["SignOnlyLifecycleRecord"] = {
+            "type": "object",
+            "required": [
+                "execution_id",
+                "account_id",
+                "state",
+                "event",
+                "signed_order_ref",
+                "no_remote_side_effect",
+            ],
+            "properties": {
+                "client_event_id": {"type": "string"},
+                "signed_order_ref": {"type": "string"},
+                "no_remote_side_effect": {"type": "boolean"},
+            },
+        }
+        spec["components"]["schemas"]["StandardSignOnlyConstructionRequest"] = {
+            "type": "object",
+            "required": ["execution_id", "account_id", "plan_hash", "no_remote_side_effect"],
+            "properties": {
+                "signed_order_ref": {"type": "string"},
+                "signed_order_digest": {"type": "string"},
+                "no_remote_side_effect": {"type": "boolean"},
+            },
+        }
+        spec["components"]["schemas"]["StandardSignOnlyConstructionReceipt"] = {
+            "type": "object",
+            "properties": {
+                "signed_order_ref": {"type": "string"},
+                "signed_order_digest": {"type": "string"},
+                "lifecycle_records": {"type": "array"},
+                "no_remote_side_effect": {"type": "boolean"},
+            },
+        }
+        spec["components"]["schemas"]["RuntimeWorkerStatusReport"] = {
+            "type": "object",
+            "properties": {"heartbeats": {"type": "array"}, "observations": {"type": "array"}},
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("adapters/pmx-official-sdk-adapter/src/lifecycle.rs"):
+                return """
+use crate::{OfficialSdkAdapterError, SignOnlyDryRunReceipt};
+
+pub fn some_other_helper(
+    _receipt: &SignOnlyDryRunReceipt,
+) -> Result<(), OfficialSdkAdapterError> {
+    Ok(())
+}
+transition_sign_only_lifecycle
+no_remote_side_effect: true
+sign-only receipt unexpectedly indicates remote posting
+signed_order_ref: Some(receipt.signed_order_ref.clone())
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v21_sign_only_and_runtime_models(spec)
+        self.assertIn("sign-only lifecycle adapter", str(ctx.exception))
 
     def test_store_and_backend_structure_rejects_missing_postgres_export(self) -> None:
         original_read_text = Path.read_text

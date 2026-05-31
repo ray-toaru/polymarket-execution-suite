@@ -419,35 +419,131 @@ def validate_v09_official_adapter_boundary() -> None:
     if bins.get("pmx-real-funds-canary", {}).get("required-features") != ["live-submit"]:
         fail("official adapter must gate pmx-real-funds-canary behind live-submit")
     config_text = (SDK_ADAPTER_SRC / "model/config.rs").read_text()
-    for needle in [
-        "pub struct OfficialSdkAdapterConfig",
-        "allow_sign_only_dry_run: false",
-        "allow_live_submit: false",
-        "allow_real_funds_canary: false",
-        "pub struct OfficialSdkStandardSignOnlyProfile",
-    ]:
-        if needle not in config_text:
-            fail(f"official SDK adapter config missing token: {needle}")
+    sdk_error_text = (SDK_ADAPTER_SRC / "model/sdk_error.rs").read_text()
+    sign_only_model_text = (SDK_ADAPTER_SRC / "model/sign_only.rs").read_text()
+    try:
+        adapter_config_fields = rust_struct_field_names(
+            config_text, "OfficialSdkAdapterConfig"
+        )
+        standard_profile_fields = rust_struct_field_names(
+            config_text, "OfficialSdkStandardSignOnlyProfile"
+        )
+        sdk_error_variants = rust_enum_variant_names(
+            sdk_error_text, "OfficialSdkErrorCategory"
+        )
+        normalized_error_fields = rust_struct_field_names(
+            sdk_error_text, "OfficialSdkNormalizedError"
+        )
+        dry_run_receipt_fields = rust_struct_field_names(
+            sign_only_model_text, "SignOnlyDryRunReceipt"
+        )
+    except SystemExit as exc:
+        fail(f"official SDK adapter models malformed: {exc}")
+    if adapter_config_fields != {
+        "clob_host",
+        "allow_read_only_smoke",
+        "allow_authenticated_non_trading_smoke",
+        "allow_sign_only_dry_run",
+        "allow_live_submit",
+        "allow_real_funds_canary",
+        "require_kill_switch_open_for_live_submit",
+        "require_repository_reservation_for_live_submit",
+        "require_reconcile_worker_for_live_submit",
+    }:
+        fail("official SDK adapter config missing OfficialSdkAdapterConfig fields")
+    if not {
+        "clob_host",
+        "collateral_symbol",
+        "signing_protocol",
+        "uses_deposit_wallet_order_path",
+        "supports_builder_attribution",
+        "supports_fee_metadata",
+        "exposes_raw_signed_order",
+        "may_post_order",
+        "may_cancel_order",
+    }.issubset(standard_profile_fields):
+        fail(
+            "official SDK adapter config missing OfficialSdkStandardSignOnlyProfile fields"
+        )
+    if sdk_error_variants != {
+        "RemoteRejected",
+        "RemoteUnknown",
+        "AuthenticationFailed",
+        "ValidationFailed",
+        "Geoblocked",
+        "WebSocketFailed",
+        "Internal",
+    }:
+        fail("official SDK error model missing OfficialSdkErrorCategory variants")
+    if normalized_error_fields != {
+        "category",
+        "retryable",
+        "message",
+        "http_status",
+        "geoblock_country",
+        "geoblock_region",
+    }:
+        fail("official SDK error model missing OfficialSdkNormalizedError fields")
+    if dry_run_receipt_fields != {
+        "account_id",
+        "execution_id",
+        "plan_hash",
+        "signed_order_ref",
+        "posted",
+    }:
+        fail("official SDK sign-only model missing SignOnlyDryRunReceipt fields")
+    require_tokens(
+        config_text,
+        "official SDK adapter config",
+        [
+            "allow_sign_only_dry_run: false",
+            "allow_live_submit: false",
+            "allow_real_funds_canary: false",
+            "may_post_order: false",
+            "may_cancel_order: false",
+            "exposes_raw_signed_order: false",
+        ],
+    )
     smoke_text = (SDK_ADAPTER_SRC / "gates/smoke.rs").read_text()
-    for fn_name in ["validate_authenticated_non_trading_smoke", "validate_sign_only_dry_run"]:
-        if fn_name not in smoke_text:
-            fail(f"official SDK smoke gates missing token: {fn_name}")
+    smoke_fns = rust_fn_names(smoke_text)
+    if not {"validate_read_only_smoke_environment", "validate_authenticated_non_trading_smoke", "validate_sign_only_dry_run"}.issubset(
+        smoke_fns
+    ):
+        fail("official SDK smoke gates missing validation functions")
     for env_name in ["ENV_RUN_AUTHENTICATED_SMOKE", "ENV_ALLOW_SIGN_ONLY_DRY_RUN", "ENV_ALLOW_LIVE_SUBMIT"]:
         if env_name not in smoke_text:
             fail(f"official SDK smoke gates missing token: {env_name}")
     sign_only_text = (SDK_ADAPTER_SRC / "sdk_runtime/sign_only/dry_run.rs").read_text()
-    for needle in ["SignOnlyDryRunReceipt", "validate_sign_only_dry_run(config, &credentials)?", "signed_order_ref = format!(", "posted: false"]:
-        if needle not in sign_only_text:
-            fail(f"official SDK sign-only dry run missing token: {needle}")
+    sign_only_fns = rust_async_fn_names(sign_only_text)
+    if "run_sign_only_dry_run" not in sign_only_fns:
+        fail("official SDK sign-only dry run missing async entrypoint")
+    require_tokens(
+        sign_only_text,
+        "official SDK sign-only dry run",
+        [
+            "validate_sign_only_dry_run(config, &credentials)?",
+            "signed_order_ref = format!(",
+            "posted: false",
+        ],
+    )
     feature_tests = (SDK_ADAPTER_SRC / "tests/feature_gated.rs").read_text()
-    for test_name in [
+    feature_test_fns = rust_fn_names(feature_tests) | rust_async_fn_names(feature_tests)
+    if not {
+        "env_helpers_trim_values_and_accept_case_insensitive_true",
         "authenticated_non_trading_smoke_executes_when_enabled",
         "sign_only_dry_run_executes_when_enabled",
-        "env_helpers_trim_values_and_accept_case_insensitive_true",
-        "assert!(!receipt.posted);",
-    ]:
-        if test_name not in feature_tests:
-            fail(f"official SDK feature-gated tests missing token: {test_name}")
+    }.issubset(feature_test_fns):
+        fail("official SDK feature-gated tests missing required test functions")
+    require_tokens(
+        feature_tests,
+        "official SDK feature-gated tests",
+        [
+            "sdk_error_normalization_covers_validation",
+            "sdk_error_normalization_covers_status_codes",
+            "gateway_error_conversion_preserves_remote_unknown",
+            "assert!(!receipt.posted);",
+        ],
+    )
     live_canary = SDK_ADAPTER_SRC / "sdk_runtime/live_canary.rs"
     gateway_bridge = SDK_ADAPTER_SRC / "sdk_runtime/gateway.rs"
     adapter_boundary_text = source_tree_text_without_paths(SDK_ADAPTER_SRC, [live_canary, gateway_bridge])
@@ -1080,16 +1176,30 @@ def validate_v21_sign_only_and_runtime_models(spec: dict | None = None) -> None:
             "sign_only_lifecycle_records_equivalent",
         ],
     )
-    require_file_tokens(
-        SDK_ADAPTER_SRC / "lifecycle.rs",
+    lifecycle_adapter_text = (SDK_ADAPTER_SRC / "lifecycle.rs").read_text()
+    sign_only_tests_text = (SDK_ADAPTER_SRC / "tests/sign_only.rs").read_text()
+    lifecycle_fns = rust_fn_names(lifecycle_adapter_text)
+    sign_only_test_fns = rust_fn_names(sign_only_tests_text) | rust_async_fn_names(
+        sign_only_tests_text
+    )
+    if lifecycle_fns != {"sign_only_lifecycle_records_from_receipt"}:
+        fail("v0.21 sign-only lifecycle adapter missing conversion helper")
+    require_tokens(
+        lifecycle_adapter_text,
         "v0.21 sign-only lifecycle adapter",
-        ["sign_only_lifecycle_records_from_receipt", "no_remote_side_effect: true", "sign-only receipt unexpectedly indicates remote posting", "signed_order_ref: Some(receipt.signed_order_ref.clone())"],
+        [
+            "transition_sign_only_lifecycle",
+            "no_remote_side_effect: true",
+            "sign-only receipt unexpectedly indicates remote posting",
+            "signed_order_ref: Some(receipt.signed_order_ref.clone())",
+        ],
     )
-    require_file_tokens(
-        SDK_ADAPTER_SRC / "tests/sign_only.rs",
-        "v0.21 sign-only lifecycle tests",
-        ["sign_only_lifecycle_records_are_persistable_and_non_mutating", "sign_only_lifecycle_rejects_posted_receipt", "standard_sign_only_construction_emits_only_digest_ref_and_lifecycle"],
-    )
+    if not {
+        "sign_only_lifecycle_records_are_persistable_and_non_mutating",
+        "sign_only_lifecycle_rejects_posted_receipt",
+        "standard_sign_only_construction_emits_only_digest_ref_and_lifecycle",
+    }.issubset(sign_only_test_fns):
+        fail("v0.21 sign-only lifecycle tests missing required test functions")
     runtime_action_text = (
         EXECUTOR / "crates/pmx-runtime/src/health/action.rs"
     ).read_text()
@@ -1142,11 +1252,15 @@ def validate_v21_sign_only_and_runtime_models(spec: dict | None = None) -> None:
             "should_fail_closed: health.blocks_submit()",
         ],
     )
-    require_file_tokens(
-        EXECUTOR / "crates/pmx-runtime/src/runtime_tests/breakdown_loop/capabilities/groups.rs",
-        "v0.21 runtime worker tests",
-        ["worker_actions_mark_stale_runtime_inputs_as_fail_closed_updates"],
+    runtime_worker_tests_text = (
+        EXECUTOR
+        / "crates/pmx-runtime/src/runtime_tests/breakdown_loop/capabilities/groups.rs"
+    ).read_text()
+    runtime_worker_test_fns = rust_fn_names(runtime_worker_tests_text) | rust_async_fn_names(
+        runtime_worker_tests_text
     )
+    if "worker_actions_mark_stale_runtime_inputs_as_fail_closed_updates" not in runtime_worker_test_fns:
+        fail("v0.21 runtime worker tests missing required test function")
     for doc in [
         EXECUTOR / "validation/check_sign_only_lifecycle.py",
         EXECUTOR / "validation/check_runtime_worker_models.py",
