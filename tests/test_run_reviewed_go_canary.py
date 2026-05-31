@@ -136,6 +136,8 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                 "source_release": "v0.28.0",
                 "scope": "REAL_FUNDS_CANARY",
                 "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
+                "account_id": "acct-canary",
+                "condition_id": "condition-1",
                 "artifact_sha256": "a" * 64,
                 "workspace_manifest_sha256": "b" * 64,
                 "archived_manifest_sha256": "c" * 64,
@@ -148,6 +150,23 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                         "order_cancel_reconciliation",
                     ]
                 ],
+                "preflight_report": {
+                    "status": "preflight_ready",
+                    "runtime_truth_source": "postgres",
+                    "posted": False,
+                    "remote_side_effects": False,
+                    "raw_signed_order_exposed": False,
+                    "live_submit_allowed": True,
+                    "real_funds_canary_allowed": True,
+                    "kill_switch_open": True,
+                    "runtime_worker_healthy": True,
+                    "geoblock_allowed": True,
+                    "repository_reservation_exists": True,
+                    "idempotency_key_written": True,
+                    "reconcile_worker_healthy": True,
+                    "cancel_only_fallback_ready": True,
+                    "balance_allowance_checked": True,
+                },
                 "references_only_no_secret_values": True,
                 "live_submit_allowed": False,
                 "live_cancel_allowed": False,
@@ -203,6 +222,33 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                     include_live_config_overrides=True,
                 )
         self.assertIn("only valid for armed", str(ctx.exception))
+
+    def test_build_invocation_rejects_runtime_truth_gate_env_disagreement(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            package, env_file = self.package_fixture(tmp)
+            previous = os.environ.get("PMX_KILL_SWITCH_OPEN")
+            os.environ["PMX_KILL_SWITCH_OPEN"] = "0"
+            try:
+                with self.assertRaises(SystemExit) as ctx:
+                    self.module.build_invocation(
+                        package_dir=package,
+                        env_file=env_file,
+                        mode="preflight",
+                        daily_used_notional_usd="0",
+                        idempotency_key=None,
+                        execution_id=None,
+                        plan_hash=None,
+                        report_file=None,
+                        approval_consumed_marker=None,
+                        include_live_config_overrides=False,
+                    )
+            finally:
+                if previous is None:
+                    os.environ.pop("PMX_KILL_SWITCH_OPEN", None)
+                else:
+                    os.environ["PMX_KILL_SWITCH_OPEN"] = previous
+        self.assertIn("disagrees with runtime truth", str(ctx.exception))
 
     def test_build_invocation_armed_defaults_report_and_marker_in_package(self):
         with tempfile.TemporaryDirectory() as tmp_name:

@@ -38,6 +38,16 @@ REQUIRED_GATE_ENV_VARS = [
     "PMX_CANCEL_ONLY_FALLBACK_READY",
     "PMX_BALANCE_ALLOWANCE_CHECKED",
 ]
+RUNTIME_TRUTH_PREFLIGHT_ENV_BINDINGS = {
+    "PMX_KILL_SWITCH_OPEN": "kill_switch_open",
+    "PMX_RUNTIME_WORKER_HEALTHY": "runtime_worker_healthy",
+    "PMX_GEOBLOCK_ALLOWED": "geoblock_allowed",
+    "PMX_REPOSITORY_RESERVATION_EXISTS": "repository_reservation_exists",
+    "PMX_IDEMPOTENCY_KEY_WRITTEN": "idempotency_key_written",
+    "PMX_RECONCILE_WORKER_HEALTHY": "reconcile_worker_healthy",
+    "PMX_CANCEL_ONLY_FALLBACK_READY": "cancel_only_fallback_ready",
+    "PMX_BALANCE_ALLOWANCE_CHECKED": "balance_allowance_checked",
+}
 
 
 def load_module(path: Path, name: str):
@@ -117,6 +127,23 @@ def missing_gate_env() -> list[str]:
     return missing
 
 
+def require_runtime_truth_gate_alignment(runtime_truth_summary: dict[str, Any]) -> None:
+    report = runtime_truth_summary.get("preflight_report")
+    if not isinstance(report, dict):
+        raise SystemExit("runtime truth preflight_report must be an object")
+    for field in ["live_submit_allowed", "real_funds_canary_allowed"]:
+        if report.get(field) is not True:
+            raise SystemExit(f"runtime truth preflight_report.{field} must be true for reviewed-go wrapper use")
+    for env_name, report_field in RUNTIME_TRUTH_PREFLIGHT_ENV_BINDINGS.items():
+        if report.get(report_field) is not True:
+            raise SystemExit(f"runtime truth preflight_report.{report_field} must be true")
+        env_value = str(os.environ.get(env_name, "")).strip()
+        if env_value and env_value != "1":
+            raise SystemExit(
+                f"{env_name}={env_value!r} disagrees with runtime truth preflight_report.{report_field}=true"
+            )
+
+
 def build_invocation(
     *,
     package_dir: Path,
@@ -143,10 +170,14 @@ def build_invocation(
     runtime_truth_file = require_file(package_dir / "runtime-truth.json", "runtime truth")
 
     decision_summary = pipeline.validate_reviewed_go_decision_file(release_decision_file)
-    runtime_truth_summary = pipeline.validate_runtime_truth_file(runtime_truth_file)
-    pipeline.validate_candidate_file(market_file)
     approval = validate_approval(approval_file)
+    runtime_truth_summary = pipeline.validate_runtime_truth_file(
+        runtime_truth_file,
+        expected_account_id=approval["account_id"],
+    )
+    pipeline.validate_candidate_file(market_file)
     env_summary = env_check.evaluate_env_file(env_file, expected_account_id=approval["account_id"])
+    require_runtime_truth_gate_alignment(runtime_truth_summary)
 
     if approval["artifact_sha256"] != runtime_truth_summary["artifact_sha256"]:
         raise SystemExit("approval artifact_sha256 does not match runtime truth artifact_sha256")

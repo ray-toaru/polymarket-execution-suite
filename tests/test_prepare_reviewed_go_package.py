@@ -41,6 +41,8 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
 
     def runtime_truth(self, artifact_sha: str) -> dict:
         return {
+            "account_id": "acct-canary",
+            "condition_id": "condition-1",
             "artifact_sha256": artifact_sha,
             "workspace_manifest_sha256": "b" * 64,
             "archived_manifest_sha256": "c" * 64,
@@ -48,6 +50,16 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
                 "posted": False,
                 "remote_side_effects": False,
                 "status": "preflight_ready",
+                "live_submit_allowed": True,
+                "real_funds_canary_allowed": True,
+                "kill_switch_open": True,
+                "runtime_worker_healthy": True,
+                "geoblock_allowed": True,
+                "repository_reservation_exists": True,
+                "idempotency_key_written": True,
+                "reconcile_worker_healthy": True,
+                "cancel_only_fallback_ready": True,
+                "balance_allowance_checked": True,
             },
             "remote_side_effects": False,
         }

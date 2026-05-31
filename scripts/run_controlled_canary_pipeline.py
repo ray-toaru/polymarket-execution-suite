@@ -287,6 +287,7 @@ def required_runtime_truth_names() -> set[str]:
 def validate_runtime_truth_file(
     path: Path,
     *,
+    expected_account_id: str | None = None,
     expected_artifact_sha256: str | None = None,
     expected_workspace_manifest_sha256: str | None = None,
     expected_archived_manifest_sha256: str | None = None,
@@ -303,6 +304,7 @@ def validate_runtime_truth_file(
         raise SystemExit(f"runtime truth validator failed: {detail}")
     data = load_json(path)
     expected_fields = {
+        "account_id": expected_account_id,
         "artifact_sha256": expected_artifact_sha256,
         "workspace_manifest_sha256": expected_workspace_manifest_sha256,
         "archived_manifest_sha256": expected_archived_manifest_sha256,
@@ -337,14 +339,19 @@ def validate_runtime_truth_file(
     missing = sorted(required_runtime_truth_names() - set(ready))
     if missing:
         raise SystemExit("runtime truth missing durable dependencies: " + ", ".join(missing))
+    report = data.get("preflight_report")
+    if not isinstance(report, dict):
+        raise SystemExit("runtime truth preflight_report must be an object")
     return {
         "schema_version": 1,
         "ready_for_armed_stage": True,
         "path": str(path),
         "sha256": sha256(path),
+        "account_id": data.get("account_id"),
         "artifact_sha256": data.get("artifact_sha256"),
         "workspace_manifest_sha256": data.get("workspace_manifest_sha256"),
         "archived_manifest_sha256": data.get("archived_manifest_sha256"),
+        "preflight_report": report,
         "dependencies": [ready[name] for name in sorted(ready)],
     }
 

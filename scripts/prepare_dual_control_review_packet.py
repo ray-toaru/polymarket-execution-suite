@@ -72,6 +72,10 @@ def validate_candidate(path: Path) -> dict[str, Any]:
 
 def validate_runtime_truth(path: Path) -> dict[str, Any]:
     data = load_json(path)
+    if not isinstance(data.get("account_id"), str) or not data["account_id"].strip():
+        raise SystemExit("runtime truth account_id must be a non-empty string")
+    if not isinstance(data.get("condition_id"), str) or not data["condition_id"].strip():
+        raise SystemExit("runtime truth condition_id must be a non-empty string")
     report = data.get("preflight_report")
     if not isinstance(report, dict):
         raise SystemExit("runtime truth preflight_report must be an object")
@@ -81,6 +85,20 @@ def validate_runtime_truth(path: Path) -> dict[str, Any]:
         raise SystemExit("runtime truth must keep preflight_report.remote_side_effects=false")
     if report.get("status") != "preflight_ready":
         raise SystemExit("runtime truth must keep preflight_report.status=preflight_ready")
+    for field in [
+        "live_submit_allowed",
+        "real_funds_canary_allowed",
+        "kill_switch_open",
+        "runtime_worker_healthy",
+        "geoblock_allowed",
+        "repository_reservation_exists",
+        "idempotency_key_written",
+        "reconcile_worker_healthy",
+        "cancel_only_fallback_ready",
+        "balance_allowance_checked",
+    ]:
+        if report.get(field) is not True:
+            raise SystemExit(f"runtime truth must keep preflight_report.{field}=true")
     if data.get("remote_side_effects") is not False:
         raise SystemExit("runtime truth must keep remote_side_effects=false")
     return data
