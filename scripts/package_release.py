@@ -37,7 +37,7 @@ def command_output(command: list[str]) -> str | None:
         cwd=ROOT,
         text=True,
         stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
         check=False,
     )
     if completed.returncode != 0:
@@ -50,11 +50,46 @@ def command_output_bytes(command: list[str], *, cwd: Path = ROOT) -> bytes | Non
         command,
         cwd=cwd,
         stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
         check=False,
     )
     if completed.returncode != 0:
         return None
+    return completed.stdout
+
+
+def require_command_output(command: list[str], *, cwd: Path = ROOT) -> str:
+    completed = subprocess.run(
+        command,
+        cwd=cwd,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if completed.returncode != 0:
+        stderr = completed.stderr.strip()
+        detail = f": {stderr}" if stderr else ""
+        raise SystemExit(
+            f"command failed ({completed.returncode}) {' '.join(command)}{detail}"
+        )
+    return completed.stdout.rstrip("\n")
+
+
+def require_command_output_bytes(command: list[str], *, cwd: Path = ROOT) -> bytes:
+    completed = subprocess.run(
+        command,
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if completed.returncode != 0:
+        stderr = completed.stderr.decode(errors="replace").strip()
+        detail = f": {stderr}" if stderr else ""
+        raise SystemExit(
+            f"command failed ({completed.returncode}) {' '.join(command)}{detail}"
+        )
     return completed.stdout
 
 
@@ -88,22 +123,23 @@ def submodule_records() -> list[dict[str, str]]:
 
 
 def tracked_git_files(repo_root: Path) -> list[Path]:
-    raw = command_output_bytes(["git", "ls-files", "-z"], cwd=repo_root)
-    if raw is None:
-        raise SystemExit(f"git ls-files failed for release packaging: {repo_root}")
+    raw = require_command_output_bytes(["git", "ls-files", "-z"], cwd=repo_root)
     paths = []
     for item in raw.split(b"\0"):
         if not item:
             continue
-        rel = Path(item.decode())
+        try:
+            rel = Path(item.decode("utf-8"))
+        except UnicodeDecodeError as exc:
+            raise SystemExit(
+                f"git ls-files emitted non-utf8 path bytes for release packaging: {repo_root}: {exc}"
+            ) from exc
         paths.append(repo_root / rel)
     return paths
 
 
 def git_status_lines(repo_root: Path) -> list[str]:
-    raw = command_output(["git", "-C", str(repo_root), "status", "--short"])
-    if raw is None:
-        raise SystemExit(f"git status failed for release packaging: {repo_root}")
+    raw = require_command_output(["git", "-C", str(repo_root), "status", "--short"])
     return [line for line in raw.splitlines() if line.strip()]
 
 

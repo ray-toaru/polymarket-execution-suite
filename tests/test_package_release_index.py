@@ -145,6 +145,26 @@ class PackageReleaseIndexTests(unittest.TestCase):
         self.assertIn(tracked_root, files)
         self.assertIn(tracked_submodule, files)
 
+    def test_tracked_git_files_rejects_non_utf8_paths(self):
+        with mock.patch.object(
+            self.package_release,
+            "require_command_output_bytes",
+            return_value=b"bad-\xff-path\0",
+        ):
+            with self.assertRaises(SystemExit) as ctx:
+                self.package_release.tracked_git_files(ROOT)
+        self.assertIn("non-utf8 path bytes", str(ctx.exception))
+
+    def test_git_status_lines_surfaces_stderr_on_failure(self):
+        with mock.patch.object(
+            self.package_release,
+            "require_command_output",
+            side_effect=SystemExit("command failed (128) git -C /tmp status --short: fatal: not a git repository"),
+        ):
+            with self.assertRaises(SystemExit) as ctx:
+                self.package_release.git_status_lines(Path("/tmp"))
+        self.assertIn("fatal: not a git repository", str(ctx.exception))
+
     def test_contract_validation_report_metadata_returns_path_and_hash(self):
         report = (
             ROOT

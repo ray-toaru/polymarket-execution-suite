@@ -159,7 +159,7 @@ jobs:
         run: PYTHONPATH=hermes-polymarket-executor-adapter/src python -m pytest -q hermes-polymarket-executor-adapter/tests
 
       - name: Compile integration Python sources
-        run: python -m compileall -q scripts tests
+        run: python -m compileall -q scripts tests hermes-polymarket-executor-adapter/src polymarket-execution-engine/validation
 
       - name: Check docs and evidence governance
         run: python polymarket-execution-engine/validation/check_docs_evidence_governance.py
