@@ -71,6 +71,25 @@ class PackageReleaseIndexTests(unittest.TestCase):
         self.assertEqual(entry["status"], "current_no_go_review_material")
         self.assertEqual(entry["approval_reuse_allowed"], False)
 
+    def test_dist_index_classifies_reviewed_go_material_from_contents_not_only_name(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            package = Path(tmp_name)
+            (package / "review.json").write_text(
+                json.dumps({"status": "reviewed_go_package_ready_single_attempt"}) + "\n"
+            )
+            (package / "release-decision.json").write_text(
+                json.dumps({"status": "reviewed_go"}) + "\n"
+            )
+            for name in ["approval.json", "candidate-market.json", "runtime-truth.json"]:
+                (package / name).write_text("{}\n")
+            entry = self.package_release.classify_dist_entry(
+                "opaque-local-material",
+                is_dir=True,
+                child_names={child.name for child in package.iterdir()},
+                dir_path=package,
+            )
+        self.assertEqual(entry["status"], "reviewed_go_local_material_not_current_approval")
+
     def test_release_policy_rejects_secret_like_local_env_and_json_files(self):
         forbidden = [
             Path(".env.local"),

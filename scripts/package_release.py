@@ -8,6 +8,7 @@ import json
 import subprocess
 import sys
 from datetime import datetime, timezone
+from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -242,18 +243,46 @@ def build_release_zip() -> None:
             write_deterministic(zf, path)
 
 
-def is_reviewed_go_material(name: str) -> bool:
+def load_json_if_exists(path: Path) -> dict[str, Any] | None:
+    if not path.is_file():
+        return None
+    data = json.loads(path.read_text())
+    return data if isinstance(data, dict) else None
+
+
+def is_reviewed_go_material(
+    name: str,
+    *,
+    child_names: set[str] | None = None,
+    dir_path: Path | None = None,
+) -> bool:
+    child_names = child_names or set()
+    if {"review.json", "release-decision.json", "approval.json", "candidate-market.json", "runtime-truth.json"}.issubset(child_names):
+        return True
+    if dir_path is not None:
+        review = load_json_if_exists(dir_path / "review.json")
+        decision = load_json_if_exists(dir_path / "release-decision.json")
+        if isinstance(review, dict) and str(review.get("status", "")).startswith("reviewed_go_"):
+            return True
+        if isinstance(decision, dict) and decision.get("status") == "reviewed_go":
+            return True
     return name.startswith("pmx-canary-reviewed-go-") or (
         name.startswith("pmx-") and "-reviewed-go-" in name
     )
 
 
-def classify_dist_entry(name: str, *, is_dir: bool, child_names: set[str] | None = None) -> dict[str, object]:
+def classify_dist_entry(
+    name: str,
+    *,
+    is_dir: bool,
+    child_names: set[str] | None = None,
+    dir_path: Path | None = None,
+) -> dict[str, object]:
     child_names = child_names or set()
     status = "local_review_material_not_release_artifact"
     approval_reuse_allowed = False
     remote_side_effects_authorized = False
-    if is_reviewed_go_material(name):
+    if is_reviewed_go_material(name, child_names=child_names, dir_path=dir_path):
         if "closeout.json" in child_names or "CLOSEOUT.md" in child_names:
             status = "consumed_closed"
         elif any(child.startswith("approval-consumed") for child in child_names):
@@ -291,7 +320,14 @@ def write_dist_index(
         if path.name in current_release_files or path.name in {"INDEX.json", "README.md"}:
             continue
         child_names = {child.name for child in path.iterdir()} if path.is_dir() else set()
-        local_material.append(classify_dist_entry(path.name, is_dir=path.is_dir(), child_names=child_names))
+        local_material.append(
+            classify_dist_entry(
+                path.name,
+                is_dir=path.is_dir(),
+                child_names=child_names,
+                dir_path=path if path.is_dir() else None,
+            )
+        )
     index = {
         "schema_version": 1,
         "generated_at": datetime.now(timezone.utc).isoformat(),

@@ -123,6 +123,27 @@ class DistIndexGuardTests(unittest.TestCase):
         failures = self.guard.validate(self.dist, "0.26.0")
         self.assertTrue(any("must not be approval-reusable" in failure for failure in failures))
 
+    def test_rejects_reviewed_go_status_mismatch_against_contents(self):
+        package = self.dist / "pmx-local-material"
+        package.mkdir()
+        (package / "review.json").write_text(json.dumps({"status": "reviewed_go_package_ready_single_attempt"}) + "\n")
+        (package / "release-decision.json").write_text(json.dumps({"status": "reviewed_go"}) + "\n")
+        (package / "approval.json").write_text("{}\n")
+        (package / "candidate-market.json").write_text("{}\n")
+        (package / "runtime-truth.json").write_text("{}\n")
+        self.write_index(
+            local_material=[
+                {
+                    "path": "pmx-local-material",
+                    "status": "consumed_closed",
+                    "approval_reuse_allowed": False,
+                    "remote_side_effects_authorized": False,
+                }
+            ]
+        )
+        failures = self.guard.validate(self.dist, "0.26.0")
+        self.assertTrue(any("does not match reviewed-go contents" in failure for failure in failures))
+
     def test_rejects_no_go_remote_side_effect_authorization(self):
         self.write_index(
             local_material=[

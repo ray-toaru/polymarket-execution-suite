@@ -130,6 +130,10 @@ def build_invocation(
     approval_consumed_marker: Path | None,
     include_live_config_overrides: bool,
 ) -> dict[str, Any]:
+    if mode != "armed" and include_live_config_overrides:
+        raise SystemExit(
+            "live config overrides are only valid for armed reviewed-go canary invocations"
+        )
     pipeline = load_module(PIPELINE_SCRIPT, "run_controlled_canary_pipeline")
     env_check = load_module(ENV_CHECK_SCRIPT, "check_active_profile_consistency")
 

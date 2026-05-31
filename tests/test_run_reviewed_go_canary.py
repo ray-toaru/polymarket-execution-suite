@@ -185,6 +185,25 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
             self.assertFalse(plan["includes_live_config_overrides"])
             self.assertNotIn("--allow-live-submit-config", plan["command"])
 
+    def test_build_invocation_rejects_live_overrides_for_preflight(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            package, env_file = self.package_fixture(tmp)
+            with self.assertRaises(SystemExit) as ctx:
+                self.module.build_invocation(
+                    package_dir=package,
+                    env_file=env_file,
+                    mode="preflight",
+                    daily_used_notional_usd="0",
+                    idempotency_key=None,
+                    execution_id=None,
+                    plan_hash=None,
+                    report_file=None,
+                    approval_consumed_marker=None,
+                    include_live_config_overrides=True,
+                )
+        self.assertIn("only valid for armed", str(ctx.exception))
+
     def test_build_invocation_armed_defaults_report_and_marker_in_package(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)

@@ -29,6 +29,26 @@ def is_reviewed_go_material(path: str) -> bool:
     )
 
 
+def infer_reviewed_go_material_status(path: Path) -> str | None:
+    if not path.is_dir():
+        return None
+    child_names = {child.name for child in path.iterdir()}
+    required = {
+        "review.json",
+        "release-decision.json",
+        "approval.json",
+        "candidate-market.json",
+        "runtime-truth.json",
+    }
+    if not required.issubset(child_names):
+        return None
+    if "closeout.json" in child_names or "CLOSEOUT.md" in child_names:
+        return "consumed_closed"
+    if any(child.startswith("approval-consumed") for child in child_names):
+        return "consumed_not_closed"
+    return "reviewed_go_local_material_not_current_approval"
+
+
 def validate(dist: Path, expected_version: str) -> list[str]:
     failures: list[str] = []
     index_path = dist / "INDEX.json"
@@ -145,7 +165,12 @@ def validate(dist: Path, expected_version: str) -> list[str]:
             continue
         if (dist / material_path).exists() is False:
             failures.append(f"{path}: local_material path is missing from dist/")
-        if is_reviewed_go_material(path) and status in {"consumed_closed", "consumed_not_closed"}:
+        inferred_status = infer_reviewed_go_material_status(dist / material_path)
+        if inferred_status is not None and status != inferred_status:
+            failures.append(
+                f"{path}: local_material status {status!r} does not match reviewed-go contents ({inferred_status})"
+            )
+        if (inferred_status is not None or is_reviewed_go_material(path)) and status in {"consumed_closed", "consumed_not_closed"}:
             if approval_reuse_allowed is not False:
                 failures.append(f"{path}: consumed reviewed-go material must not be approval-reusable")
             if remote_side_effects_authorized is not False:
