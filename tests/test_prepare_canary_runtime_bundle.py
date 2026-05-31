@@ -153,7 +153,11 @@ class PrepareCanaryRuntimeBundleTests(unittest.TestCase):
                 "pg://runtime/kill-switch",
             )
             self.assertEqual(result["profile"], "acct_b")
-            self.assertIn("POLYMARKET_PRIVATE_KEY=0xabc123", runtime_env.read_text())
+            self.assertIn("PMX_ACTIVE_ACCOUNT_PROFILE=acct_b", runtime_env.read_text())
+            self.assertIn(
+                "POLYMARKET_PRIVATE_KEY=0xabc123",
+                runtime_env.with_name(".env.runtime.secrets").read_text(),
+            )
 
 
 if __name__ == "__main__":

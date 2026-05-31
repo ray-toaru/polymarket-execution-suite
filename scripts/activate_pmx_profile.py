@@ -102,10 +102,25 @@ def activate_profile(profile: str, source_values: dict[str, str]) -> dict[str, s
     return activated
 
 
+def runtime_secrets_output_path(output: Path) -> Path:
+    if output.suffix == ".example":
+        return output.with_name(output.stem + ".secrets" + output.suffix)
+    return output.with_name(output.name + ".secrets")
+
+
+def write_restrictive_file(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+    try:
+        path.chmod(stat.S_IRUSR | stat.S_IWUSR)
+    except OSError as exc:
+        raise SystemExit(f"failed to set restrictive permissions on {path}: {exc}") from exc
+
+
 def write_runtime_env(output: Path, activated: dict[str, str], *, write_secrets: bool) -> None:
     lines = [
         "# Generated runtime env for a single active Polymarket account profile.",
-        "# This file is runtime-facing only; do not store PMX_PROFILE_* source inventory here.",
+        "# This file carries active identity only; do not store PMX_PROFILE_* source inventory here.",
         "",
         "# Active local account profile label.",
         f"PMX_ACTIVE_ACCOUNT_PROFILE={activated['PMX_ACTIVE_ACCOUNT_PROFILE']}",
@@ -117,34 +132,43 @@ def write_runtime_env(output: Path, activated: dict[str, str], *, write_secrets:
         f"PMX_ACTIVE_PROFILE_REF={activated['PMX_ACTIVE_PROFILE_REF']}",
     ]
     if write_secrets:
+        secrets_output = runtime_secrets_output_path(output)
         lines.extend(
             [
                 "",
-                "# Generic runtime signer material.",
-                f"POLYMARKET_PRIVATE_KEY={activated['POLYMARKET_PRIVATE_KEY']}",
-                "",
-                "# Generic runtime L2 API key.",
-                f"POLY_API_KEY={activated['POLY_API_KEY']}",
-                "",
-                "# Generic runtime L2 API secret.",
-                f"POLY_API_SECRET={activated['POLY_API_SECRET']}",
-                "",
-                "# Generic runtime L2 API passphrase.",
-                f"POLY_API_PASSPHRASE={activated['POLY_API_PASSPHRASE']}",
-                "",
-                "# Generic runtime signature type for the active account.",
-                f"PMX_CLOB_SIGNATURE_TYPE={activated['PMX_CLOB_SIGNATURE_TYPE']}",
+                "# Secret-bearing runtime fields are written to a companion file.",
+                f"# Companion secrets file: {secrets_output.name}",
             ]
         )
+        secret_lines = [
+            "# Generated runtime secret env for a single active Polymarket account profile.",
+            "# Keep this file local. It contains private key and API credentials.",
+            "",
+            "# Generic runtime signer material.",
+            f"POLYMARKET_PRIVATE_KEY={activated['POLYMARKET_PRIVATE_KEY']}",
+            "",
+            "# Generic runtime L2 API key.",
+            f"POLY_API_KEY={activated['POLY_API_KEY']}",
+            "",
+            "# Generic runtime L2 API secret.",
+            f"POLY_API_SECRET={activated['POLY_API_SECRET']}",
+            "",
+            "# Generic runtime L2 API passphrase.",
+            f"POLY_API_PASSPHRASE={activated['POLY_API_PASSPHRASE']}",
+            "",
+            "# Generic runtime signature type for the active account.",
+            f"PMX_CLOB_SIGNATURE_TYPE={activated['PMX_CLOB_SIGNATURE_TYPE']}",
+        ]
         funder = activated.get("PMX_CLOB_FUNDER")
         if funder:
-            lines.extend(
+            secret_lines.extend(
                 [
                     "",
                     "# Generic runtime CLOB funder for deposit-wallet / Poly1271 auth.",
                     f"PMX_CLOB_FUNDER={funder}",
                 ]
             )
+        write_restrictive_file(secrets_output, "\n".join(secret_lines) + "\n")
     else:
         lines.extend(
             [
@@ -153,12 +177,7 @@ def write_runtime_env(output: Path, activated: dict[str, str], *, write_secrets:
                 "# Re-run with --write-secrets only when a local runtime env must hold active credentials.",
             ]
         )
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text("\n".join(lines) + "\n")
-    try:
-        output.chmod(stat.S_IRUSR | stat.S_IWUSR)
-    except OSError as exc:
-        raise SystemExit(f"failed to set restrictive permissions on {output}: {exc}") from exc
+    write_restrictive_file(output, "\n".join(lines) + "\n")
 
 
 def parse_args() -> argparse.Namespace:
@@ -196,6 +215,9 @@ def main() -> int:
                 "profile_ref": activated["PMX_ACTIVE_PROFILE_REF"],
                 "secret_material_written": args.write_secrets,
                 "output": str(output),
+                "secrets_output": (
+                    str(runtime_secrets_output_path(output)) if args.write_secrets else None
+                ),
             },
             sort_keys=True,
         )

@@ -50,6 +50,38 @@ class ActiveProfileConsistencyTests(unittest.TestCase):
             ]
         )
 
+    def valid_identity_env(self) -> str:
+        return "\n".join(
+            [
+                "# Active local account profile label.",
+                "PMX_ACTIVE_ACCOUNT_PROFILE=acct_b",
+                "# Active local account id bound to the selected profile.",
+                "PMX_ACTIVE_ACCOUNT_ID=acct_b",
+                "# Local non-secret profile reference.",
+                "PMX_ACTIVE_PROFILE_REF=local-profile://acct_b",
+                "",
+            ]
+        )
+
+    def valid_secrets_env(self) -> str:
+        return "\n".join(
+            [
+                "# Generic runtime signer material.",
+                "POLYMARKET_PRIVATE_KEY=0xabc123",
+                "# Generic runtime L2 API key.",
+                "POLY_API_KEY=api-key",
+                "# Generic runtime L2 API secret.",
+                "POLY_API_SECRET=api-secret",
+                "# Generic runtime L2 API passphrase.",
+                "POLY_API_PASSPHRASE=api-pass",
+                "# Generic runtime CLOB funder.",
+                "PMX_CLOB_FUNDER=0x00000000000000000000000000000000000000b0",
+                "# Generic runtime signature type.",
+                "PMX_CLOB_SIGNATURE_TYPE=POLY_1271",
+                "",
+            ]
+        )
+
     def test_check_accepts_consistent_runtime_env(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             env_file = Path(tmp_name) / ".env.runtime"
@@ -94,6 +126,15 @@ class ActiveProfileConsistencyTests(unittest.TestCase):
             env_file.write_text(text)
             with self.assertRaisesRegex(SystemExit, "PMX_CLOB_FUNDER is required"):
                 self.module.evaluate_env_file(env_file, expected_account_id="acct_b")
+
+    def test_check_accepts_identity_env_with_companion_secrets_file(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            env_file = Path(tmp_name) / ".env.runtime"
+            env_file.write_text(self.valid_identity_env())
+            env_file.with_name(".env.runtime.secrets").write_text(self.valid_secrets_env())
+            report = self.module.evaluate_env_file(env_file, expected_account_id="acct_b")
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["active_account_id"], "acct_b")
 
 
 if __name__ == "__main__":

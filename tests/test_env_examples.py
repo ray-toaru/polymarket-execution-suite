@@ -9,6 +9,7 @@ ENV_EXAMPLES = [
     "polymarket-execution-engine/.env.example",
     "polymarket-execution-engine/.env.profiles.example",
     "polymarket-execution-engine/.env.runtime.example",
+    "polymarket-execution-engine/.env.runtime.secrets.example",
     "polymarket-execution-engine/deploy/single-host/env/pmx-api.env.example",
     "polymarket-execution-engine/deploy/single-host/env/pmx-real-funds-canary.env.example",
 ]
