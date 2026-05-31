@@ -51,6 +51,16 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
                 "cancel_only_fallback_ready": True,
                 "balance_allowance_checked": True,
             },
+            "runtime_gate_evidence_refs": {
+                "kill_switch_open": "pg://runtime/kill-switch",
+                "runtime_worker_healthy": "pg://runtime/runtime-worker",
+                "geoblock_allowed": "pg://runtime/geoblock",
+                "repository_reservation_exists": "pg://runtime/reservation",
+                "idempotency_key_written": "pg://runtime/idempotency",
+                "reconcile_worker_healthy": "pg://runtime/reconcile",
+                "cancel_only_fallback_ready": "pg://runtime/cancel-only-fallback",
+                "balance_allowance_checked": "pg://runtime/allowance",
+            },
             "github_evidence": {
                 "root_ci_run_id": "1",
                 "hermes_ci_run_id": "2",
@@ -202,7 +212,13 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
         )
         self.assertEqual(decision["decision"], "go")
         self.assertEqual(decision["status"], "reviewed_go")
+        self.assertEqual(decision["condition_id"], "condition-1")
         self.assertEqual(decision["risk_limits"]["max_order_notional_usd"], "0.2")
+        self.assertTrue(decision["runtime_gate_snapshot"]["kill_switch_open"])
+        self.assertEqual(
+            decision["runtime_gate_evidence_refs"]["kill_switch_open"],
+            "pg://runtime/kill-switch",
+        )
         self.assertTrue(decision["required_review_signals"]["operator_dual_control_reviewed"])
         self.assertFalse(decision["production_deployment_authorized"])
         self.assertEqual(decision["external_references"]["operator_dual_control_review_ref"], "dual://review")

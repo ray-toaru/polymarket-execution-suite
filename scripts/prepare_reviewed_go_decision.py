@@ -140,6 +140,13 @@ def validate_approval_request(request: dict[str, Any]) -> None:
     for field in PREFLIGHT_GATE_FIELDS:
         if gate_snapshot.get(field) is not True:
             raise SystemExit(f"approval request runtime_gate_snapshot.{field} must be true")
+    gate_evidence_refs = request.get("runtime_gate_evidence_refs")
+    if not isinstance(gate_evidence_refs, dict):
+        raise SystemExit("approval request runtime_gate_evidence_refs must be an object")
+    for field in PREFLIGHT_GATE_FIELDS[2:]:
+        value = gate_evidence_refs.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise SystemExit(f"approval request runtime_gate_evidence_refs.{field} must be a non-empty string")
 
 
 def external_refs(
@@ -273,12 +280,15 @@ def build_decision(
         "workspace_manifest_sha256": request["workspace_manifest_sha256"],
         "archived_manifest_sha256": request["archived_manifest_sha256"],
         "market_candidate_sha256": request["market_candidate_sha256"],
+        "condition_id": request["condition_id"],
         "github_evidence": request["github_evidence"],
         "external_references": refs,
         "risk_limits": {
             "max_order_notional_usd": request["risk_limits"]["max_order_notional_usd"],
             "max_daily_notional_usd": request["risk_limits"]["max_daily_notional_usd"],
         },
+        "runtime_gate_snapshot": request["runtime_gate_snapshot"],
+        "runtime_gate_evidence_refs": request["runtime_gate_evidence_refs"],
         "required_review_signals": {signal: True for signal in REVIEW_SIGNALS},
         "live_submit_authorized": True,
         "live_cancel_authorized": True,
