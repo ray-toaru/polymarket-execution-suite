@@ -196,6 +196,9 @@ def build_request(
         "operator_identity_ref": require_nonempty_text(
             operator_identity_ref, "operator_identity_ref"
         ),
+        "operator_identity_sha256": hashlib.sha256(
+            require_nonempty_text(operator_identity_ref, "operator_identity_ref").encode("utf-8")
+        ).hexdigest(),
         "approval_ticket_ref": require_nonempty_text(
             approval_ticket_ref, "approval_ticket_ref"
         ),

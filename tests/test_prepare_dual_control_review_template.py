@@ -31,6 +31,7 @@ class PrepareDualControlReviewTemplateTests(unittest.TestCase):
             "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
             "expires_at": "2099-01-01T00:15:00Z",
             "operator_identity_ref": "operator://requester",
+            "operator_identity_sha256": "50eb782b17b64c8484de1850583db555a463c67a73929dd5e46884d6e0a58d20",
             "artifact_sha256": "b" * 64,
             "workspace_manifest_sha256": "c" * 64,
             "archived_manifest_sha256": "d" * 64,

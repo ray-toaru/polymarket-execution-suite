@@ -32,6 +32,7 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
             "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
             "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
             "operator_identity_ref": "chat-authorization://operator",
+            "operator_identity_sha256": "4a080c290f5a065983226b38b68e2ed824b9d4124bdf1010f873ed350a2717e5",
             "dual_control_required": True,
             "artifact_sha256": "b" * 64,
             "workspace_manifest_sha256": "c" * 64,
@@ -101,6 +102,7 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
             "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
             "review_ref": "dual://review",
             "reviewer_identity_ref": "operator://second-reviewer",
+            "reviewer_identity_sha256": "9644ef536b99be9273eb3a72384705f6642a461810904a1107610fe4f48e14ec",
             "reviewed_at": datetime.now(timezone.utc).isoformat(),
             "approval_request_sha256": "8" * 64,
             "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
@@ -163,7 +165,8 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
                 decision_id="decision-1",
                 decision_reason="test",
                 dual_control_review=self.dual_control_review(
-                    reviewer_identity_ref=request["operator_identity_ref"]
+                    reviewer_identity_ref=request["operator_identity_ref"],
+                    reviewer_identity_sha256=request["operator_identity_sha256"],
                 ),
             )
 

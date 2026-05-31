@@ -85,6 +85,7 @@ class RunReviewedGoCanaryArmedTests(unittest.TestCase):
                 "max_daily_notional_usd": "0.2",
                 "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
                 "operator_identity_ref": "operator://primary",
+                "operator_identity_sha256": "31407192d4cb1a4a59550966b008ad672f660e0621b7e1c656ac10ee71e30a2f",
                 "runtime_gate_snapshot": {
                     "preconditions_live_submit_would_pass": True,
                     "preconditions_real_funds_canary_would_pass": True,

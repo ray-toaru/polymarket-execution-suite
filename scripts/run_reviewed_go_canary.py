@@ -93,6 +93,7 @@ def validate_approval(path: Path) -> dict[str, Any]:
         "workspace_manifest_sha256",
         "archived_manifest_sha256",
         "market_candidate_sha256",
+        "operator_identity_sha256",
     ]:
         require_text(data, field)
     require_text(data, "account_id")

@@ -125,6 +125,7 @@ class PrepareDualControlReviewPacketTests(unittest.TestCase):
             "status": "draft_requires_independent_reviewer",
             "review_ref": "REPLACE_WITH_DUAL_CONTROL_REVIEW_REF",
             "reviewer_identity_ref": "REPLACE_WITH_INDEPENDENT_REVIEWER_IDENTITY_REF",
+            "reviewer_identity_sha256": "REPLACE_WITH_REVIEWER_IDENTITY_SHA256",
             "approval_hash": approval_hash,
             "approval_request_sha256": approval_request_sha,
             "artifact_sha256": artifact_sha,

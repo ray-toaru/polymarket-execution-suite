@@ -89,6 +89,12 @@ def require_sha256(value: object, label: str) -> str:
     return value.lower()
 
 
+def require_nonempty_text(value: object, label: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise SystemExit(f"{label} must be a non-empty string")
+    return value.strip()
+
+
 def parse_time(value: object, label: str) -> datetime:
     if not isinstance(value, str) or not value.strip():
         raise SystemExit(f"{label} must be an RFC3339 timestamp")
@@ -118,6 +124,14 @@ def validate_approval_request(request: dict[str, Any]) -> None:
         raise SystemExit("approval request must not include secrets")
     if not isinstance(request.get("active_profile_ref"), str) or not request["active_profile_ref"].strip():
         raise SystemExit("approval request active_profile_ref is required")
+    operator_identity_ref = require_nonempty_text(
+        request.get("operator_identity_ref"), "approval request operator_identity_ref"
+    )
+    operator_identity_sha256 = require_sha256(
+        request.get("operator_identity_sha256"), "approval request operator_identity_sha256"
+    )
+    if operator_identity_sha256 != hashlib.sha256(operator_identity_ref.encode("utf-8")).hexdigest():
+        raise SystemExit("approval request operator_identity_sha256 does not match operator_identity_ref")
     if not isinstance(request.get("condition_id"), str) or not request["condition_id"].strip():
         raise SystemExit("approval request condition_id is required")
     if parse_time(request.get("expires_at"), "approval request expires_at") <= datetime.now(timezone.utc):
@@ -207,6 +221,11 @@ def validate_dual_control_review(
     reviewer = review.get("reviewer_identity_ref")
     if not isinstance(reviewer, str) or not reviewer.strip() or reviewer.startswith("REPLACE_WITH_"):
         raise SystemExit("dual-control review reviewer_identity_ref is required")
+    reviewer_identity_sha256 = require_sha256(
+        review.get("reviewer_identity_sha256"), "dual-control review reviewer_identity_sha256"
+    )
+    if reviewer_identity_sha256 != hashlib.sha256(reviewer.encode("utf-8")).hexdigest():
+        raise SystemExit("dual-control review reviewer_identity_sha256 does not match reviewer_identity_ref")
     if reviewer == request.get("operator_identity_ref"):
         raise SystemExit("dual-control reviewer must differ from operator_identity_ref")
 
@@ -302,6 +321,8 @@ def build_decision(
         "allow_real_funds_canary": True,
         "reviewed_release_decision_present": True,
         "operator_identity_ref": request["operator_identity_ref"],
+        "operator_identity_sha256": request["operator_identity_sha256"],
+        "reviewer_identity_sha256": dual_control_review["reviewer_identity_sha256"],
         "secrets_included": False,
     }
 

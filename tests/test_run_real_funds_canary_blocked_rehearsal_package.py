@@ -47,6 +47,7 @@ class BlockedRehearsalPackageTests(unittest.TestCase):
                 "market_candidate_sha256": "c" * 64,
                 "account_id": "acct-canary",
                 "operator_identity_ref": "operator://primary",
+                "operator_identity_sha256": "31407192d4cb1a4a59550966b008ad672f660e0621b7e1c656ac10ee71e30a2f",
             }
             (output_dir / "approval.json").write_text(json.dumps(approval) + "\n")
             (output_dir / "release-decision.json").write_text(json.dumps({}) + "\n")

@@ -87,6 +87,7 @@ def build_cli_approval(approval_request: dict[str, Any]) -> dict[str, Any]:
         "max_daily_notional_usd": risk_limits["max_daily_notional_usd"],
         "execution_style": approval_request["execution_style"],
         "operator_identity_ref": approval_request["operator_identity_ref"],
+        "operator_identity_sha256": approval_request["operator_identity_sha256"],
         "runtime_gate_snapshot": runtime_gate_snapshot,
         "runtime_gate_evidence_refs": runtime_gate_evidence_refs,
     }

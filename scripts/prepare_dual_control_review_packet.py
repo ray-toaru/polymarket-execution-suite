@@ -158,6 +158,8 @@ def validate_dual_control_template(path: Path) -> dict[str, Any]:
         raise SystemExit("dual-control template must keep review_ref placeholder")
     if data.get("reviewer_identity_ref") != "REPLACE_WITH_INDEPENDENT_REVIEWER_IDENTITY_REF":
         raise SystemExit("dual-control template must keep reviewer_identity_ref placeholder")
+    if data.get("reviewer_identity_sha256") != "REPLACE_WITH_REVIEWER_IDENTITY_SHA256":
+        raise SystemExit("dual-control template must keep reviewer_identity_sha256 placeholder")
     checks = data.get("required_reviewer_checks")
     if not isinstance(checks, dict) or any(value is not False for value in checks.values()):
         raise SystemExit("dual-control template must keep all required_reviewer_checks false")

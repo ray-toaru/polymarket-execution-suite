@@ -70,6 +70,7 @@ def build_template(request: dict[str, Any], *, approval_request_sha256: str) -> 
         "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
         "review_ref": "REPLACE_WITH_DUAL_CONTROL_REVIEW_REF",
         "reviewer_identity_ref": "REPLACE_WITH_INDEPENDENT_REVIEWER_IDENTITY_REF",
+        "reviewer_identity_sha256": "REPLACE_WITH_REVIEWER_IDENTITY_SHA256",
         "reviewed_at": "REPLACE_WITH_RFC3339_REVIEW_TIME",
         "expires_at": request["expires_at"],
         "approval_request_sha256": approval_request_sha256,
