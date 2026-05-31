@@ -47,6 +47,18 @@ REQUIRED_DUAL_CONTROL_CHECKS = [
     "rollback_reviewed",
     "reconcile_and_cancel_fallback_reviewed",
 ]
+PREFLIGHT_GATE_FIELDS = [
+    "live_submit_allowed",
+    "real_funds_canary_allowed",
+    "kill_switch_open",
+    "runtime_worker_healthy",
+    "geoblock_allowed",
+    "repository_reservation_exists",
+    "idempotency_key_written",
+    "reconcile_worker_healthy",
+    "cancel_only_fallback_ready",
+    "balance_allowance_checked",
+]
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -106,6 +118,8 @@ def validate_approval_request(request: dict[str, Any]) -> None:
         raise SystemExit("approval request must not include secrets")
     if not isinstance(request.get("active_profile_ref"), str) or not request["active_profile_ref"].strip():
         raise SystemExit("approval request active_profile_ref is required")
+    if not isinstance(request.get("condition_id"), str) or not request["condition_id"].strip():
+        raise SystemExit("approval request condition_id is required")
     if parse_time(request.get("expires_at"), "approval request expires_at") <= datetime.now(timezone.utc):
         raise SystemExit("approval request is expired")
     for field in [
@@ -120,6 +134,12 @@ def validate_approval_request(request: dict[str, Any]) -> None:
         require_sha256(request.get(field), f"approval request {field}")
     if request.get("archived_manifest_sha256") != request.get("evidence_manifest_sha256"):
         raise SystemExit("approval request archived/evidence manifest hashes must match")
+    gate_snapshot = request.get("runtime_gate_snapshot")
+    if not isinstance(gate_snapshot, dict):
+        raise SystemExit("approval request runtime_gate_snapshot must be an object")
+    for field in PREFLIGHT_GATE_FIELDS:
+        if gate_snapshot.get(field) is not True:
+            raise SystemExit(f"approval request runtime_gate_snapshot.{field} must be true")
 
 
 def external_refs(

@@ -72,6 +72,7 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
             "approval_hash": "d" * 64,
             "scope": "REAL_FUNDS_CANARY",
             "account_id": "acct-canary",
+            "condition_id": "condition-1",
             "active_profile_ref": "local-profile://acct_b",
             "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
             "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
@@ -83,6 +84,18 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
             "evidence_manifest_sha256": "c" * 64,
             "market_candidate_sha256": candidate_sha,
             "runtime_truth_sha256": runtime_sha,
+            "runtime_gate_snapshot": {
+                "live_submit_allowed": True,
+                "real_funds_canary_allowed": True,
+                "kill_switch_open": True,
+                "runtime_worker_healthy": True,
+                "geoblock_allowed": True,
+                "repository_reservation_exists": True,
+                "idempotency_key_written": True,
+                "reconcile_worker_healthy": True,
+                "cancel_only_fallback_ready": True,
+                "balance_allowance_checked": True,
+            },
             "github_evidence": {
                 "root_ci_run_id": "1",
                 "hermes_ci_run_id": "2",
@@ -198,6 +211,7 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
             self.assertEqual(decision["max_order_count"], 1)
             self.assertTrue(decision["remote_side_effects_authorized"])
             self.assertEqual(approval["account_id"], "acct-canary")
+            self.assertEqual(approval["condition_id"], "condition-1")
             self.assertEqual(approval["approval_hash"], approval_doc["approval_hash"])
             self.assertEqual(
                 decision["external_references"]["operator_dual_control_review_ref"],

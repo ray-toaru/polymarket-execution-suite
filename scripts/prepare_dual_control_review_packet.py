@@ -12,6 +12,18 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
+PREFLIGHT_GATE_FIELDS = (
+    "live_submit_allowed",
+    "real_funds_canary_allowed",
+    "kill_switch_open",
+    "runtime_worker_healthy",
+    "geoblock_allowed",
+    "repository_reservation_exists",
+    "idempotency_key_written",
+    "reconcile_worker_healthy",
+    "cancel_only_fallback_ready",
+    "balance_allowance_checked",
+)
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -85,18 +97,7 @@ def validate_runtime_truth(path: Path) -> dict[str, Any]:
         raise SystemExit("runtime truth must keep preflight_report.remote_side_effects=false")
     if report.get("status") != "preflight_ready":
         raise SystemExit("runtime truth must keep preflight_report.status=preflight_ready")
-    for field in [
-        "live_submit_allowed",
-        "real_funds_canary_allowed",
-        "kill_switch_open",
-        "runtime_worker_healthy",
-        "geoblock_allowed",
-        "repository_reservation_exists",
-        "idempotency_key_written",
-        "reconcile_worker_healthy",
-        "cancel_only_fallback_ready",
-        "balance_allowance_checked",
-    ]:
+    for field in PREFLIGHT_GATE_FIELDS:
         if report.get(field) is not True:
             raise SystemExit(f"runtime truth must keep preflight_report.{field}=true")
     if data.get("remote_side_effects") is not False:
@@ -110,6 +111,14 @@ def validate_approval_request(path: Path) -> dict[str, Any]:
         raise SystemExit("approval request status must be operator_approval_request_not_authorization")
     if not isinstance(data.get("active_profile_ref"), str) or not data["active_profile_ref"].strip():
         raise SystemExit("approval request active_profile_ref is required")
+    if not isinstance(data.get("condition_id"), str) or not data["condition_id"].strip():
+        raise SystemExit("approval request condition_id is required")
+    gate_snapshot = data.get("runtime_gate_snapshot")
+    if not isinstance(gate_snapshot, dict):
+        raise SystemExit("approval request runtime_gate_snapshot must be an object")
+    for field in PREFLIGHT_GATE_FIELDS:
+        if gate_snapshot.get(field) is not True:
+            raise SystemExit(f"approval request runtime_gate_snapshot.{field} must be true")
     if data.get("live_submit_authorized") is not False:
         raise SystemExit("approval request must not authorize live submit")
     if data.get("remote_side_effects_authorized") is not False:
@@ -164,6 +173,7 @@ def build_packet(
         ("archived_manifest_sha256", release_sidecar["archived_manifest_sha256"], runtime_doc.get("archived_manifest_sha256")),
         ("market_candidate_sha256", sha256(candidate), approval_doc.get("market_candidate_sha256")),
         ("runtime_truth_sha256", sha256(runtime_truth), approval_doc.get("runtime_truth_sha256")),
+        ("condition_id", runtime_doc.get("condition_id"), approval_doc.get("condition_id")),
         ("approval_hash", approval_doc.get("approval_hash"), dual_control_doc.get("approval_hash")),
         ("approval_request_sha256", sha256(approval_request), dual_control_doc.get("approval_request_sha256")),
     ]

@@ -96,6 +96,13 @@ def validate_approval(path: Path) -> dict[str, Any]:
     ]:
         require_text(data, field)
     require_text(data, "account_id")
+    require_text(data, "condition_id")
+    gate_snapshot = data.get("runtime_gate_snapshot")
+    if not isinstance(gate_snapshot, dict):
+        raise SystemExit("approval runtime_gate_snapshot must be an object")
+    for report_field in ["live_submit_allowed", "real_funds_canary_allowed", *RUNTIME_TRUTH_PREFLIGHT_ENV_BINDINGS.values()]:
+        if gate_snapshot.get(report_field) is not True:
+            raise SystemExit(f"approval runtime_gate_snapshot.{report_field} must be true")
     return data
 
 
@@ -144,6 +151,22 @@ def require_runtime_truth_gate_alignment(runtime_truth_summary: dict[str, Any]) 
             )
 
 
+def require_approval_runtime_gate_alignment(
+    approval: dict[str, Any],
+    runtime_truth_summary: dict[str, Any],
+) -> dict[str, bool]:
+    approval_snapshot = approval.get("runtime_gate_snapshot")
+    report = runtime_truth_summary.get("preflight_report")
+    if not isinstance(approval_snapshot, dict) or not isinstance(report, dict):
+        raise SystemExit("approval/runtime truth gate snapshots must both be objects")
+    gate_snapshot: dict[str, bool] = {}
+    for report_field in ["live_submit_allowed", "real_funds_canary_allowed", *RUNTIME_TRUTH_PREFLIGHT_ENV_BINDINGS.values()]:
+        if approval_snapshot.get(report_field) is not True or report.get(report_field) is not True:
+            raise SystemExit(f"approval/runtime truth gate snapshot {report_field} must be true")
+        gate_snapshot[report_field] = True
+    return gate_snapshot
+
+
 def build_invocation(
     *,
     package_dir: Path,
@@ -178,6 +201,7 @@ def build_invocation(
     pipeline.validate_candidate_file(market_file)
     env_summary = env_check.evaluate_env_file(env_file, expected_account_id=approval["account_id"])
     require_runtime_truth_gate_alignment(runtime_truth_summary)
+    gate_snapshot = require_approval_runtime_gate_alignment(approval, runtime_truth_summary)
 
     if approval["artifact_sha256"] != runtime_truth_summary["artifact_sha256"]:
         raise SystemExit("approval artifact_sha256 does not match runtime truth artifact_sha256")
@@ -258,10 +282,12 @@ def build_invocation(
         "package_dir": str(package_dir),
         "env_file": str(env_file),
         "account_id": approval["account_id"],
+        "condition_id": approval["condition_id"],
         "active_profile_ref": env_summary["active_profile_ref"],
         "approval_hash": approval["approval_hash"],
         "decision_id": decision_summary["decision_id"],
         "runtime_truth_sha256": runtime_truth_summary["sha256"],
+        "runtime_gate_snapshot": gate_snapshot,
         "command": command,
         "required_gate_env_vars": REQUIRED_GATE_ENV_VARS,
         "missing_gate_env_vars": missing_gate_env(),

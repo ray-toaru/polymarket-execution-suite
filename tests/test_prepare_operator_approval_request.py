@@ -99,6 +99,28 @@ class PrepareOperatorApprovalRequestTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "exceeds"):
             self.module.validate_candidate(candidate, self.module.Decimal("0.20"))
 
+    def test_runtime_truth_must_bind_account_and_gate_snapshot(self):
+        runtime_truth = {
+            "account_id": "acct-canary",
+            "condition_id": "condition-1",
+            "preflight_report": {
+                "status": "preflight_ready",
+                "live_submit_allowed": True,
+                "real_funds_canary_allowed": True,
+                "kill_switch_open": True,
+                "runtime_worker_healthy": True,
+                "geoblock_allowed": True,
+                "repository_reservation_exists": True,
+                "idempotency_key_written": True,
+                "reconcile_worker_healthy": True,
+                "cancel_only_fallback_ready": True,
+                "balance_allowance_checked": True,
+            },
+        }
+        summary = self.module.validate_runtime_truth(runtime_truth, expected_account_id="acct-canary")
+        self.assertEqual(summary["condition_id"], "condition-1")
+        self.assertTrue(summary["gate_snapshot"]["kill_switch_open"])
+
 
 if __name__ == "__main__":
     unittest.main()

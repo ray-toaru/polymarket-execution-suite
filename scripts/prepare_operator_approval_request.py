@@ -20,6 +20,18 @@ ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "VERSION").read_text().strip()
 DEFAULT_RELEASE_ZIP = ROOT / "dist" / f"polymarket-execution-suite-v{VERSION}.zip"
 ACTIVE_PROFILE_CHECK = ROOT / "polymarket-execution-engine" / "validation" / "check_active_profile_consistency.py"
+PREFLIGHT_GATE_FIELDS = (
+    "live_submit_allowed",
+    "real_funds_canary_allowed",
+    "kill_switch_open",
+    "runtime_worker_healthy",
+    "geoblock_allowed",
+    "repository_reservation_exists",
+    "idempotency_key_written",
+    "reconcile_worker_healthy",
+    "cancel_only_fallback_ready",
+    "balance_allowance_checked",
+)
 
 
 def sha256(path: Path) -> str:
@@ -73,6 +85,32 @@ def decimal_text(value: Decimal) -> str:
     return "0" if text == "-0" else text
 
 
+def validate_runtime_truth(
+    runtime_truth: dict[str, Any],
+    *,
+    expected_account_id: str,
+) -> dict[str, Any]:
+    account_id = require_nonempty_text(runtime_truth.get("account_id"), "runtime truth account_id")
+    if account_id != expected_account_id:
+        raise SystemExit("runtime truth account_id does not match active runtime account")
+    condition_id = require_nonempty_text(runtime_truth.get("condition_id"), "runtime truth condition_id")
+    preflight_report = runtime_truth.get("preflight_report")
+    if not isinstance(preflight_report, dict):
+        raise SystemExit("runtime truth preflight_report must be an object")
+    if preflight_report.get("status") != "preflight_ready":
+        raise SystemExit("runtime truth preflight_report.status must be preflight_ready")
+    gate_snapshot: dict[str, bool] = {}
+    for field in PREFLIGHT_GATE_FIELDS:
+        if preflight_report.get(field) is not True:
+            raise SystemExit(f"runtime truth preflight_report.{field} must be true")
+        gate_snapshot[field] = True
+    return {
+        "account_id": account_id,
+        "condition_id": condition_id,
+        "gate_snapshot": gate_snapshot,
+    }
+
+
 def resolve_runtime_identity(
     *,
     runtime_env_file: Path | None,
@@ -105,11 +143,13 @@ def resolve_runtime_identity(
 def build_request(
     *,
     account_id: str,
+    condition_id: str,
     active_profile_ref: str,
     operator_identity_ref: str,
     approval_ticket_ref: str,
     candidate_market_file: Path,
     runtime_truth_file: Path,
+    runtime_gate_snapshot: dict[str, bool],
     sidecar: dict[str, str],
     candidate_limits: dict[str, str],
     max_order_notional: Decimal,
@@ -127,6 +167,7 @@ def build_request(
         "approval_id": f"approval-request-controlled-canary-{now.strftime('%Y%m%dT%H%M%SZ')}",
         "scope": "REAL_FUNDS_CANARY",
         "account_id": account_id,
+        "condition_id": condition_id,
         "active_profile_ref": active_profile_ref,
         "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
         "requested_at": now.isoformat(),
@@ -146,6 +187,7 @@ def build_request(
         "evidence_manifest_sha256": sidecar["evidence_manifest_sha256"],
         "market_candidate_sha256": sha256(candidate_market_file),
         "runtime_truth_sha256": sha256(runtime_truth_file),
+        "runtime_gate_snapshot": runtime_gate_snapshot,
         "github_evidence": {
             "root_ci_run_id": root_ci_run_id,
             "hermes_ci_run_id": hermes_ci_run_id,
@@ -292,6 +334,7 @@ def main() -> int:
         account_id=args.account_id,
         active_profile_ref=args.active_profile_ref,
     )
+    runtime_summary = validate_runtime_truth(runtime_truth, expected_account_id=account_id)
     max_order_notional = decimal_value(args.max_order_notional_usd, "max_order_notional_usd")
     max_daily_notional = decimal_value(args.max_daily_notional_usd, "max_daily_notional_usd")
     if max_order_notional > Decimal("1"):
@@ -306,11 +349,13 @@ def main() -> int:
 
     request = build_request(
         account_id=account_id,
+        condition_id=runtime_summary["condition_id"],
         active_profile_ref=active_profile_ref,
         operator_identity_ref=args.operator_identity_ref,
         approval_ticket_ref=args.approval_ticket_ref,
         candidate_market_file=candidate_path,
         runtime_truth_file=runtime_truth_path,
+        runtime_gate_snapshot=runtime_summary["gate_snapshot"],
         sidecar=sidecar,
         candidate_limits=candidate_limits,
         max_order_notional=max_order_notional,

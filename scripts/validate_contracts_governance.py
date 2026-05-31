@@ -667,7 +667,7 @@ def validate_v28_production_live_candidate_guard() -> None:
         "production-live-candidate",
         "--require-ready",
         "release artifact evidence sidecar missing",
-        "current evidence manifest must bind final external_artifact_sidecar.sha256",
+        "workspace manifest snapshot referenced by release artifact evidence sidecar is missing",
         "validated_release",
         "production_ready",
         "live_trading_ready",

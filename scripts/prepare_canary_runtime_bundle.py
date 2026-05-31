@@ -78,6 +78,7 @@ def prepare_bundle(
     sidecar = approval.load_release_sidecar(release_zip_path)
     candidate = approval.load_json(candidate_market_file)
     runtime_truth = approval.load_json(runtime_truth_file)
+    runtime_summary = approval.validate_runtime_truth(runtime_truth, expected_account_id=account_id)
     max_order_notional = approval.decimal_value(max_order_notional_usd, "max_order_notional_usd")
     max_daily_notional = approval.decimal_value(max_daily_notional_usd, "max_daily_notional_usd")
     candidate_limits = approval.validate_candidate(candidate, max_order_notional)
@@ -89,11 +90,13 @@ def prepare_bundle(
         raise SystemExit("runtime truth artifact hash does not match release sidecar")
     request = approval.build_request(
         account_id=account_id,
+        condition_id=runtime_summary["condition_id"],
         active_profile_ref=active_profile_ref,
         operator_identity_ref=operator_identity_ref,
         approval_ticket_ref=approval_ticket_ref,
         candidate_market_file=candidate_market_file,
         runtime_truth_file=runtime_truth_file,
+        runtime_gate_snapshot=runtime_summary["gate_snapshot"],
         sidecar=sidecar,
         candidate_limits=candidate_limits,
         max_order_notional=max_order_notional,

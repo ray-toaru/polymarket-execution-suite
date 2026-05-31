@@ -62,10 +62,17 @@ def build_cli_approval(approval_request: dict[str, Any]) -> dict[str, Any]:
     risk_limits = approval_request.get("risk_limits")
     if not isinstance(risk_limits, dict):
         raise SystemExit("approval request risk_limits must be an object")
+    condition_id = approval_request.get("condition_id")
+    if not isinstance(condition_id, str) or not condition_id.strip():
+        raise SystemExit("approval request condition_id is required to build canonical approval.json")
+    runtime_gate_snapshot = approval_request.get("runtime_gate_snapshot")
+    if not isinstance(runtime_gate_snapshot, dict):
+        raise SystemExit("approval request runtime_gate_snapshot must be an object to build canonical approval.json")
     return {
         "approval_id": approval_request["approval_id"],
         "approval_hash": approval_request["approval_hash"],
         "account_id": account_id.strip(),
+        "condition_id": condition_id.strip(),
         "scope": approval_request["scope"],
         "expires_at": approval_request["expires_at"],
         "artifact_sha256": approval_request["artifact_sha256"],
@@ -77,6 +84,7 @@ def build_cli_approval(approval_request: dict[str, Any]) -> dict[str, Any]:
         "max_daily_notional_usd": risk_limits["max_daily_notional_usd"],
         "execution_style": approval_request["execution_style"],
         "operator_identity_ref": approval_request["operator_identity_ref"],
+        "runtime_gate_snapshot": runtime_gate_snapshot,
     }
 
 
@@ -117,6 +125,7 @@ def build_package(
         ("archived_manifest_sha256", sidecar["archived_manifest_sha256"], runtime_doc.get("archived_manifest_sha256")),
         ("market_candidate_sha256", candidate_sha, approval_doc.get("market_candidate_sha256")),
         ("runtime_truth_sha256", runtime_sha, approval_doc.get("runtime_truth_sha256")),
+        ("condition_id", runtime_doc.get("condition_id"), approval_doc.get("condition_id")),
     ]
     mismatches = [
         f"{field} expected {expected}, got {actual!r}"
@@ -125,6 +134,19 @@ def build_package(
     ]
     if mismatches:
         raise SystemExit("reviewed-go package binding mismatch: " + "; ".join(mismatches))
+    runtime_gate_snapshot = approval_doc.get("runtime_gate_snapshot")
+    runtime_report = runtime_doc.get("preflight_report")
+    if not isinstance(runtime_gate_snapshot, dict) or not isinstance(runtime_report, dict):
+        raise SystemExit("reviewed-go package requires runtime gate snapshots in approval request and runtime truth")
+    gate_mismatches = [
+        field
+        for field, value in runtime_gate_snapshot.items()
+        if runtime_report.get(field) is not value
+    ]
+    if gate_mismatches:
+        raise SystemExit(
+            "reviewed-go package runtime gate snapshot mismatch: " + ", ".join(sorted(gate_mismatches))
+        )
 
     decision = reviewed_go.build_decision(
         approval_doc,
