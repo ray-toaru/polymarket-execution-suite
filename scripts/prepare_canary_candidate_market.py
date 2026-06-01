@@ -157,6 +157,11 @@ def parse_args() -> argparse.Namespace:
         default=5,
         help="Validity window for exchange_rule_snapshot.expires_at relative to captured_at",
     )
+    parser.add_argument(
+        "--max-clob-requests",
+        type=int,
+        help="Optional total CLOB request budget for scan mode; defaults to max_markets * 2",
+    )
     parser.add_argument("--timeout-seconds", type=float, default=10.0, help="HTTP timeout per request")
     return parser.parse_args()
 
@@ -388,8 +393,18 @@ def liquidity_score(ask_size: Decimal, best_ask_price: Decimal, spread_bps_value
     return max(0, depth_score - spread_penalty)
 
 
-def market_fingerprint(market: dict[str, Any]) -> str:
-    compact = json.dumps(market, sort_keys=True, separators=(",", ":"), default=str)
+def market_fingerprint(
+    market: dict[str, Any],
+    *,
+    book: dict[str, Any] | None = None,
+    spread: dict[str, Any] | None = None,
+) -> str:
+    payload: dict[str, Any] = {"market": market}
+    if book is not None:
+        payload["book"] = book
+    if spread is not None:
+        payload["spread"] = spread
+    compact = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(compact.encode("utf-8")).hexdigest()
 
 
@@ -453,6 +468,13 @@ def fetch_json_or_error(
             }
         )
         raise CandidateError(failure_message, audit) from exc
+
+
+def clob_request_limit(args: argparse.Namespace) -> int:
+    configured = args.max_clob_requests
+    if configured is None:
+        return args.max_markets * 2
+    return configured
 
 
 def select_market_for_outcome(
@@ -598,7 +620,7 @@ def candidate_from_market(
         "token_id_hash": hashlib.sha256(token_id.encode()).hexdigest(),
         "outcome": outcome,
         "market_slug": slug,
-        "source_market_hash": market_fingerprint(market),
+        "source_market_hash": market_fingerprint(market, book=book, spread=spread),
         "spread_bps": bps,
         "target_size": decimal_text(target_size),
         "target_size_source": "operator_override" if requested_target_size else "book_min_order_size",
@@ -624,7 +646,7 @@ def candidate_from_market(
         min_order_size=min_order_size,
         min_tick_size=min_tick_size,
         liquidity_score=liquidity_score(size, price, bps),
-        source_market_hash=market_fingerprint(market),
+        source_market_hash=market_fingerprint(market, book=book, spread=spread),
         book_snapshot_timestamp=snapshot_at,
         human_review_ref=human_review_ref,
         exchange_rule_evidence_ref=exchange_rule_evidence_ref,
@@ -663,6 +685,8 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
         raise CandidateError("--target-size must be a positive decimal")
     if args.max_markets <= 0:
         raise CandidateError("--max-markets must be positive")
+    if args.max_clob_requests is not None and args.max_clob_requests <= 0:
+        raise CandidateError("--max-clob-requests must be positive")
     if args.max_spread_bps < 0:
         raise CandidateError("--max-spread-bps must be non-negative")
     if args.exchange_rule_valid_for_minutes <= 0:
@@ -697,6 +721,8 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
         "gamma_url_ref": audit_url_ref(args.gamma_url),
         "clob_url_ref": audit_url_ref(args.clob_url),
         "max_markets": args.max_markets,
+        "max_clob_requests": clob_request_limit(args),
+        "clob_requests_used": 0,
         "target_size": decimal_text(target_size) if target_size else "book_min_order_size",
         "target_size_source": "operator_override" if target_size else "book_min_order_size",
         "max_order_notional_usd": decimal_text(order_cap),
@@ -717,6 +743,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
             "target_notional_above_cap": 0,
             "post_only_price_unavailable": 0,
             "min_order_size_above_target_size": 0,
+            "clob_request_budget_exhausted": 0,
         },
     }
 
@@ -753,6 +780,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
         raise CandidateError("Gamma /markets response was not a JSON array")
 
     candidates: list[Candidate] = []
+    max_clob_requests = clob_request_limit(args)
     for market in markets[: args.max_markets]:
         if not isinstance(market, dict):
             continue
@@ -789,7 +817,11 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
             continue
         for outcome, token_id in zip(outcomes, token_ids, strict=True):
             audit["inspected_tokens"] += 1
+            if audit["clob_requests_used"] >= max_clob_requests:
+                audit["rejections"]["clob_request_budget_exhausted"] += 1
+                break
             try:
+                audit["clob_requests_used"] += 1
                 book = fetch_json(args.clob_url, "/book", {"token_id": token_id}, args.timeout_seconds)
             except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, json.JSONDecodeError, ValueError):
                 audit["rejections"]["book_unavailable"] += 1
@@ -819,7 +851,11 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
             if limit_price is None:
                 audit["rejections"]["post_only_price_unavailable"] += 1
                 continue
+            if audit["clob_requests_used"] >= max_clob_requests:
+                audit["rejections"]["clob_request_budget_exhausted"] += 1
+                break
             try:
+                audit["clob_requests_used"] += 1
                 spread = fetch_json(args.clob_url, "/spread", {"token_id": token_id}, args.timeout_seconds)
             except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, json.JSONDecodeError, ValueError):
                 audit["rejections"]["spread_unavailable"] += 1
@@ -865,13 +901,15 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
                     min_order_size=min_order_size,
                     min_tick_size=min_tick_size,
                     liquidity_score=liquidity_score(size, price, bps),
-                    source_market_hash=market_fingerprint(market),
+                    source_market_hash=market_fingerprint(market, book=book, spread=spread),
                     book_snapshot_timestamp=snapshot_at,
                     human_review_ref=human_review_ref,
                     exchange_rule_evidence_ref=exchange_rule_evidence_ref,
                     exchange_rule_valid_for_minutes=args.exchange_rule_valid_for_minutes,
                 )
             )
+        if audit["clob_requests_used"] >= max_clob_requests:
+            break
 
     if not candidates:
         raise CandidateError("no candidate satisfied the configured canary market constraints", audit)

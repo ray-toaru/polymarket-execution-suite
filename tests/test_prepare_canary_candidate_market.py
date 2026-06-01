@@ -79,6 +79,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             max_order_notional_usd="1.00",
             target_size="5",
             max_markets=10,
+            max_clob_requests=None,
             max_spread_bps=100,
             exchange_rule_valid_for_minutes=5,
             human_review_ref="ticket://review",
@@ -129,6 +130,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             max_order_notional_usd="1.00",
             target_size="5",
             max_markets=10,
+            max_clob_requests=None,
             max_spread_bps=100,
             exchange_rule_valid_for_minutes=5,
             human_review_ref="review",
@@ -145,6 +147,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             clob_url="https://clob",
             timeout_seconds=1.0,
             max_spread_bps=100,
+            max_clob_requests=None,
             exchange_rule_valid_for_minutes=5,
             market_slug="slug",
         )
@@ -313,6 +316,15 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
         )
         self.assertEqual(price, Decimal("0.04"))
 
+    def test_market_fingerprint_binds_book_and_spread(self):
+        market = {"id": "condition-1", "slug": "slug"}
+        book = {"asks": [{"price": "0.03", "size": "10"}]}
+        spread_a = {"spread": "0.01"}
+        spread_b = {"spread": "0.02"}
+        hash_a = self.module.market_fingerprint(market, book=book, spread=spread_a)
+        hash_b = self.module.market_fingerprint(market, book=book, spread=spread_b)
+        self.assertNotEqual(hash_a, hash_b)
+
     def test_scan_audit_redacts_base_urls(self):
         args = argparse.Namespace(
             gamma_url="https://gamma.example/api?token=secret",
@@ -321,6 +333,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             max_order_notional_usd="1.00",
             target_size="5",
             max_markets=10,
+            max_clob_requests=None,
             max_spread_bps=100,
             exchange_rule_valid_for_minutes=5,
             human_review_ref="ticket://review",
@@ -356,6 +369,48 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
         self.assertEqual(audit["clob_url_ref"]["origin"], "https://clob.example")
         self.assertEqual(len(audit["gamma_url_ref"]["sha256"]), 64)
         self.assertEqual(len(audit["clob_url_ref"]["sha256"]), 64)
+
+    def test_scan_stops_when_clob_request_budget_is_exhausted(self):
+        args = argparse.Namespace(
+            gamma_url="https://gamma",
+            clob_url="https://clob",
+            timeout_seconds=1.0,
+            max_order_notional_usd="1.00",
+            target_size="5",
+            max_markets=10,
+            max_clob_requests=2,
+            max_spread_bps=100,
+            exchange_rule_valid_for_minutes=5,
+            human_review_ref="ticket://review",
+            exchange_rule_evidence_ref="ticket://reviewed-rule",
+            market_url=None,
+            market_slug=None,
+            outcome=None,
+        )
+        markets = [
+            {
+                "id": "condition-a",
+                "slug": "slug-a",
+                "active": True,
+                "acceptingOrders": True,
+                "closed": False,
+                "archived": False,
+                "outcomes": ["Yes", "No", "Maybe"],
+                "clobTokenIds": ["100", "200", "300"],
+            },
+        ]
+        book = {
+            "asks": [{"price": "0.03", "size": "10"}],
+            "bids": [{"price": "0.0298", "size": "8"}],
+            "min_order_size": "5",
+            "min_tick_size": "0.01",
+        }
+        spread = {"spread": "0.01"}
+        with patch.object(self.module, "fetch_json", side_effect=[markets, book, spread]):
+            candidate, audit = self.module.scan(args)
+        self.assertEqual(candidate.token_id, "100")
+        self.assertEqual(audit["clob_requests_used"], 2)
+        self.assertEqual(audit["rejections"]["clob_request_budget_exhausted"], 1)
 
 
 if __name__ == "__main__":
