@@ -320,6 +320,8 @@ def build_invocation(
         str(release_decision_file),
         "--runtime-truth-file",
         str(runtime_truth_file),
+        "--runtime-truth-condition-id",
+        approval["condition_id"],
         "--market-file",
         str(market_file),
         "--artifact-sha256",
