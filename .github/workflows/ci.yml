@@ -81,6 +81,14 @@ defaults:
     shell: bash --noprofile --norc -euo pipefail {0}
 
 jobs:
+  adapter-required-ci:
+    name: adapter required ci
+    uses: ray-toaru/hermes-polymarket-executor-adapter/.github/workflows/ci.yml@bb5cc67174974751f6725f41c267259697caed34
+
+  engine-required-ci:
+    name: engine required ci
+    uses: ray-toaru/polymarket-execution-engine/.github/workflows/ci.yml@4a436f14fef9910be57c6a7d37170d6ed08cd759
+
   engine-rust-locked:
     name: engine rust locked
     runs-on: ubuntu-latest
