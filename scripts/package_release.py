@@ -315,6 +315,7 @@ def write_dist_index(
     workspace_manifest_sha256: str | None,
     workspace_manifest_snapshot_path: str | None,
 ) -> None:
+    DIST.mkdir(parents=True, exist_ok=True)
     current_release_files = {OUT.name, OUT.with_suffix(OUT.suffix + ".sha256").name, OUT.with_suffix(OUT.suffix + ".evidence.json").name}
     local_material = []
     for path in sorted(DIST.iterdir()):

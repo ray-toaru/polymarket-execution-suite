@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import re
 import hashlib
 import sys
 import zipfile
@@ -15,18 +14,10 @@ if str(SCRIPT_DIR) not in sys.path:
 from check_dist_index import validate as validate_dist_index
 from package_release import release_source_files, command_output, submodule_records
 from release_policy import is_allowed_release_source_path, is_forbidden_release_member
-
-STALE_ROOT_DOCS = [
-    re.compile(r"^V0_.*\.md$"),
-    re.compile(r"^VALIDATION_V0_.*\.md$"),
-    re.compile(r".*_GATE_CONFIRMATION\.md$"),
-    re.compile(r"^VALIDATION_CONFIRMATION_REPORT\.md$"),
-    re.compile(r"^CONTINUATION_REPORT\.md$"),
-    re.compile(r"^ISSUES_CONFIRMED_AND_FIXED\.md$"),
-]
-VERSION_SPECIFIC_AGENT_PATTERN = re.compile(
-    r"(?:\b0\.\d+(?:\.\d+)?\b|\bv0\.\d+\b|\bv0_\d+\b|\bV0_\d+\b|run_v0_\d+_gates\.sh)",
-    re.IGNORECASE,
+from release_doc_policy import (
+    STALE_ROOT_DOC_PATTERNS,
+    contains_historical_root_doc_marker,
+    contains_release_specific_agents_marker,
 )
 
 
@@ -53,7 +44,7 @@ def stale_root_doc(member: str, expected_root: str) -> bool:
     rel = member[len(prefix) :]
     if "/" in rel:
         return False
-    return any(pattern.match(rel) for pattern in STALE_ROOT_DOCS)
+    return any(pattern.match(rel) for pattern in STALE_ROOT_DOC_PATTERNS)
 
 
 def historical_root_doc_content(member: str, expected_root: str, zf: zipfile.ZipFile) -> bool:
@@ -63,8 +54,7 @@ def historical_root_doc_content(member: str, expected_root: str, zf: zipfile.Zip
     rel = member[len(prefix) :]
     if "/" in rel or not rel.endswith(".md"):
         return False
-    first_line = zf.read(member).decode(errors="replace").splitlines()[:1]
-    return bool(first_line and re.search(r"\bHistorical v0\.", first_line[0], re.IGNORECASE))
+    return contains_historical_root_doc_marker(zf.read(member).decode(errors="replace"))
 
 
 
@@ -293,7 +283,7 @@ def validate_agents_in_archive(zf: zipfile.ZipFile, *, expected_root: str) -> li
         if name not in names:
             continue
         content = zf.read(name).decode()
-        if VERSION_SPECIFIC_AGENT_PATTERN.search(content):
+        if contains_release_specific_agents_marker(content):
             failures.append(f"AGENTS.md contains version-specific release markers: {name}")
     return failures
 

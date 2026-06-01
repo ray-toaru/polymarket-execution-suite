@@ -132,6 +132,41 @@ class CheckReleaseArtifactTests(unittest.TestCase):
             self.assertTrue(any("forbidden archive members" in item for item in failures))
             self.assertTrue(any("stale root docs in archive" in item for item in failures))
 
+    def test_validate_archive_members_rejects_historical_marker_beyond_first_line(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            zip_path = tmp / "artifact.zip"
+            with zipfile.ZipFile(zip_path, "w") as zf:
+                zf.writestr("polymarket_execution_suite_v0_28_0/VERSION", "0.28.0\n")
+                zf.writestr(
+                    "polymarket_execution_suite_v0_28_0/REVIEW_AUDIT.md",
+                    "# Review Audit\n\n> Historical v0.27 continuation note.\n",
+                )
+            with zipfile.ZipFile(zip_path) as zf:
+                failures = self.module.validate_archive_members(
+                    zf,
+                    expected_root="polymarket_execution_suite_v0_28_0",
+                    expected_version="0.28.0",
+                )
+        self.assertTrue(any("historical root docs in archive" in item for item in failures))
+
+    def test_validate_agents_in_archive_ignores_non_release_numeric_content(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            zip_path = tmp / "artifact.zip"
+            with zipfile.ZipFile(zip_path, "w") as zf:
+                for name in self.module.required_agents("polymarket_execution_suite_v0_28_0"):
+                    zf.writestr(
+                        name,
+                        "# AGENTS.md\n\nUse Python >=3.11 and keep 1. 2. 3. examples concise.\n"
+                        "Current validation entrypoint is run_current_gates.sh.\n",
+                    )
+            with zipfile.ZipFile(zip_path) as zf:
+                failures = self.module.validate_agents_in_archive(
+                    zf, expected_root="polymarket_execution_suite_v0_28_0"
+                )
+        self.assertEqual(failures, [])
+
     def test_validate_sidecars_rejects_git_head_mismatch(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
