@@ -47,7 +47,6 @@ class PrepareCanaryRuntimeBundleTests(unittest.TestCase):
                     "canonical_evidence": {
                         "workspace_manifest_sha256": "b" * 64,
                         "archived_manifest_sha256": "c" * 64,
-                        "manifest_sha256": "c" * 64,
                     },
                 },
             )

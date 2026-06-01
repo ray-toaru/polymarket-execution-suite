@@ -262,8 +262,8 @@ def load_release_sidecar(release_zip: Path) -> dict[str, Any]:
             "canonical_evidence.archived_manifest_sha256",
         ),
         "evidence_manifest_sha256": require_sha256(
-            canonical.get("manifest_sha256"),
-            "canonical_evidence.manifest_sha256",
+            canonical.get("archived_manifest_sha256"),
+            "canonical_evidence.archived_manifest_sha256",
         ),
     }
 

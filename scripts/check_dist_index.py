@@ -143,10 +143,6 @@ def validate(dist: Path, expected_version: str) -> list[str]:
                 failures.append("evidence sidecar canonical_evidence.archived_manifest_binding_kind is invalid")
             if canonical.get("workspace_manifest_binding_kind") != "post_package_workspace_snapshot":
                 failures.append("evidence sidecar canonical_evidence.workspace_manifest_binding_kind is invalid")
-            manifest_alias = canonical.get("manifest_sha256")
-            if manifest_alias is not None and manifest_alias != archived_sha:
-                failures.append("evidence sidecar canonical_evidence.manifest_sha256 alias must match archived_manifest_sha256")
-
     local_material = index.get("local_material")
     if not isinstance(local_material, list):
         failures.append("INDEX.json local_material must be a list")

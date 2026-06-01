@@ -501,7 +501,7 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
                 "sidecar_git_head": lget(sidecar, "source", "git_head"),
                 "sidecar_submodules": lget(sidecar, "source", "submodules", default=[]),
                 "canonical_evidence_manifest_sha256": lget(
-                    sidecar, "canonical_evidence", "manifest_sha256"
+                    sidecar, "canonical_evidence", "archived_manifest_sha256"
                 ),
             }
         )

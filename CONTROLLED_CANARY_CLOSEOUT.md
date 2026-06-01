@@ -5,7 +5,7 @@ reviewed-go controlled canary package on the v0.28 line. It summarizes the
 closeout boundary and evidence expectations for the single local v0.28
 BUY/GTC/post-only attempt that has already been consumed and closed.
 
-Historical v0.26 closeout context now lives under:
+Archived v0.26 closeout context now lives under:
 
 ```text
 docs/archive/CONTROLLED_CANARY_CLOSEOUT_v0.26.0.md

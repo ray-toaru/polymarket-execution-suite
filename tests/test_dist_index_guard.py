@@ -36,7 +36,6 @@ class DistIndexGuardTests(unittest.TestCase):
                     "artifact": {"name": self.artifact.name, "sha256": self.sha},
                     "canonical_evidence": {
                         "manifest_path": "polymarket-execution-engine/evidence/current/manifest.json",
-                        "manifest_sha256": "a" * 64,
                         "archived_manifest_sha256": "a" * 64,
                         "workspace_manifest_sha256": "b" * 64,
                         "workspace_manifest_snapshot_path": "polymarket-execution-suite-v0.26.0.workspace-manifest.json",

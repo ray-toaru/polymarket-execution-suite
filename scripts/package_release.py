@@ -470,7 +470,7 @@ def main() -> int:
         artifact_sha256=artifact_sha256,
         snapshot_path=workspace_snapshot,
     )
-    manifest_sha256 = archived_manifest_sha256(evidence_manifest)
+    archived_manifest = archived_manifest_sha256(evidence_manifest)
     sidecar.write_text(f"{artifact_sha256}  {OUT.name}\n")
     evidence_sidecar = OUT.with_suffix(OUT.suffix + ".evidence.json")
     evidence_sidecar.write_text(
@@ -492,18 +492,12 @@ def main() -> int:
                 },
                 "canonical_evidence": {
                     "manifest_path": "polymarket-execution-engine/evidence/current/manifest.json",
-                    "manifest_sha256": manifest_sha256,
-                    "archived_manifest_sha256": manifest_sha256,
+                    "archived_manifest_sha256": archived_manifest,
                     "workspace_manifest_sha256": workspace_manifest_sha256,
                     "workspace_manifest_snapshot_path": workspace_snapshot.name,
                     "archived_manifest_binding_kind": ARCHIVED_MANIFEST_BINDING_KIND,
                     "workspace_manifest_binding_kind": WORKSPACE_MANIFEST_BINDING_KIND,
                     "contract_validation_report": contract_validation_report_metadata(),
-                    "manifest_sha256_alias_note": (
-                        "Deprecated compatibility alias for archived_manifest_sha256. "
-                        "Use archived_manifest_sha256 for the archive-normalized manifest "
-                        "and workspace_manifest_sha256 for the post-package workspace manifest snapshot."
-                    ),
                 },
                 "release_decision_path": "RELEASE_DECISION.md",
                 "note": "This external sidecar binds the final zip hash; files inside the zip do not self-assert the final containing-archive hash.",
@@ -515,7 +509,7 @@ def main() -> int:
     )
     write_dist_index(
         artifact_sha256,
-        manifest_sha256,
+        archived_manifest,
         workspace_manifest_sha256,
         workspace_snapshot.name if workspace_manifest_sha256 else None,
     )
