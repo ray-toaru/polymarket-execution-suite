@@ -132,6 +132,34 @@ def plan_hash_from_package(approval: dict[str, Any]) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+def invocation_hash_from_package(
+    approval: dict[str, Any],
+    *,
+    mode: str,
+    runtime_truth_sha256: str,
+    active_profile_ref: str,
+    plan_hash: str,
+    daily_used_notional_usd: str,
+) -> str:
+    raw = "|".join(
+        [
+            mode,
+            approval["approval_hash"],
+            approval["artifact_sha256"],
+            approval["workspace_manifest_sha256"],
+            approval["archived_manifest_sha256"],
+            approval["market_candidate_sha256"],
+            approval["account_id"],
+            approval["condition_id"],
+            active_profile_ref,
+            runtime_truth_sha256,
+            plan_hash,
+            daily_used_notional_usd,
+        ]
+    )
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
 def timestamp_tag() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
@@ -260,9 +288,17 @@ def build_invocation(
     if mode_bin is None:
         raise SystemExit(f"unsupported mode: {mode}")
 
-    idempotency = idempotency_key or f"canary-{approval['approval_hash'][:12]}-{mode}"
-    execution = execution_id or f"exec-{approval['approval_hash'][:12]}"
     plan = plan_hash or plan_hash_from_package(approval)
+    invocation_hash = invocation_hash_from_package(
+        approval,
+        mode=mode,
+        runtime_truth_sha256=runtime_truth_summary["sha256"],
+        active_profile_ref=env_summary["active_profile_ref"],
+        plan_hash=plan,
+        daily_used_notional_usd=daily_used_notional_usd,
+    )
+    idempotency = idempotency_key or f"canary-{invocation_hash}-{mode}"
+    execution = execution_id or f"exec-{invocation_hash}"
     report = report_file or (package_dir / "post-canary-report.json")
     marker = approval_consumed_marker or default_marker_path(package_dir)
 
@@ -329,6 +365,7 @@ def build_invocation(
         "approval_hash": approval["approval_hash"],
         "decision_id": decision_summary["decision_id"],
         "runtime_truth_sha256": runtime_truth_summary["sha256"],
+        "invocation_hash": invocation_hash,
         "runtime_gate_snapshot": gate_snapshot,
         "runtime_gate_evidence_refs": gate_evidence_refs,
         "command": command,

@@ -234,12 +234,15 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
             self.assertEqual(plan["account_id"], "acct-canary")
             self.assertEqual(plan["condition_id"], "condition-1")
             self.assertEqual(plan["active_profile_ref"], "local-profile://acct_b")
+            self.assertEqual(len(plan["invocation_hash"]), 64)
             self.assertTrue(plan["runtime_gate_snapshot"]["kill_switch_open"])
             self.assertEqual(
                 plan["runtime_gate_evidence_refs"]["kill_switch_open"],
                 "pg://runtime/kill-switch",
             )
             self.assertIn("pmx-real-funds-canary-preflight", plan["command"])
+            self.assertIn(f"canary-{plan['invocation_hash']}-preflight", plan["command"])
+            self.assertIn(f"exec-{plan['invocation_hash']}", plan["command"])
             self.assertIn(str(package / "approval.json"), plan["command"])
             self.assertIn(str(package / "runtime-truth.json"), plan["command"])
             self.assertIn("PMX_ALLOW_LIVE_SUBMIT", plan["required_gate_env_vars"])
@@ -311,6 +314,9 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
 
             self.assertEqual(plan["mode"], "armed")
             self.assertIn("pmx-real-funds-canary-armed", plan["command"])
+            self.assertEqual(len(plan["invocation_hash"]), 64)
+            self.assertIn(f"canary-{plan['invocation_hash']}-armed", plan["command"])
+            self.assertIn(f"exec-{plan['invocation_hash']}", plan["command"])
             self.assertIn("--report-file", plan["command"])
             self.assertIn("--approval-consumed-marker", plan["command"])
             self.assertTrue(plan["report_file"].endswith("post-canary-report.json"))
