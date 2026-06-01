@@ -36,6 +36,9 @@ class CiWorkflowTests(unittest.TestCase):
         self.assertIn("integration-proof-artifacts", text)
         self.assertIn("check_v28_production_live_candidate.py --require-ready", text)
         self.assertIn("cargo test --workspace --exclude pmx-api --locked", text)
+        self.assertIn("PyYAML==6.0.3", (ROOT / "requirements-ci.txt").read_text())
+        self.assertIn("hermes-polymarket-executor-adapter/tests", text)
+        self.assertIn("polymarket-execution-engine/scripts", text)
 
     def test_adapter_ci_pins_actions_and_pip(self):
         text = ADAPTER_CI.read_text()
