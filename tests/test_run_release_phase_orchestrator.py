@@ -48,6 +48,7 @@ class RunReleasePhaseOrchestratorTests(unittest.TestCase):
             gamma_url=None,
             clob_url=None,
             max_markets=200,
+            max_clob_requests=None,
             target_size=None,
             max_order_notional_usd="0.20",
             max_daily_notional_usd="0.20",

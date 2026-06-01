@@ -60,6 +60,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gamma-url")
     parser.add_argument("--clob-url")
     parser.add_argument("--max-markets", type=int, default=200)
+    parser.add_argument("--max-clob-requests", type=int)
     parser.add_argument("--target-size")
     parser.add_argument("--max-order-notional-usd", default="0.20")
     parser.add_argument("--max-daily-notional-usd", default="0.20")
@@ -93,6 +94,7 @@ def prepare_candidate(
     gamma_url: str | None,
     clob_url: str | None,
     max_markets: int,
+    max_clob_requests: int | None,
     target_size: str | None,
     max_order_notional_usd: str,
     max_spread_bps: int,
@@ -111,6 +113,7 @@ def prepare_candidate(
         market_slug=market_slug,
         outcome=outcome,
         max_markets=max_markets,
+        max_clob_requests=max_clob_requests,
         target_size=target_size,
         max_order_notional_usd=max_order_notional_usd,
         max_spread_bps=max_spread_bps,
@@ -247,6 +250,7 @@ def prepare_prereview_bundle(
     gamma_url: str | None,
     clob_url: str | None,
     max_markets: int,
+    max_clob_requests: int | None,
     target_size: str | None,
     max_order_notional_usd: str,
     max_daily_notional_usd: str,
@@ -267,6 +271,7 @@ def prepare_prereview_bundle(
         gamma_url=gamma_url,
         clob_url=clob_url,
         max_markets=max_markets,
+        max_clob_requests=max_clob_requests,
         target_size=target_size,
         max_order_notional_usd=max_order_notional_usd,
         max_spread_bps=max_spread_bps,
@@ -337,6 +342,7 @@ def main() -> int:
         gamma_url=args.gamma_url,
         clob_url=args.clob_url,
         max_markets=args.max_markets,
+        max_clob_requests=args.max_clob_requests,
         target_size=args.target_size,
         max_order_notional_usd=args.max_order_notional_usd,
         max_daily_notional_usd=args.max_daily_notional_usd,
