@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import os
 import stat
 import tempfile
@@ -85,6 +86,20 @@ class ActivatePmxProfileTests(unittest.TestCase):
         }
         with self.assertRaisesRegex(SystemExit, "requires PMX_CLOB_FUNDER"):
             self.module.activate_profile("acct_b", source)
+
+    def test_activate_profile_does_not_emit_funder_for_eoa_profile(self):
+        source = {
+            "PMX_PROFILE_ACCT_B_ACCOUNT_ID": "acct_b",
+            "PMX_PROFILE_ACCT_B_PROFILE_REF": "local-profile://acct_b",
+            "PMX_PROFILE_ACCT_B_POLYMARKET_PRIVATE_KEY": "0xabc123",
+            "PMX_PROFILE_ACCT_B_POLY_API_KEY": "api-key",
+            "PMX_PROFILE_ACCT_B_POLY_API_SECRET": "api-secret",
+            "PMX_PROFILE_ACCT_B_POLY_API_PASSPHRASE": "api-pass",
+            "PMX_PROFILE_ACCT_B_CLOB_FUNDER": "0x00000000000000000000000000000000000000b0",
+            "PMX_PROFILE_ACCT_B_CLOB_SIGNATURE_TYPE": "EOA",
+        }
+        activated = self.module.activate_profile("acct_b", source)
+        self.assertNotIn("PMX_CLOB_FUNDER", activated)
 
     def test_write_runtime_env_contains_comments_and_no_profile_source_vars(self):
         activated = {
@@ -210,6 +225,65 @@ class ActivatePmxProfileTests(unittest.TestCase):
             secrets_text = secrets_output.read_text()
         self.assertIn("POLYMARKET_PRIVATE_KEY=0xabc123", secrets_text)
         self.assertIn("POLY_API_SECRET=api-secret", secrets_text)
+
+    def test_parse_env_file_preserves_unquoted_value_spacing(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            env_file = Path(tmp_name) / ".env"
+            env_file.write_text('KEY=value with trailing spaces   \nQUOTED=" value with edges "\n')
+            values = self.module.parse_env_file(env_file)
+        self.assertEqual(values["KEY"], "value with trailing spaces   ")
+        self.assertEqual(values["QUOTED"], " value with edges ")
+
+    def test_parse_env_file_rejects_unsupported_shell_syntax(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            env_file = Path(tmp_name) / ".env"
+            env_file.write_text("KEY=${HOME}\n")
+            with self.assertRaisesRegex(SystemExit, "unsupported shell-style env value"):
+                self.module.parse_env_file(env_file)
+
+    def test_main_does_not_emit_account_identity_in_json(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            source = tmp / ".env.profiles"
+            output = tmp / ".env.runtime"
+            source.write_text(
+                "\n".join(
+                    [
+                        "PMX_PROFILE_ACCT_B_ACCOUNT_ID=acct_b",
+                        "PMX_PROFILE_ACCT_B_PROFILE_REF=local-profile://acct_b",
+                        "PMX_PROFILE_ACCT_B_POLYMARKET_PRIVATE_KEY=0xabc123",
+                        "PMX_PROFILE_ACCT_B_POLY_API_KEY=api-key",
+                        "PMX_PROFILE_ACCT_B_POLY_API_SECRET=api-secret",
+                        "PMX_PROFILE_ACCT_B_POLY_API_PASSPHRASE=api-pass",
+                        "PMX_PROFILE_ACCT_B_CLOB_SIGNATURE_TYPE=EOA",
+                        "",
+                    ]
+                )
+            )
+            saved_argv = os.sys.argv
+            try:
+                os.sys.argv = [
+                    "activate_pmx_profile.py",
+                    "--profile",
+                    "acct_b",
+                    "--source-env-file",
+                    str(source),
+                    "--output",
+                    str(output),
+                ]
+                with tempfile.TemporaryFile(mode="w+") as stdout:
+                    saved_stdout = os.sys.stdout
+                    os.sys.stdout = stdout
+                    try:
+                        self.module.main()
+                    finally:
+                        os.sys.stdout = saved_stdout
+                    stdout.seek(0)
+                    payload = json.loads(stdout.read())
+            finally:
+                os.sys.argv = saved_argv
+        self.assertNotIn("account_id", payload)
+        self.assertNotIn("profile_ref", payload)
 
 
 if __name__ == "__main__":

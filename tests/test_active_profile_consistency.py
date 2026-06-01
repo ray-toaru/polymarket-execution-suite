@@ -136,6 +136,20 @@ class ActiveProfileConsistencyTests(unittest.TestCase):
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["active_account_id"], "acct_b")
 
+    def test_check_preserves_unquoted_value_spacing(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            env_file = Path(tmp_name) / ".env.runtime"
+            env_file.write_text("PMX_ACTIVE_ACCOUNT_PROFILE=acct_b  \n")
+            values, _ = self.module.parse_env_file(env_file)
+        self.assertEqual(values["PMX_ACTIVE_ACCOUNT_PROFILE"], "acct_b  ")
+
+    def test_check_rejects_unsupported_shell_syntax(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            env_file = Path(tmp_name) / ".env.runtime"
+            env_file.write_text("PMX_ACTIVE_ACCOUNT_PROFILE=${HOME}\n")
+            with self.assertRaisesRegex(SystemExit, "unsupported shell-style env value"):
+                self.module.parse_env_file(env_file)
+
 
 if __name__ == "__main__":
     unittest.main()

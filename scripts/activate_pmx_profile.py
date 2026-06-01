@@ -11,6 +11,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import shlex
 import stat
 
 
@@ -24,17 +25,54 @@ SIGNATURE_TYPE_ALIASES = {
     "3": "POLY_1271",
 }
 
+IDENTITY_KEYS = {
+    "PMX_ACTIVE_ACCOUNT_PROFILE",
+    "PMX_ACTIVE_ACCOUNT_ID",
+    "PMX_ACTIVE_PROFILE_REF",
+}
+SECRET_KEYS = {
+    "POLYMARKET_PRIVATE_KEY",
+    "POLY_API_KEY",
+    "POLY_API_SECRET",
+    "POLY_API_PASSPHRASE",
+    "PMX_CLOB_SIGNATURE_TYPE",
+    "PMX_CLOB_FUNDER",
+}
+UNSUPPORTED_ENV_TOKENS = ("`", "$(", "${", "&&", "||", ";")
+
+
+def parse_env_value(raw_value: str, *, path: Path, raw_line: str) -> str:
+    value = raw_value
+    if any(token in value for token in UNSUPPORTED_ENV_TOKENS):
+        raise SystemExit(
+            f"unsupported shell-style env value in {path}: {raw_line}"
+        )
+    stripped = value.strip()
+    if not stripped:
+        return ""
+    if stripped[0] in {"'", '"'}:
+        try:
+            parsed = shlex.split(stripped, posix=True)
+        except ValueError as exc:
+            raise SystemExit(f"invalid quoted env value in {path}: {raw_line}") from exc
+        if len(parsed) != 1:
+            raise SystemExit(f"invalid quoted env value in {path}: {raw_line}")
+        return parsed[0]
+    return value
+
 
 def parse_env_file(path: Path) -> dict[str, str]:
     values: dict[str, str] = {}
     for raw_line in path.read_text().splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
+        stripped = raw_line.lstrip()
+        if not stripped or stripped.startswith("#"):
             continue
-        if "=" not in line:
+        if stripped.startswith("export "):
+            raise SystemExit(f"unsupported export syntax in {path}: {raw_line}")
+        if "=" not in raw_line:
             raise SystemExit(f"invalid env assignment in {path}: {raw_line}")
-        key, value = line.split("=", 1)
-        values[key.strip()] = value.strip()
+        key, value = raw_line.split("=", 1)
+        values[key.strip()] = parse_env_value(value, path=path, raw_line=raw_line)
     return values
 
 
@@ -84,9 +122,7 @@ def activate_profile(profile: str, source_values: dict[str, str]) -> dict[str, s
         if not source_values.get(f"{prefix}{field}", "").strip()
     ]
     if missing:
-        raise SystemExit(
-            "missing required profile source variables: " + ", ".join(sorted(missing))
-        )
+        raise SystemExit(f"missing required profile source variables for profile {normalized}")
     activated = {"PMX_ACTIVE_ACCOUNT_PROFILE": normalized}
     for source_suffix, target_key in required_fields.items():
         activated[target_key] = source_values[f"{prefix}{source_suffix}"].strip()
@@ -96,8 +132,6 @@ def activate_profile(profile: str, source_values: dict[str, str]) -> dict[str, s
     if signature_type == "POLY_1271":
         if not funder:
             raise SystemExit("POLY_1271 profile requires PMX_CLOB_FUNDER")
-        activated["PMX_CLOB_FUNDER"] = funder
-    elif funder:
         activated["PMX_CLOB_FUNDER"] = funder
     return activated
 
@@ -115,6 +149,28 @@ def write_restrictive_file(path: Path, text: str) -> None:
         path.chmod(stat.S_IRUSR | stat.S_IWUSR)
     except OSError as exc:
         raise SystemExit(f"failed to set restrictive permissions on {path}: {exc}") from exc
+
+
+def verify_runtime_outputs(output: Path, *, write_secrets: bool) -> None:
+    identity_values = parse_env_file(output)
+    if set(identity_values) != IDENTITY_KEYS:
+        raise SystemExit(f"runtime identity env keys do not match expected contract in {output}")
+    secrets_output = runtime_secrets_output_path(output)
+    if not write_secrets:
+        if secrets_output.exists():
+            raise SystemExit(f"unexpected companion secrets file present at {secrets_output}")
+        return
+    if not secrets_output.is_file():
+        raise SystemExit(f"expected companion secrets file at {secrets_output}")
+    secret_values = parse_env_file(secrets_output)
+    unexpected = set(secret_values) - SECRET_KEYS
+    if unexpected:
+        raise SystemExit(
+            f"unexpected runtime secret keys in {secrets_output}: {', '.join(sorted(unexpected))}"
+        )
+    required_secret_keys = SECRET_KEYS - {"PMX_CLOB_FUNDER"}
+    if not required_secret_keys.issubset(secret_values):
+        raise SystemExit(f"missing required runtime secret keys in {secrets_output}")
 
 
 def write_runtime_env(output: Path, activated: dict[str, str], *, write_secrets: bool) -> None:
@@ -178,6 +234,7 @@ def write_runtime_env(output: Path, activated: dict[str, str], *, write_secrets:
             ]
         )
     write_restrictive_file(output, "\n".join(lines) + "\n")
+    verify_runtime_outputs(output, write_secrets=write_secrets)
 
 
 def parse_args() -> argparse.Namespace:
@@ -211,8 +268,6 @@ def main() -> int:
             {
                 "status": "pass",
                 "profile": activated["PMX_ACTIVE_ACCOUNT_PROFILE"],
-                "account_id": activated["PMX_ACTIVE_ACCOUNT_ID"],
-                "profile_ref": activated["PMX_ACTIVE_PROFILE_REF"],
                 "secret_material_written": args.write_secrets,
                 "output": str(output),
                 "secrets_output": (
