@@ -285,6 +285,22 @@ class ActivatePmxProfileTests(unittest.TestCase):
         self.assertNotIn("account_id", payload)
         self.assertNotIn("profile_ref", payload)
 
+    def test_verify_runtime_outputs_rejects_profile_inventory_text(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            output = Path(tmp_name) / ".env.runtime"
+            output.write_text(
+                "\n".join(
+                    [
+                        "PMX_ACTIVE_ACCOUNT_PROFILE=acct_b",
+                        "PMX_ACTIVE_ACCOUNT_ID=acct_b",
+                        "PMX_ACTIVE_PROFILE_REF=local-profile://PMX_PROFILE_shadow",
+                        "",
+                    ]
+                )
+            )
+            with self.assertRaisesRegex(SystemExit, "forbidden runtime text"):
+                self.module.verify_runtime_outputs(output, write_secrets=False)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -39,6 +39,13 @@ SECRET_KEYS = {
     "PMX_CLOB_FUNDER",
 }
 UNSUPPORTED_ENV_TOKENS = ("`", "$(", "${", "&&", "||", ";")
+RUNTIME_FORBIDDEN_TEXT = (
+    "PMX_PROFILE_",
+    "PMX_ACCT_",
+    "raw_signed_payload",
+    "raw_signature",
+    "SignedOrderEnvelope",
+)
 
 
 def parse_env_value(raw_value: str, *, path: Path, raw_line: str) -> str:
@@ -155,6 +162,11 @@ def verify_runtime_outputs(output: Path, *, write_secrets: bool) -> None:
     identity_values = parse_env_file(output)
     if set(identity_values) != IDENTITY_KEYS:
         raise SystemExit(f"runtime identity env keys do not match expected contract in {output}")
+    for key, value in identity_values.items():
+        haystack = f"{key}={value}"
+        for forbidden in RUNTIME_FORBIDDEN_TEXT:
+            if forbidden in haystack:
+                raise SystemExit(f"forbidden runtime text {forbidden!r} present in {output}")
     secrets_output = runtime_secrets_output_path(output)
     if not write_secrets:
         if secrets_output.exists():
@@ -171,6 +183,11 @@ def verify_runtime_outputs(output: Path, *, write_secrets: bool) -> None:
     required_secret_keys = SECRET_KEYS - {"PMX_CLOB_FUNDER"}
     if not required_secret_keys.issubset(secret_values):
         raise SystemExit(f"missing required runtime secret keys in {secrets_output}")
+    for key, value in secret_values.items():
+        haystack = f"{key}={value}"
+        for forbidden in RUNTIME_FORBIDDEN_TEXT:
+            if forbidden in haystack:
+                raise SystemExit(f"forbidden runtime text {forbidden!r} present in {secrets_output}")
 
 
 def write_runtime_env(output: Path, activated: dict[str, str], *, write_secrets: bool) -> None:
