@@ -219,6 +219,7 @@ class RunReviewedGoCanaryArmedTests(unittest.TestCase):
             plan = self.module.build_armed_invocation(
                 package_dir=package,
                 env_file=env_file,
+                secrets_env_file=None,
                 daily_used_notional_usd="0",
                 idempotency_key=None,
                 execution_id=None,

@@ -60,6 +60,7 @@ class RunReviewedGoCanaryCloseoutTests(unittest.TestCase):
             plan = self.module.build_workflow_plan(
                 package_dir=package,
                 env_file=env_file,
+                secrets_env_file=None,
                 release_zip=None,
                 daily_used_notional_usd="0",
                 account_address=None,
@@ -79,6 +80,7 @@ class RunReviewedGoCanaryCloseoutTests(unittest.TestCase):
                 self.module.build_workflow_plan(
                     package_dir=package,
                     env_file=env_file,
+                    secrets_env_file=None,
                     release_zip=None,
                     daily_used_notional_usd="0",
                     account_address=None,
@@ -91,6 +93,7 @@ class RunReviewedGoCanaryCloseoutTests(unittest.TestCase):
             plan = self.module.build_workflow_plan(
                 package_dir=package,
                 env_file=env_file,
+                secrets_env_file=None,
                 release_zip=None,
                 daily_used_notional_usd="0",
                 account_address=None,
@@ -108,6 +111,7 @@ class RunReviewedGoCanaryCloseoutTests(unittest.TestCase):
             plan = self.module.build_workflow_plan(
                 package_dir=package,
                 env_file=env_file,
+                secrets_env_file=None,
                 release_zip=None,
                 daily_used_notional_usd="0",
                 account_address=None,

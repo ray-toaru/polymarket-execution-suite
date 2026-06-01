@@ -132,7 +132,20 @@ class ActiveProfileConsistencyTests(unittest.TestCase):
             env_file = Path(tmp_name) / ".env.runtime"
             env_file.write_text(self.valid_identity_env())
             env_file.with_name(".env.runtime.secrets").write_text(self.valid_secrets_env())
-            report = self.module.evaluate_env_file(env_file, expected_account_id="acct_b")
+            with self.assertRaisesRegex(SystemExit, "missing required runtime env variables"):
+                self.module.evaluate_env_file(env_file, expected_account_id="acct_b")
+
+    def test_check_accepts_explicit_companion_secrets_file(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            env_file = Path(tmp_name) / ".env.runtime"
+            secrets_env = env_file.with_name(".env.runtime.secrets")
+            env_file.write_text(self.valid_identity_env())
+            secrets_env.write_text(self.valid_secrets_env())
+            report = self.module.evaluate_env_file(
+                env_file,
+                expected_account_id="acct_b",
+                secrets_env_file=secrets_env,
+            )
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["active_account_id"], "acct_b")
 

@@ -249,6 +249,49 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
             self.assertFalse(plan["includes_live_config_overrides"])
             self.assertNotIn("--allow-live-submit-config", plan["command"])
 
+    def test_build_invocation_accepts_explicit_secrets_env_file(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            package, env_file = self.package_fixture(tmp)
+            secrets_env_file = tmp / ".env.runtime.secrets"
+            env_file.write_text(
+                "\n".join(
+                    [
+                        "PMX_ACTIVE_ACCOUNT_PROFILE=acct_b",
+                        "PMX_ACTIVE_ACCOUNT_ID=acct-canary",
+                        "PMX_ACTIVE_PROFILE_REF=local-profile://acct_b",
+                        "",
+                    ]
+                )
+            )
+            secrets_env_file.write_text(
+                "\n".join(
+                    [
+                        "POLYMARKET_PRIVATE_KEY=0xabc123",
+                        "POLY_API_KEY=123e4567-e89b-12d3-a456-426614174000",
+                        "POLY_API_SECRET=api-secret",
+                        "POLY_API_PASSPHRASE=api-pass",
+                        "PMX_CLOB_SIGNATURE_TYPE=POLY_1271",
+                        "PMX_CLOB_FUNDER=0x00000000000000000000000000000000000000b0",
+                        "",
+                    ]
+                )
+            )
+            plan = self.module.build_invocation(
+                package_dir=package,
+                env_file=env_file,
+                secrets_env_file=secrets_env_file,
+                mode="preflight",
+                daily_used_notional_usd="0",
+                idempotency_key=None,
+                execution_id=None,
+                plan_hash=None,
+                report_file=None,
+                approval_consumed_marker=None,
+                include_live_config_overrides=False,
+            )
+        self.assertEqual(plan["active_profile_ref"], "local-profile://acct_b")
+
     def test_build_invocation_rejects_live_overrides_for_preflight(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
@@ -388,6 +431,7 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                 self.module.parse_args = lambda: self.module.argparse.Namespace(
                     package_dir=Path(argv[1]),
                     env_file=Path(argv[3]),
+                    secrets_env_file=None,
                     mode="preflight",
                     daily_used_notional_usd="0",
                     idempotency_key=None,
@@ -417,6 +461,7 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                 self.module.parse_args = lambda: self.module.argparse.Namespace(
                     package_dir=package,
                     env_file=env_file,
+                    secrets_env_file=None,
                     mode="armed",
                     daily_used_notional_usd="0",
                     idempotency_key=None,

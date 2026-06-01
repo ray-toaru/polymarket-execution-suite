@@ -240,6 +240,7 @@ def build_invocation(
     *,
     package_dir: Path,
     env_file: Path,
+    secrets_env_file: Path | None = None,
     mode: str,
     daily_used_notional_usd: str,
     idempotency_key: str | None,
@@ -268,7 +269,11 @@ def build_invocation(
         expected_account_id=approval["account_id"],
     )
     pipeline.validate_candidate_file(market_file)
-    env_summary = env_check.evaluate_env_file(env_file, expected_account_id=approval["account_id"])
+    env_summary = env_check.evaluate_env_file(
+        env_file,
+        expected_account_id=approval["account_id"],
+        secrets_env_file=secrets_env_file,
+    )
     require_runtime_truth_gate_alignment(runtime_truth_summary)
     gate_snapshot, gate_evidence_refs = require_approval_runtime_gate_alignment(
         approval, runtime_truth_summary
@@ -384,6 +389,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--package-dir", required=True, type=Path)
     parser.add_argument("--env-file", required=True, type=Path)
+    parser.add_argument(
+        "--secrets-env-file",
+        type=Path,
+        help="Optional explicit runtime companion secrets env file. Secrets are not auto-discovered from the env-file path.",
+    )
     parser.add_argument("--mode", choices=["preflight"], default="preflight")
     parser.add_argument("--daily-used-notional-usd", default="0")
     parser.add_argument("--idempotency-key")
@@ -413,6 +423,7 @@ def main() -> int:
     invocation = build_invocation(
         package_dir=resolve(args.package_dir),
         env_file=resolve(args.env_file),
+        secrets_env_file=resolve(args.secrets_env_file) if args.secrets_env_file else None,
         mode=args.mode,
         daily_used_notional_usd=args.daily_used_notional_usd,
         idempotency_key=args.idempotency_key,
