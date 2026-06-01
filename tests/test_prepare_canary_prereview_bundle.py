@@ -88,6 +88,7 @@ class PrepareCanaryPrereviewBundleTests(unittest.TestCase):
                 operator_identity_ref="operator://primary",
                 approval_ticket_ref="ticket://approval",
                 human_review_ref="ticket://market-review",
+                exchange_rule_evidence_ref="ticket://reviewed-rule",
                 market_url="https://polymarket.com/event/example",
                 market_slug=None,
                 outcome="Yes",
@@ -106,6 +107,7 @@ class PrepareCanaryPrereviewBundleTests(unittest.TestCase):
                 [entry[0] for entry in calls],
                 ["candidate", "activate_runtime_profile", "runtime_truth", "review_bundle"],
             )
+            self.assertEqual(calls[0][1]["exchange_rule_evidence_ref"], "ticket://reviewed-rule")
             self.assertEqual(result["profile"], "acct_b")
             self.assertEqual(result["review_packet_status"], "dual_control_review_packet_not_authorization")
             self.assertEqual(

@@ -39,6 +39,7 @@ class RunReviewedGoDecisionWorkflowTests(unittest.TestCase):
             operator_identity_ref="operator://primary",
             approval_ticket_ref="ticket://approval",
             human_review_ref="ticket://market-review",
+            exchange_rule_evidence_ref="ticket://reviewed-rule",
             market_url="https://polymarket.com/event/example",
             market_slug=None,
             outcome="Yes",

@@ -476,6 +476,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--market-slug")
     parser.add_argument("--outcome")
     parser.add_argument("--human-review-ref")
+    parser.add_argument("--exchange-rule-evidence-ref")
     parser.add_argument("--target-size")
     parser.add_argument("--max-order-notional-usd", default="1.00")
     parser.add_argument(
@@ -531,7 +532,7 @@ def prepare_candidate(args: argparse.Namespace, output_dir: Path) -> tuple[Path 
         return None, stages
 
     if not args.outcome or not args.human_review_ref:
-        raise SystemExit("--outcome and --human-review-ref are required when preparing a fresh candidate")
+        raise SystemExit("--outcome, --human-review-ref, and --exchange-rule-evidence-ref are required when preparing a fresh candidate")
 
     candidate = output_dir / "candidate-market.json"
     audit = output_dir / "candidate-market.audit.json"
@@ -546,6 +547,8 @@ def prepare_candidate(args: argparse.Namespace, output_dir: Path) -> tuple[Path 
         args.outcome,
         "--human-review-ref",
         args.human_review_ref,
+        "--exchange-rule-evidence-ref",
+        args.exchange_rule_evidence_ref,
         "--max-order-notional-usd",
         args.max_order_notional_usd,
     ]

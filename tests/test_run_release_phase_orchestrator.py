@@ -40,6 +40,7 @@ class RunReleasePhaseOrchestratorTests(unittest.TestCase):
             operator_identity_ref=None,
             approval_ticket_ref=None,
             human_review_ref=None,
+            exchange_rule_evidence_ref=None,
             market_url=None,
             market_slug=None,
             outcome=None,
@@ -142,6 +143,7 @@ class RunReleasePhaseOrchestratorTests(unittest.TestCase):
             args.operator_identity_ref = "operator://primary"
             args.approval_ticket_ref = "ticket://approval"
             args.human_review_ref = "ticket://market-review"
+            args.exchange_rule_evidence_ref = "ticket://reviewed-rule"
 
             class FakeProductionModule:
                 @staticmethod

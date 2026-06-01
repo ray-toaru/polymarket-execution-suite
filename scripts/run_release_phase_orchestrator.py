@@ -126,6 +126,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--operator-identity-ref")
     parser.add_argument("--approval-ticket-ref")
     parser.add_argument("--human-review-ref")
+    parser.add_argument("--exchange-rule-evidence-ref")
     parser.add_argument("--market-url")
     parser.add_argument("--market-slug")
     parser.add_argument("--outcome")
@@ -219,6 +220,7 @@ def build_stage_plans(args: argparse.Namespace) -> dict[str, Any]:
             operator_identity_ref=args.operator_identity_ref,
             approval_ticket_ref=args.approval_ticket_ref,
             human_review_ref=args.human_review_ref,
+            exchange_rule_evidence_ref=args.exchange_rule_evidence_ref,
             market_url=args.market_url,
             market_slug=args.market_slug,
             outcome=args.outcome,
@@ -343,6 +345,7 @@ def parse_args_for_reviewed_go(args: argparse.Namespace) -> argparse.Namespace:
         operator_identity_ref=args.operator_identity_ref,
         approval_ticket_ref=args.approval_ticket_ref,
         human_review_ref=args.human_review_ref,
+        exchange_rule_evidence_ref=args.exchange_rule_evidence_ref,
         market_url=args.market_url,
         market_slug=args.market_slug,
         outcome=args.outcome,

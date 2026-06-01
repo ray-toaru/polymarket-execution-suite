@@ -53,6 +53,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--operator-identity-ref", required=True)
     parser.add_argument("--approval-ticket-ref", required=True)
     parser.add_argument("--human-review-ref", required=True)
+    parser.add_argument("--exchange-rule-evidence-ref", required=True)
     parser.add_argument("--market-url")
     parser.add_argument("--market-slug")
     parser.add_argument("--outcome")
@@ -79,6 +80,7 @@ def prepare_candidate(
     candidate_market_output: Path,
     candidate_audit_output: Path | None,
     human_review_ref: str,
+    exchange_rule_evidence_ref: str,
     market_url: str | None,
     market_slug: str | None,
     outcome: str | None,
@@ -95,6 +97,7 @@ def prepare_candidate(
         output=candidate_market_output,
         audit_output=candidate_audit_output,
         human_review_ref=human_review_ref,
+        exchange_rule_evidence_ref=exchange_rule_evidence_ref,
         gamma_url=gamma_url or candidate_module.DEFAULT_GAMMA_URL,
         clob_url=clob_url or candidate_module.DEFAULT_CLOB_URL,
         market_url=market_url,
@@ -223,6 +226,7 @@ def prepare_prereview_bundle(
     operator_identity_ref: str,
     approval_ticket_ref: str,
     human_review_ref: str,
+    exchange_rule_evidence_ref: str,
     market_url: str | None,
     market_slug: str | None,
     outcome: str | None,
@@ -240,6 +244,7 @@ def prepare_prereview_bundle(
         candidate_market_output=candidate_market_output,
         candidate_audit_output=candidate_audit_output,
         human_review_ref=human_review_ref,
+        exchange_rule_evidence_ref=exchange_rule_evidence_ref,
         market_url=market_url,
         market_slug=market_slug,
         outcome=outcome,
@@ -306,6 +311,7 @@ def main() -> int:
         operator_identity_ref=args.operator_identity_ref,
         approval_ticket_ref=args.approval_ticket_ref,
         human_review_ref=args.human_review_ref,
+        exchange_rule_evidence_ref=args.exchange_rule_evidence_ref,
         market_url=args.market_url,
         market_slug=args.market_slug,
         outcome=args.outcome,

@@ -49,6 +49,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--operator-identity-ref", required=True)
     parser.add_argument("--approval-ticket-ref", required=True)
     parser.add_argument("--human-review-ref", required=True)
+    parser.add_argument("--exchange-rule-evidence-ref", required=True)
     parser.add_argument("--market-url")
     parser.add_argument("--market-slug")
     parser.add_argument("--outcome")
@@ -146,6 +147,7 @@ def execute_workflow(args: argparse.Namespace) -> dict[str, Any]:
         operator_identity_ref=args.operator_identity_ref,
         approval_ticket_ref=args.approval_ticket_ref,
         human_review_ref=args.human_review_ref,
+        exchange_rule_evidence_ref=args.exchange_rule_evidence_ref,
         market_url=args.market_url,
         market_slug=args.market_slug,
         outcome=args.outcome,
