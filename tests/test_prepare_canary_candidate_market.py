@@ -46,6 +46,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             book_snapshot_timestamp="2026-05-23T00:00:00+00:00",
             human_review_ref="ticket://review",
             exchange_rule_evidence_ref="ticket://reviewed-rule",
+            exchange_rule_valid_for_minutes=5,
         )
         self.assertEqual(candidate.to_engine_json()["outcome"], "Yes")
         self.assertEqual(candidate.to_engine_json()["estimated_order_notional_usd"], "0.1")
@@ -77,6 +78,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             target_size="5",
             max_markets=10,
             max_spread_bps=100,
+            exchange_rule_valid_for_minutes=5,
             human_review_ref="ticket://review",
             exchange_rule_evidence_ref="ticket://reviewed-rule",
             market_url=None,
@@ -105,7 +107,12 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
                 "clobTokenIds": ["100"],
             },
         ]
-        book = {"asks": [{"price": "0.03", "size": "10"}], "min_order_size": "5", "min_tick_size": "0.01"}
+        book = {
+            "asks": [{"price": "0.03", "size": "10"}],
+            "bids": [{"price": "0.0298", "size": "8"}],
+            "min_order_size": "5",
+            "min_tick_size": "0.01",
+        }
         spread = {"spread": "0.01"}
         with patch.object(self.module, "fetch_json", side_effect=[markets, book, spread, book, spread]):
             candidate, _audit = self.module.scan(args)
@@ -121,6 +128,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             target_size="5",
             max_markets=10,
             max_spread_bps=100,
+            exchange_rule_valid_for_minutes=5,
             human_review_ref="review",
             exchange_rule_evidence_ref="review",
             market_url=None,
@@ -135,6 +143,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             clob_url="https://clob",
             timeout_seconds=1.0,
             max_spread_bps=100,
+            exchange_rule_valid_for_minutes=5,
             market_slug="slug",
         )
         market = {
@@ -188,6 +197,48 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
                 data = self.module.fetch_json("https://gamma", "/markets", {}, 1.0)
         self.assertEqual(data["status"], "ok")
         self.assertEqual(len(calls), 3)
+
+    def test_candidate_json_uses_configured_exchange_rule_validity_window(self):
+        candidate = self.module.Candidate(
+            market_id="condition-1",
+            token_id="123",
+            outcome="Yes",
+            market_slug="slug",
+            active=True,
+            accepting_orders=True,
+            closed=False,
+            archived=False,
+            best_ask=Decimal("0.024"),
+            limit_price=Decimal("0.02"),
+            ask_size=Decimal("100"),
+            target_size=Decimal("5"),
+            spread_bps=10,
+            min_order_size=Decimal("5"),
+            min_tick_size=Decimal("0.01"),
+            liquidity_score=100,
+            source_market_hash="a" * 64,
+            book_snapshot_timestamp="2026-05-23T00:00:00+00:00",
+            human_review_ref="ticket://review",
+            exchange_rule_evidence_ref="ticket://reviewed-rule",
+            exchange_rule_valid_for_minutes=7,
+        )
+        self.assertEqual(
+            candidate.to_engine_json()["exchange_rule_snapshot"]["expires_at"],
+            "2026-05-23T00:07:00+00:00",
+        )
+
+    def test_spread_bps_uses_more_conservative_of_book_and_api(self):
+        book = {
+            "asks": [{"price": "0.05", "size": "10"}],
+            "bids": [{"price": "0.03", "size": "10"}],
+        }
+        spread = {"spread": "0.01"}
+        self.assertEqual(self.module.spread_bps(book, spread), 4000)
+
+    def test_liquidity_score_penalizes_wider_spread(self):
+        narrow = self.module.liquidity_score(Decimal("10"), Decimal("0.05"), 100)
+        wide = self.module.liquidity_score(Decimal("10"), Decimal("0.05"), 1000)
+        self.assertGreater(narrow, wide)
 
 
 if __name__ == "__main__":

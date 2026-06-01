@@ -99,6 +99,7 @@ class PrepareCanaryPrereviewBundleTests(unittest.TestCase):
                 max_order_notional_usd="0.20",
                 max_daily_notional_usd="0.20",
                 max_spread_bps=100,
+                exchange_rule_valid_for_minutes=5,
                 timeout_seconds=10.0,
                 valid_for_minutes=15,
             )

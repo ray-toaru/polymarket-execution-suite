@@ -53,6 +53,7 @@ class Candidate:
     book_snapshot_timestamp: str
     human_review_ref: str
     exchange_rule_evidence_ref: str
+    exchange_rule_valid_for_minutes: int
 
     def to_engine_json(self) -> dict[str, Any]:
         return {
@@ -86,7 +87,7 @@ class Candidate:
                 "captured_at": self.book_snapshot_timestamp,
                 "expires_at": (
                     dt.datetime.fromisoformat(self.book_snapshot_timestamp)
-                    + dt.timedelta(minutes=15)
+                    + dt.timedelta(minutes=self.exchange_rule_valid_for_minutes)
                 ).isoformat(),
                 "evidence_ref": self.exchange_rule_evidence_ref,
             },
@@ -149,6 +150,12 @@ def parse_args() -> argparse.Namespace:
         help="Controlled canary order cap; selected target-size notional must not exceed it",
     )
     parser.add_argument("--max-spread-bps", type=int, default=100, help="Maximum allowed spread in bps")
+    parser.add_argument(
+        "--exchange-rule-valid-for-minutes",
+        type=int,
+        default=5,
+        help="Validity window for exchange_rule_snapshot.expires_at relative to captured_at",
+    )
     parser.add_argument("--timeout-seconds", type=float, default=10.0, help="HTTP timeout per request")
     return parser.parse_args()
 
@@ -269,6 +276,23 @@ def best_ask(book: dict[str, Any]) -> tuple[Decimal, Decimal] | None:
     return min(parsed, key=lambda item: item[0])
 
 
+def best_bid(book: dict[str, Any]) -> tuple[Decimal, Decimal] | None:
+    bids = book.get("bids")
+    if not isinstance(bids, list):
+        return None
+    parsed: list[tuple[Decimal, Decimal]] = []
+    for bid in bids:
+        if not isinstance(bid, dict):
+            continue
+        price = as_decimal(bid.get("price"))
+        size = as_decimal(bid.get("size"))
+        if price is not None and size is not None and price > 0 and size > 0:
+            parsed.append((price, size))
+    if not parsed:
+        return None
+    return max(parsed, key=lambda item: item[0])
+
+
 def post_only_buy_limit_price(best_ask_price: Decimal, min_tick_size: Decimal) -> Decimal | None:
     if best_ask_price <= 0 or min_tick_size <= 0:
         return None
@@ -279,16 +303,36 @@ def post_only_buy_limit_price(best_ask_price: Decimal, min_tick_size: Decimal) -
     return limit_price if limit_price > 0 else None
 
 
-def spread_bps(spread: dict[str, Any]) -> int | None:
+def spread_bps(book: dict[str, Any], spread: dict[str, Any]) -> int | None:
     raw = spread.get("spread")
-    value = as_decimal(raw)
-    if value is None or value < 0:
+    api_value = as_decimal(raw)
+    api_bps: int | None = None
+    if api_value is not None and api_value >= 0:
+        api_bps = int((api_value * Decimal("10000")).to_integral_value(rounding=ROUND_CEILING))
+
+    ask = best_ask(book)
+    bid = best_bid(book)
+    book_bps: int | None = None
+    if ask is not None and bid is not None:
+        ask_price, _ = ask
+        bid_price, _ = bid
+        if ask_price > 0 and bid_price >= 0 and ask_price >= bid_price:
+            width = ask_price - bid_price
+            book_bps = int(((width / ask_price) * Decimal("10000")).to_integral_value(rounding=ROUND_CEILING))
+
+    candidates = [value for value in (api_bps, book_bps) if value is not None]
+    if not candidates:
         return None
-    return int((value * Decimal("10000")).to_integral_value(rounding=ROUND_CEILING))
+    return max(candidates)
 
 
-def liquidity_score(ask_size: Decimal) -> int:
-    return max(0, int((ask_size * Decimal("1000000")).to_integral_value()))
+def liquidity_score(ask_size: Decimal, best_ask_price: Decimal, spread_bps_value: int) -> int:
+    if ask_size <= 0 or best_ask_price <= 0:
+        return 0
+    notional = ask_size * best_ask_price
+    depth_score = int((notional * Decimal("1000000")).to_integral_value(rounding=ROUND_FLOOR))
+    spread_penalty = max(spread_bps_value, 0) * 1000
+    return max(0, depth_score - spread_penalty)
 
 
 def market_fingerprint(market: dict[str, Any]) -> str:
@@ -463,7 +507,7 @@ def candidate_from_market(
     )
     if not isinstance(spread, dict):
         raise CandidateError("selected market spread response was not an object", audit)
-    bps = spread_bps(spread)
+    bps = spread_bps(book, spread)
     if bps is None:
         raise CandidateError("selected market spread is unavailable", audit)
     if bps > args.max_spread_bps:
@@ -503,7 +547,7 @@ def candidate_from_market(
         "estimated_order_notional_usd": decimal_text(estimated_notional),
         "limit_price": decimal_text(limit_price),
         "top_ask_notional_usd": decimal_text(price * size),
-        "liquidity_score": liquidity_score(size),
+        "liquidity_score": liquidity_score(size, price, bps),
     }
     return Candidate(
         market_id=condition_id,
@@ -521,11 +565,12 @@ def candidate_from_market(
         spread_bps=bps,
         min_order_size=min_order_size,
         min_tick_size=min_tick_size,
-        liquidity_score=liquidity_score(size),
+        liquidity_score=liquidity_score(size, price, bps),
         source_market_hash=market_fingerprint(market),
         book_snapshot_timestamp=snapshot_at,
         human_review_ref=human_review_ref,
         exchange_rule_evidence_ref=exchange_rule_evidence_ref,
+        exchange_rule_valid_for_minutes=args.exchange_rule_valid_for_minutes,
     )
 
 
@@ -562,6 +607,8 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
         raise CandidateError("--max-markets must be positive")
     if args.max_spread_bps < 0:
         raise CandidateError("--max-spread-bps must be non-negative")
+    if args.exchange_rule_valid_for_minutes <= 0:
+        raise CandidateError("--exchange-rule-valid-for-minutes must be positive")
     human_review_ref = args.human_review_ref.strip()
     if not is_concrete_external_ref(human_review_ref):
         raise CandidateError("--human-review-ref must be a concrete external review reference")
@@ -717,7 +764,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
             if not isinstance(spread, dict):
                 audit["rejections"]["spread_unavailable"] += 1
                 continue
-            bps = spread_bps(spread)
+            bps = spread_bps(book, spread)
             if bps is None:
                 audit["rejections"]["spread_unavailable"] += 1
                 continue
@@ -754,11 +801,12 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
                     spread_bps=bps,
                     min_order_size=min_order_size,
                     min_tick_size=min_tick_size,
-                    liquidity_score=liquidity_score(size),
+                    liquidity_score=liquidity_score(size, price, bps),
                     source_market_hash=market_fingerprint(market),
                     book_snapshot_timestamp=snapshot_at,
                     human_review_ref=human_review_ref,
                     exchange_rule_evidence_ref=exchange_rule_evidence_ref,
+                    exchange_rule_valid_for_minutes=args.exchange_rule_valid_for_minutes,
                 )
             )
 

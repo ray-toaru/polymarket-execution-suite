@@ -60,6 +60,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-order-notional-usd", default="0.20")
     parser.add_argument("--max-daily-notional-usd", default="0.20")
     parser.add_argument("--max-spread-bps", type=int, default=100)
+    parser.add_argument("--exchange-rule-valid-for-minutes", type=int, default=5)
     parser.add_argument("--timeout-seconds", type=float, default=10.0)
     parser.add_argument("--valid-for-minutes", type=int, default=15)
     parser.add_argument("--approved-dual-control-review-file", type=Path)
@@ -158,6 +159,7 @@ def execute_workflow(args: argparse.Namespace) -> dict[str, Any]:
         max_order_notional_usd=args.max_order_notional_usd,
         max_daily_notional_usd=args.max_daily_notional_usd,
         max_spread_bps=args.max_spread_bps,
+        exchange_rule_valid_for_minutes=args.exchange_rule_valid_for_minutes,
         timeout_seconds=args.timeout_seconds,
         valid_for_minutes=args.valid_for_minutes,
     )

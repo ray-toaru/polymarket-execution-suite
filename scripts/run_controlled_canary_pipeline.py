@@ -479,6 +479,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--exchange-rule-evidence-ref")
     parser.add_argument("--target-size")
     parser.add_argument("--max-order-notional-usd", default="1.00")
+    parser.add_argument("--exchange-rule-valid-for-minutes", type=int, default=5)
     parser.add_argument(
         "--reviewed-go-decision-file",
         type=Path,
@@ -551,6 +552,8 @@ def prepare_candidate(args: argparse.Namespace, output_dir: Path) -> tuple[Path 
         args.exchange_rule_evidence_ref,
         "--max-order-notional-usd",
         args.max_order_notional_usd,
+        "--exchange-rule-valid-for-minutes",
+        str(args.exchange_rule_valid_for_minutes),
     ]
     if args.market_url:
         command.extend(["--market-url", args.market_url])

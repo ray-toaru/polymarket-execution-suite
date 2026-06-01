@@ -64,6 +64,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-order-notional-usd", default="0.20")
     parser.add_argument("--max-daily-notional-usd", default="0.20")
     parser.add_argument("--max-spread-bps", type=int, default=100)
+    parser.add_argument("--exchange-rule-valid-for-minutes", type=int, default=5)
     parser.add_argument("--timeout-seconds", type=float, default=10.0)
     parser.add_argument("--valid-for-minutes", type=int, default=15)
     return parser.parse_args()
@@ -90,6 +91,7 @@ def prepare_candidate(
     target_size: str | None,
     max_order_notional_usd: str,
     max_spread_bps: int,
+    exchange_rule_valid_for_minutes: int,
     timeout_seconds: float,
 ) -> dict[str, str]:
     candidate_module = load_module(PREPARE_CANDIDATE_SCRIPT, "prepare_canary_candidate_market")
@@ -107,6 +109,7 @@ def prepare_candidate(
         target_size=target_size,
         max_order_notional_usd=max_order_notional_usd,
         max_spread_bps=max_spread_bps,
+        exchange_rule_valid_for_minutes=exchange_rule_valid_for_minutes,
         timeout_seconds=timeout_seconds,
     )
     candidate, audit = candidate_module.scan(namespace)
@@ -237,6 +240,7 @@ def prepare_prereview_bundle(
     max_order_notional_usd: str,
     max_daily_notional_usd: str,
     max_spread_bps: int,
+    exchange_rule_valid_for_minutes: int,
     timeout_seconds: float,
     valid_for_minutes: int,
 ) -> dict[str, str]:
@@ -254,6 +258,7 @@ def prepare_prereview_bundle(
         target_size=target_size,
         max_order_notional_usd=max_order_notional_usd,
         max_spread_bps=max_spread_bps,
+        exchange_rule_valid_for_minutes=exchange_rule_valid_for_minutes,
         timeout_seconds=timeout_seconds,
     )
     runtime_profile_result = activate_runtime_profile_env(
@@ -322,6 +327,7 @@ def main() -> int:
         max_order_notional_usd=args.max_order_notional_usd,
         max_daily_notional_usd=args.max_daily_notional_usd,
         max_spread_bps=args.max_spread_bps,
+        exchange_rule_valid_for_minutes=args.exchange_rule_valid_for_minutes,
         timeout_seconds=args.timeout_seconds,
         valid_for_minutes=args.valid_for_minutes,
     )
