@@ -311,6 +311,15 @@ def candidate_sort_key(candidate: Candidate) -> tuple[int, int, str, str]:
     return (-candidate.liquidity_score, candidate.spread_bps, candidate.market_id, candidate.token_id)
 
 
+def market_disambiguation_summary(market: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "market_id": market_id(market),
+        "slug": str(market.get("slug") or ""),
+        "outcomes": parse_outcomes(market),
+        "token_ids": parse_token_ids(market),
+    }
+
+
 def fetch_json_or_error(
     *,
     base_url: str,
@@ -356,8 +365,11 @@ def select_market_for_outcome(
         return exact_slug_matches[0]
     if len(matches) == 1:
         return matches[0]
+    summaries = [market_disambiguation_summary(market) for market in matches]
     raise CandidateError(
-        f"Gamma API returned multiple markets for slug {slug!r} and outcome {requested_outcome!r}; explicit market disambiguation is required"
+        "Gamma API returned multiple markets for slug "
+        f"{slug!r} and outcome {requested_outcome!r}; explicit market disambiguation is required. "
+        f"Candidates: {json.dumps(summaries, ensure_ascii=True, sort_keys=True)}"
     )
 
 

@@ -56,8 +56,12 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             {"slug": "shared-slug", "outcomes": ["Yes", "No"], "clobTokenIds": ["3", "4"]},
         ]
         with patch.object(self.module, "fetch_json", side_effect=[markets]):
-            with self.assertRaisesRegex(self.module.CandidateError, "multiple markets"):
+            with self.assertRaisesRegex(self.module.CandidateError, "multiple markets") as ctx:
                 self.module.load_market_by_slug(args, "shared-slug", "Yes")
+        message = str(ctx.exception)
+        self.assertIn("Candidates:", message)
+        self.assertIn('"token_ids": ["1", "2"]', message)
+        self.assertIn('"token_ids": ["3", "4"]', message)
 
     def test_scan_uses_deterministic_tie_break_for_equal_liquidity(self):
         args = argparse.Namespace(
