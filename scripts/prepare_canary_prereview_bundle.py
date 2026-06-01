@@ -67,6 +67,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--exchange-rule-valid-for-minutes", type=int, default=5)
     parser.add_argument("--timeout-seconds", type=float, default=10.0)
     parser.add_argument("--valid-for-minutes", type=int, default=15)
+    parser.add_argument(
+        "--write-runtime-secrets",
+        action="store_true",
+        help="Also write the companion .env.runtime.secrets file. Without this flag only runtime identity is emitted.",
+    )
     return parser.parse_args()
 
 
@@ -196,17 +201,23 @@ def activate_runtime_profile_env(
     profile: str,
     source_env_file: Path,
     runtime_env_output: Path,
+    write_runtime_secrets: bool = False,
 ) -> dict[str, str]:
     activate = load_module(ACTIVATE_PROFILE_SCRIPT, "activate_pmx_profile")
     source_values = activate.load_profile_source(source_env_file)
     activated = activate.activate_profile(profile, source_values)
-    activate.write_runtime_env(runtime_env_output, activated, write_secrets=True)
+    activate.write_runtime_env(
+        runtime_env_output,
+        activated,
+        write_secrets=write_runtime_secrets,
+    )
     os.environ.update(activated)
     return {
         "profile": activated["PMX_ACTIVE_ACCOUNT_PROFILE"],
         "account_id": activated["PMX_ACTIVE_ACCOUNT_ID"],
         "active_profile_ref": activated["PMX_ACTIVE_PROFILE_REF"],
         "runtime_env_output": str(runtime_env_output),
+        "secrets_included": write_runtime_secrets,
     }
 
 
@@ -243,6 +254,7 @@ def prepare_prereview_bundle(
     exchange_rule_valid_for_minutes: int,
     timeout_seconds: float,
     valid_for_minutes: int,
+    write_runtime_secrets: bool = False,
 ) -> dict[str, str]:
     candidate_result = prepare_candidate(
         candidate_market_output=candidate_market_output,
@@ -265,6 +277,7 @@ def prepare_prereview_bundle(
         profile=profile,
         source_env_file=source_env_file,
         runtime_env_output=runtime_env_output,
+        write_runtime_secrets=write_runtime_secrets,
     )
     runtime_truth_result = prepare_runtime_truth(
         runtime_truth_output=runtime_truth_output,
@@ -292,6 +305,7 @@ def prepare_prereview_bundle(
         max_order_notional_usd=max_order_notional_usd,
         max_daily_notional_usd=max_daily_notional_usd,
         valid_for_minutes=valid_for_minutes,
+        write_runtime_secrets=write_runtime_secrets,
     )
     return {**candidate_result, **runtime_profile_result, **runtime_truth_result, **bundle}
 
@@ -330,6 +344,7 @@ def main() -> int:
         exchange_rule_valid_for_minutes=args.exchange_rule_valid_for_minutes,
         timeout_seconds=args.timeout_seconds,
         valid_for_minutes=args.valid_for_minutes,
+        write_runtime_secrets=args.write_runtime_secrets,
     )
     print(json.dumps(result, sort_keys=True))
     return 0

@@ -41,6 +41,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-order-notional-usd", default="0.20")
     parser.add_argument("--max-daily-notional-usd", default="0.20")
     parser.add_argument("--valid-for-minutes", type=int, default=15)
+    parser.add_argument(
+        "--write-runtime-secrets",
+        action="store_true",
+        help="Also write the companion .env.runtime.secrets file. Without this flag only runtime identity is emitted.",
+    )
     return parser.parse_args()
 
 
@@ -62,12 +67,17 @@ def prepare_bundle(
     max_order_notional_usd: str,
     max_daily_notional_usd: str,
     valid_for_minutes: int,
+    write_runtime_secrets: bool = False,
 ) -> dict[str, str]:
     activate = load_module(ACTIVATE_SCRIPT, "activate_pmx_profile")
     approval = load_module(APPROVAL_SCRIPT, "prepare_operator_approval_request")
     source_values = activate.load_profile_source(source_env_file)
     activated = activate.activate_profile(profile, source_values)
-    activate.write_runtime_env(runtime_env_output, activated, write_secrets=True)
+    activate.write_runtime_env(
+        runtime_env_output,
+        activated,
+        write_secrets=write_runtime_secrets,
+    )
 
     account_id, active_profile_ref = approval.resolve_runtime_identity(
         runtime_env_file=runtime_env_output,
@@ -118,6 +128,7 @@ def prepare_bundle(
         "runtime_env_output": str(runtime_env_output),
         "approval_request_output": str(approval_request_output),
         "approval_hash": request["approval_hash"],
+        "secrets_included": write_runtime_secrets,
     }
 
 
@@ -166,6 +177,7 @@ def main() -> int:
         max_order_notional_usd=args.max_order_notional_usd,
         max_daily_notional_usd=args.max_daily_notional_usd,
         valid_for_minutes=args.valid_for_minutes,
+        write_runtime_secrets=args.write_runtime_secrets,
     )
     print(json.dumps(result, sort_keys=True))
     return 0

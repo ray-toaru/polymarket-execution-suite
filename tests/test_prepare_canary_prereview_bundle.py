@@ -46,6 +46,7 @@ class PrepareCanaryPrereviewBundleTests(unittest.TestCase):
                     "account_id": "acct_b",
                     "active_profile_ref": "local-profile://acct_b",
                     "runtime_env_output": str(kwargs["runtime_env_output"]),
+                    "secrets_included": False,
                 }
 
             review_results = {
@@ -110,6 +111,7 @@ class PrepareCanaryPrereviewBundleTests(unittest.TestCase):
             )
             self.assertEqual(calls[0][1]["exchange_rule_evidence_ref"], "ticket://reviewed-rule")
             self.assertEqual(result["profile"], "acct_b")
+            self.assertFalse(result["secrets_included"])
             self.assertEqual(result["review_packet_status"], "dual_control_review_packet_not_authorization")
             self.assertEqual(
                 calls[3][1]["candidate_market_file"],

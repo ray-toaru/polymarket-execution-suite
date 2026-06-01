@@ -27,6 +27,7 @@ class RunReleasePhaseOrchestratorTests(unittest.TestCase):
             profile=None,
             source_env_file=None,
             runtime_env_output=None,
+            write_runtime_secrets=False,
             candidate_market_output=None,
             candidate_audit_output=None,
             runtime_truth_output=None,

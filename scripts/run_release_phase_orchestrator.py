@@ -113,6 +113,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--profile")
     parser.add_argument("--source-env-file", type=Path)
     parser.add_argument("--runtime-env-output", type=Path)
+    parser.add_argument(
+        "--write-runtime-secrets",
+        action="store_true",
+        help="Also write the companion .env.runtime.secrets file. Without this flag only runtime identity is emitted.",
+    )
     parser.add_argument("--candidate-market-output", type=Path)
     parser.add_argument("--candidate-audit-output", type=Path)
     parser.add_argument("--runtime-truth-output", type=Path)
@@ -207,6 +212,7 @@ def build_stage_plans(args: argparse.Namespace) -> dict[str, Any]:
             profile=args.profile,
             source_env_file=resolve(args.source_env_file),
             runtime_env_output=resolve(args.runtime_env_output),
+            write_runtime_secrets=args.write_runtime_secrets,
             candidate_market_output=resolve(args.candidate_market_output),
             candidate_audit_output=resolve(args.candidate_audit_output),
             runtime_truth_output=resolve(args.runtime_truth_output),
@@ -333,6 +339,7 @@ def parse_args_for_reviewed_go(args: argparse.Namespace) -> argparse.Namespace:
         profile=args.profile,
         source_env_file=resolve(args.source_env_file),
         runtime_env_output=resolve(args.runtime_env_output),
+        write_runtime_secrets=args.write_runtime_secrets,
         candidate_market_output=resolve(args.candidate_market_output),
         candidate_audit_output=resolve(args.candidate_audit_output),
         runtime_truth_output=resolve(args.runtime_truth_output),

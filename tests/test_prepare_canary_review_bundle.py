@@ -166,6 +166,7 @@ class PrepareCanaryReviewBundleTests(unittest.TestCase):
 
             self.assertEqual(result["profile"], "acct_b")
             self.assertTrue(runtime_env.exists())
+            self.assertFalse(runtime_env.with_name(".env.runtime.secrets").exists())
             self.assertTrue(approval_request.exists())
             self.assertTrue(dual_control_template.exists())
             self.assertTrue((review_packet_dir / "packet.json").exists())

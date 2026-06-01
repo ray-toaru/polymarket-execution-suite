@@ -25,6 +25,7 @@ class RunReviewedGoDecisionWorkflowTests(unittest.TestCase):
             profile="acct_b",
             source_env_file=tmp / ".env.profiles",
             runtime_env_output=tmp / ".env.runtime",
+            write_runtime_secrets=False,
             candidate_market_output=tmp / "candidate-market.json",
             candidate_audit_output=tmp / "candidate-market.audit.json",
             runtime_truth_output=tmp / "runtime-truth.json",

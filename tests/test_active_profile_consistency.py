@@ -136,6 +136,14 @@ class ActiveProfileConsistencyTests(unittest.TestCase):
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["active_account_id"], "acct_b")
 
+    def test_identity_check_accepts_identity_only_env_without_companion_secrets(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            env_file = Path(tmp_name) / ".env.runtime"
+            env_file.write_text(self.valid_identity_env())
+            report = self.module.evaluate_identity_env_file(env_file, expected_account_id="acct_b")
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["active_profile_ref"], "local-profile://acct_b")
+
     def test_check_preserves_unquoted_value_spacing(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             env_file = Path(tmp_name) / ".env.runtime"

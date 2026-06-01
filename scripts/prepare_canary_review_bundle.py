@@ -44,6 +44,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-order-notional-usd", default="0.20")
     parser.add_argument("--max-daily-notional-usd", default="0.20")
     parser.add_argument("--valid-for-minutes", type=int, default=15)
+    parser.add_argument(
+        "--write-runtime-secrets",
+        action="store_true",
+        help="Also write the companion .env.runtime.secrets file. Without this flag only runtime identity is emitted.",
+    )
     return parser.parse_args()
 
 
@@ -71,6 +76,7 @@ def prepare_review_bundle(
     max_order_notional_usd: str,
     max_daily_notional_usd: str,
     valid_for_minutes: int,
+    write_runtime_secrets: bool = False,
 ) -> dict[str, str]:
     runtime_bundle = load_module(RUNTIME_BUNDLE_SCRIPT, "prepare_canary_runtime_bundle")
     dual_control_template = load_module(
@@ -95,6 +101,7 @@ def prepare_review_bundle(
         max_order_notional_usd=max_order_notional_usd,
         max_daily_notional_usd=max_daily_notional_usd,
         valid_for_minutes=valid_for_minutes,
+        write_runtime_secrets=write_runtime_secrets,
     )
 
     approval_request = dual_control_template.load_json(approval_request_output)
@@ -157,6 +164,7 @@ def main() -> int:
         max_order_notional_usd=args.max_order_notional_usd,
         max_daily_notional_usd=args.max_daily_notional_usd,
         valid_for_minutes=args.valid_for_minutes,
+        write_runtime_secrets=args.write_runtime_secrets,
     )
     print(json.dumps(result, sort_keys=True))
     return 0

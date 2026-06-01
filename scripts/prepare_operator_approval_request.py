@@ -159,7 +159,10 @@ def resolve_runtime_identity(
     )
     if runtime_env_file is not None:
         checker = load_module(ACTIVE_PROFILE_CHECK, "check_active_profile_consistency")
-        report = checker.evaluate_env_file(runtime_env_file, expected_account_id=resolved_account)
+        report = checker.evaluate_identity_env_file(
+            runtime_env_file,
+            expected_account_id=resolved_account,
+        )
         env_account = require_nonempty_text(report.get("active_account_id"), "runtime env active_account_id")
         env_profile_ref = require_nonempty_text(report.get("active_profile_ref"), "runtime env active_profile_ref")
         if resolved_account is not None and resolved_account != env_account:

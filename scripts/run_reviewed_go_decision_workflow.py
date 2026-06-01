@@ -63,6 +63,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--exchange-rule-valid-for-minutes", type=int, default=5)
     parser.add_argument("--timeout-seconds", type=float, default=10.0)
     parser.add_argument("--valid-for-minutes", type=int, default=15)
+    parser.add_argument(
+        "--write-runtime-secrets",
+        action="store_true",
+        help="Also write the companion .env.runtime.secrets file. Without this flag only runtime identity is emitted.",
+    )
     parser.add_argument("--approved-dual-control-review-file", type=Path)
     parser.add_argument("--external-references-file", type=Path)
     parser.add_argument("--reviewed-go-output-dir", type=Path)
@@ -87,6 +92,7 @@ def build_workflow_plan(args: argparse.Namespace) -> dict[str, Any]:
             else None,
             "runtime_truth_output": str(resolve(args.runtime_truth_output)),
             "runtime_env_output": str(resolve(args.runtime_env_output)),
+            "write_runtime_secrets": args.write_runtime_secrets,
             "approval_request_output": str(resolve(args.approval_request_output)),
             "dual_control_template_output": str(resolve(args.dual_control_template_output)),
             "review_packet_output_dir": str(resolve(args.review_packet_output_dir)),
@@ -162,6 +168,7 @@ def execute_workflow(args: argparse.Namespace) -> dict[str, Any]:
         exchange_rule_valid_for_minutes=args.exchange_rule_valid_for_minutes,
         timeout_seconds=args.timeout_seconds,
         valid_for_minutes=args.valid_for_minutes,
+        write_runtime_secrets=args.write_runtime_secrets,
     )
     result: dict[str, Any] = {
         "status": "review_packet_ready_requires_independent_review",

@@ -74,6 +74,27 @@ class PrepareOperatorApprovalRequestTests(unittest.TestCase):
         self.assertEqual(account_id, "acct-canary")
         self.assertEqual(profile_ref, "local-profile://acct_b")
 
+    def test_runtime_identity_can_resolve_from_identity_only_env(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            env_file = Path(tmp_name) / ".env.runtime"
+            env_file.write_text(
+                "\n".join(
+                    [
+                        "PMX_ACTIVE_ACCOUNT_PROFILE=acct_b",
+                        "PMX_ACTIVE_ACCOUNT_ID=acct-canary",
+                        "PMX_ACTIVE_PROFILE_REF=local-profile://acct_b",
+                        "",
+                    ]
+                )
+            )
+            account_id, profile_ref = self.module.resolve_runtime_identity(
+                runtime_env_file=env_file,
+                account_id=None,
+                active_profile_ref=None,
+            )
+        self.assertEqual(account_id, "acct-canary")
+        self.assertEqual(profile_ref, "local-profile://acct_b")
+
     def test_candidate_notional_must_match_limit_times_size(self):
         candidate = {
             "market_id": "condition-1",
