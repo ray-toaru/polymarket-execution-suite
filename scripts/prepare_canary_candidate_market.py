@@ -52,6 +52,7 @@ class Candidate:
     source_market_hash: str
     book_snapshot_timestamp: str
     human_review_ref: str
+    exchange_rule_evidence_ref: str
 
     def to_engine_json(self) -> dict[str, Any]:
         return {
@@ -87,7 +88,7 @@ class Candidate:
                     dt.datetime.fromisoformat(self.book_snapshot_timestamp)
                     + dt.timedelta(minutes=15)
                 ).isoformat(),
-                "evidence_ref": self.human_review_ref,
+                "evidence_ref": self.exchange_rule_evidence_ref,
             },
             "liquidity_score": self.liquidity_score,
             "book_snapshot_timestamp": self.book_snapshot_timestamp,
@@ -114,6 +115,11 @@ def parse_args() -> argparse.Namespace:
         "--human-review-ref",
         required=True,
         help="External operator review/ticket reference approving this candidate market for BUY/GTC post-only canary only.",
+    )
+    parser.add_argument(
+        "--exchange-rule-evidence-ref",
+        required=True,
+        help="External evidence reference for the reviewed exchange rule snapshot bound into exchange_rule_snapshot.evidence_ref.",
     )
     parser.add_argument("--gamma-url", default=DEFAULT_GAMMA_URL, help="Gamma API base URL")
     parser.add_argument("--clob-url", default=DEFAULT_CLOB_URL, help="CLOB API base URL")
@@ -320,6 +326,16 @@ def market_disambiguation_summary(market: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def is_concrete_external_ref(value: str) -> bool:
+    text = value.strip()
+    if not text or "REPLACE_WITH" in text:
+        return False
+    parsed = urllib.parse.urlparse(text)
+    if not parsed.scheme:
+        return False
+    return bool(parsed.netloc or parsed.path)
+
+
 def fetch_json_or_error(
     *,
     base_url: str,
@@ -382,6 +398,7 @@ def candidate_from_market(
     requested_target_size: Decimal | None,
     snapshot_at: str,
     human_review_ref: str,
+    exchange_rule_evidence_ref: str,
     audit: dict[str, Any],
 ) -> Candidate:
     active = as_bool(market.get("active"))
@@ -454,8 +471,12 @@ def candidate_from_market(
             f"selected market spread {bps} bps exceeds max {args.max_spread_bps} bps",
             audit,
         )
-    min_order_size = as_decimal(book.get("min_order_size")) or Decimal("0")
-    min_tick_size = as_decimal(book.get("min_tick_size")) or Decimal("0.01")
+    min_order_size = as_decimal(book.get("min_order_size"))
+    if min_order_size is None or min_order_size <= 0:
+        raise CandidateError("selected market min_order_size is unavailable", audit)
+    min_tick_size = as_decimal(book.get("min_tick_size"))
+    if min_tick_size is None or min_tick_size <= 0:
+        raise CandidateError("selected market min_tick_size is unavailable", audit)
     limit_price = post_only_buy_limit_price(price, min_tick_size)
     if limit_price is None:
         raise CandidateError("selected market best ask/min tick cannot produce a non-crossing post-only price", audit)
@@ -504,6 +525,7 @@ def candidate_from_market(
         source_market_hash=market_fingerprint(market),
         book_snapshot_timestamp=snapshot_at,
         human_review_ref=human_review_ref,
+        exchange_rule_evidence_ref=exchange_rule_evidence_ref,
     )
 
 
@@ -541,8 +563,13 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
     if args.max_spread_bps < 0:
         raise CandidateError("--max-spread-bps must be non-negative")
     human_review_ref = args.human_review_ref.strip()
-    if not human_review_ref or "REPLACE_WITH" in human_review_ref:
+    if not is_concrete_external_ref(human_review_ref):
         raise CandidateError("--human-review-ref must be a concrete external review reference")
+    exchange_rule_evidence_ref = args.exchange_rule_evidence_ref.strip()
+    if not is_concrete_external_ref(exchange_rule_evidence_ref):
+        raise CandidateError("--exchange-rule-evidence-ref must be a concrete external review reference")
+    if exchange_rule_evidence_ref == human_review_ref:
+        raise CandidateError("--exchange-rule-evidence-ref must differ from --human-review-ref")
     if args.market_url and args.market_slug:
         raise CandidateError("use only one of --market-url or --market-slug")
     if (args.market_url or args.market_slug) and not args.outcome:
@@ -598,6 +625,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
             requested_target_size=target_size,
             snapshot_at=snapshot_at,
             human_review_ref=human_review_ref,
+            exchange_rule_evidence_ref=exchange_rule_evidence_ref,
             audit=audit,
         )
         audit["candidate_count"] = 1
@@ -665,8 +693,14 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
                 audit["rejections"]["book_unavailable"] += 1
                 continue
             top_ask = best_ask(book)
-            min_order_size = as_decimal(book.get("min_order_size")) or Decimal("0")
-            min_tick_size = as_decimal(book.get("min_tick_size")) or Decimal("0.01")
+            min_order_size = as_decimal(book.get("min_order_size"))
+            min_tick_size = as_decimal(book.get("min_tick_size"))
+            if min_order_size is None or min_order_size <= 0:
+                audit["rejections"]["min_order_size_above_target_size"] += 1
+                continue
+            if min_tick_size is None or min_tick_size <= 0:
+                audit["rejections"]["post_only_price_unavailable"] += 1
+                continue
             if top_ask is None:
                 audit["rejections"]["book_unavailable"] += 1
                 continue
@@ -724,6 +758,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
                     source_market_hash=market_fingerprint(market),
                     book_snapshot_timestamp=snapshot_at,
                     human_review_ref=human_review_ref,
+                    exchange_rule_evidence_ref=exchange_rule_evidence_ref,
                 )
             )
 

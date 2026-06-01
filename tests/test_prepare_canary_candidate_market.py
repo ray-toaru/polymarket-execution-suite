@@ -45,9 +45,14 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             source_market_hash="a" * 64,
             book_snapshot_timestamp="2026-05-23T00:00:00+00:00",
             human_review_ref="ticket://review",
+            exchange_rule_evidence_ref="ticket://reviewed-rule",
         )
         self.assertEqual(candidate.to_engine_json()["outcome"], "Yes")
         self.assertEqual(candidate.to_engine_json()["estimated_order_notional_usd"], "0.1")
+        self.assertEqual(
+            candidate.to_engine_json()["exchange_rule_snapshot"]["evidence_ref"],
+            "ticket://reviewed-rule",
+        )
 
     def test_load_market_by_slug_requires_outcome_disambiguation(self):
         args = argparse.Namespace(gamma_url="https://gamma", timeout_seconds=1.0)
@@ -73,6 +78,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             max_markets=10,
             max_spread_bps=100,
             human_review_ref="ticket://review",
+            exchange_rule_evidence_ref="ticket://reviewed-rule",
             market_url=None,
             market_slug=None,
             outcome=None,
@@ -105,6 +111,58 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             candidate, _audit = self.module.scan(args)
         self.assertEqual(candidate.market_id, "condition-a")
         self.assertEqual(candidate.token_id, "100")
+
+    def test_scan_requires_distinct_concrete_review_refs(self):
+        args = argparse.Namespace(
+            gamma_url="https://gamma",
+            clob_url="https://clob",
+            timeout_seconds=1.0,
+            max_order_notional_usd="1.00",
+            target_size="5",
+            max_markets=10,
+            max_spread_bps=100,
+            human_review_ref="review",
+            exchange_rule_evidence_ref="review",
+            market_url=None,
+            market_slug=None,
+            outcome=None,
+        )
+        with self.assertRaisesRegex(self.module.CandidateError, "--human-review-ref"):
+            self.module.scan(args)
+
+    def test_candidate_from_market_requires_positive_tick_and_min_order(self):
+        args = argparse.Namespace(
+            clob_url="https://clob",
+            timeout_seconds=1.0,
+            max_spread_bps=100,
+            market_slug="slug",
+        )
+        market = {
+            "id": "condition-1",
+            "slug": "slug",
+            "active": True,
+            "acceptingOrders": True,
+            "closed": False,
+            "archived": False,
+            "outcomes": ["Yes"],
+            "clobTokenIds": ["1"],
+        }
+        book = {"asks": [{"price": "0.03", "size": "10"}], "min_order_size": None, "min_tick_size": None}
+        spread = {"spread": "0.01"}
+        audit = {}
+        with patch.object(self.module, "fetch_json_or_error", side_effect=[book, spread]):
+            with self.assertRaisesRegex(self.module.CandidateError, "min_order_size is unavailable"):
+                self.module.candidate_from_market(
+                    args,
+                    market,
+                    requested_outcome="Yes",
+                    order_cap=Decimal("1"),
+                    requested_target_size=None,
+                    snapshot_at="2026-05-23T00:00:00+00:00",
+                    human_review_ref="ticket://review",
+                    exchange_rule_evidence_ref="ticket://reviewed-rule",
+                    audit=audit,
+                )
 
     def test_fetch_json_retries_before_succeeding(self):
         calls = []
