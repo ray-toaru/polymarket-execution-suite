@@ -293,14 +293,29 @@ def best_bid(book: dict[str, Any]) -> tuple[Decimal, Decimal] | None:
     return max(parsed, key=lambda item: item[0])
 
 
-def post_only_buy_limit_price(best_ask_price: Decimal, min_tick_size: Decimal) -> Decimal | None:
+def post_only_buy_limit_price(
+    best_ask_price: Decimal,
+    min_tick_size: Decimal,
+    *,
+    best_bid_price: Decimal | None = None,
+) -> Decimal | None:
     if best_ask_price <= 0 or min_tick_size <= 0:
         return None
-    ticks = (best_ask_price / min_tick_size).to_integral_value(rounding=ROUND_FLOOR)
-    limit_price = ticks * min_tick_size
-    if limit_price >= best_ask_price:
-        limit_price -= min_tick_size
-    return limit_price if limit_price > 0 else None
+    ask_ticks = (best_ask_price / min_tick_size).to_integral_value(rounding=ROUND_FLOOR)
+    upper = ask_ticks * min_tick_size
+    if upper >= best_ask_price:
+        upper -= min_tick_size
+    if upper <= 0:
+        return None
+    if best_bid_price is None or best_bid_price <= 0:
+        return upper
+    improved_bid = ((best_bid_price / min_tick_size).to_integral_value(rounding=ROUND_FLOOR) + 1) * min_tick_size
+    if improved_bid < best_ask_price and improved_bid <= upper:
+        return improved_bid
+    bid_grid = (best_bid_price / min_tick_size).to_integral_value(rounding=ROUND_FLOOR) * min_tick_size
+    if bid_grid > 0 and bid_grid < best_ask_price and bid_grid <= upper:
+        return bid_grid
+    return upper
 
 
 def spread_bps(book: dict[str, Any], spread: dict[str, Any]) -> int | None:
@@ -494,6 +509,7 @@ def candidate_from_market(
     if not isinstance(book, dict):
         raise CandidateError("selected market book response was not an object", audit)
     top_ask = best_ask(book)
+    top_bid = best_bid(book)
     if top_ask is None:
         raise CandidateError("selected market has no usable top ask", audit)
     price, size = top_ask
@@ -521,7 +537,11 @@ def candidate_from_market(
     min_tick_size = as_decimal(book.get("min_tick_size"))
     if min_tick_size is None or min_tick_size <= 0:
         raise CandidateError("selected market min_tick_size is unavailable", audit)
-    limit_price = post_only_buy_limit_price(price, min_tick_size)
+    limit_price = post_only_buy_limit_price(
+        price,
+        min_tick_size,
+        best_bid_price=top_bid[0] if top_bid is not None else None,
+    )
     if limit_price is None:
         raise CandidateError("selected market best ask/min tick cannot produce a non-crossing post-only price", audit)
     target_size = requested_target_size or min_order_size
@@ -740,6 +760,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
                 audit["rejections"]["book_unavailable"] += 1
                 continue
             top_ask = best_ask(book)
+            top_bid = best_bid(book)
             min_order_size = as_decimal(book.get("min_order_size"))
             min_tick_size = as_decimal(book.get("min_tick_size"))
             if min_order_size is None or min_order_size <= 0:
@@ -752,7 +773,11 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
                 audit["rejections"]["book_unavailable"] += 1
                 continue
             price, size = top_ask
-            limit_price = post_only_buy_limit_price(price, min_tick_size)
+            limit_price = post_only_buy_limit_price(
+                price,
+                min_tick_size,
+                best_bid_price=top_bid[0] if top_bid is not None else None,
+            )
             if limit_price is None:
                 audit["rejections"]["post_only_price_unavailable"] += 1
                 continue

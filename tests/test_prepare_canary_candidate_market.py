@@ -240,6 +240,22 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
         wide = self.module.liquidity_score(Decimal("10"), Decimal("0.05"), 1000)
         self.assertGreater(narrow, wide)
 
+    def test_post_only_buy_limit_price_uses_best_bid_when_possible(self):
+        price = self.module.post_only_buy_limit_price(
+            Decimal("0.05"),
+            Decimal("0.01"),
+            best_bid_price=Decimal("0.03"),
+        )
+        self.assertEqual(price, Decimal("0.04"))
+
+    def test_post_only_buy_limit_price_falls_back_to_upper_non_crossing_price(self):
+        price = self.module.post_only_buy_limit_price(
+            Decimal("0.05"),
+            Decimal("0.01"),
+            best_bid_price=Decimal("0.049"),
+        )
+        self.assertEqual(price, Decimal("0.04"))
+
 
 if __name__ == "__main__":
     unittest.main()
