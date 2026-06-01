@@ -123,10 +123,55 @@ jobs:
         working-directory: polymarket-execution-engine
         run: cargo test -p pmx-api --test http_and_fake_e2e --locked -- --test-threads=1
 
+  integration-python-compat:
+    name: integration python compat
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.11", "3.13"]
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
+        with:
+          token: ${{ secrets.CI_SUBMODULE_TOKEN }}
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install compatibility dependencies
+        run: |
+          python -m pip install --upgrade pip==25.3
+          python -m pip install -c constraints-ci.txt -r requirements-ci.txt
+          python -m pip install -c constraints-ci.txt -e "hermes-polymarket-executor-adapter[test]"
+
+      - name: Check version consistency
+        run: python scripts/check_version_consistency.py
+
+      - name: Run workflow and version regression tests
+        run: python -m unittest tests.test_ci_workflows tests.test_version_consistency
+
+      - name: Compile Python surfaces
+        run: |
+          python -m compileall -q \
+            scripts \
+            tests \
+            hermes-polymarket-executor-adapter/src \
+            hermes-polymarket-executor-adapter/tests \
+            polymarket-execution-engine/scripts \
+            polymarket-execution-engine/validation
+
   integration-static:
     name: integration static checks
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - name: Checkout repository and submodules
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
