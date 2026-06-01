@@ -271,6 +271,18 @@ def service_backend_method_names(text: str) -> set[str]:
     return rust_async_fn_names(text) | rust_fn_names(text)
 
 
+def rust_async_fn_signature(text: str, fn_name: str) -> tuple[str, str]:
+    pattern = (
+        rf"(?s)async\s+fn\s+{re.escape(fn_name)}\s*\((.*?)\)\s*->\s*([^\{{]+)\{{"
+    )
+    match = re.search(pattern, text)
+    if not match:
+        fail(f"missing Rust async fn signature: {fn_name}")
+    params = match.group(1)
+    return_type = match.group(2).strip()
+    return params, return_type
+
+
 def cargo_toml(path: Path) -> dict:
     try:
         return tomllib.loads(path.read_text())
@@ -1705,6 +1717,44 @@ def validate_v23_lifecycle_query_and_hardening(spec: dict | None = None) -> None
         "list_order_lifecycle_events",
     }.issubset(rust_async_fn_names(api_lifecycle_read)):
         fail("current API lifecycle read routes must expose list endpoints")
+    try:
+        runtime_params, runtime_return = rust_async_fn_signature(
+            api_runtime_read, "list_runtime_worker_status"
+        )
+        sign_only_params, sign_only_return = rust_async_fn_signature(
+            api_lifecycle_read, "list_sign_only_lifecycle_events"
+        )
+        execution_params, execution_return = rust_async_fn_signature(
+            api_lifecycle_read, "list_execution_lifecycle_events"
+        )
+        order_params, order_return = rust_async_fn_signature(
+            api_lifecycle_read, "list_order_lifecycle_events"
+        )
+        sign_only_flow_params, sign_only_flow_return = rust_async_fn_signature(
+            api_sign_only_flow, "record_sign_only_lifecycle_event"
+        )
+        construction_params, construction_return = rust_async_fn_signature(
+            api_sign_only_flow, "record_standard_sign_only_construction"
+        )
+        reconcile_params, reconcile_return = rust_async_fn_signature(
+            api_reconcile_local, "reconcile_order_local"
+        )
+    except SystemExit as exc:
+        fail(f"current API route signatures malformed: {exc}")
+    if "Query(query): Query<RuntimeWorkerStatusListQuery>" not in runtime_params or runtime_return != "ApiResult<RuntimeWorkerStatusReport>":
+        fail("current API runtime read route must bind RuntimeWorkerStatusListQuery -> ApiResult<RuntimeWorkerStatusReport>")
+    if "Query(query): Query<EventListQuery>" not in sign_only_params or sign_only_return != "ApiResult<Vec<SignOnlyLifecycleRecord>>":
+        fail("current API sign-only lifecycle read route must bind EventListQuery -> ApiResult<Vec<SignOnlyLifecycleRecord>>")
+    if "Query(query): Query<EventListQuery>" not in execution_params or execution_return != "ApiResult<Vec<ExecutionLifecycleEvent>>":
+        fail("current API execution lifecycle read route must bind EventListQuery -> ApiResult<Vec<ExecutionLifecycleEvent>>")
+    if "Query(query): Query<EventListQuery>" not in order_params or order_return != "ApiResult<Vec<OrderLifecycleEventRecord>>":
+        fail("current API order lifecycle read route must bind EventListQuery -> ApiResult<Vec<OrderLifecycleEventRecord>>")
+    if "Json(record): Json<SignOnlyLifecycleRecord>" not in sign_only_flow_params or sign_only_flow_return != "ApiResult<SignOnlyLifecycleRecord>":
+        fail("current API sign-only lifecycle record route must bind Json<SignOnlyLifecycleRecord> -> ApiResult<SignOnlyLifecycleRecord>")
+    if "Json(req): Json<StandardSignOnlyConstructionRequest>" not in construction_params or construction_return != "ApiResult<StandardSignOnlyConstructionReceipt>":
+        fail("current API sign-only construction route must bind Json<StandardSignOnlyConstructionRequest> -> ApiResult<StandardSignOnlyConstructionReceipt>")
+    if "Json(req): Json<ReconcileOrderLocalRequest>" not in reconcile_params or reconcile_return != "ApiResult<ReconcileOrderLocalResponse>":
+        fail("current API reconcile-order-local route must bind Json<ReconcileOrderLocalRequest> -> ApiResult<ReconcileOrderLocalResponse>")
     required_by_file = {
         "core": (core, ["WorkerDegraded", "left.client_event_id == right.client_event_id"]),
         "store": (store, ["in_memory_order_lifecycle_records_cancel_requested", "in_memory_worker_heartbeat_informs_runtime_state", "sign_only_lifecycle_record_is_replay", "client_event_id reused with different event payload", "PMX_RUNTIME_OBSERVATION_TTL_SECONDS", "runtime_observation_ttl_seconds", "execution_id={}"]),

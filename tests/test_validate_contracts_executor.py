@@ -259,6 +259,57 @@ pub trait RuntimeWorkerStatusStore: Send + Sync {}
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("RuntimeWorkerStatusStore", str(ctx.exception))
 
+    def test_v23_requires_runtime_route_signature(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/src/routes/read/runtime.rs"):
+                return """
+use super::*;
+
+pub(crate) async fn list_runtime_worker_status(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> ApiResult<Vec<RuntimeWorkerStatusReport>> {
+    require(&headers, Operation::ReadReport)?;
+    let _ = state;
+    Ok((StatusCode::OK, Json(Vec::new())))
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("RuntimeWorkerStatusListQuery", str(ctx.exception))
+
+    def test_v23_requires_reconcile_route_signature(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/src/routes/admin/reconcile/local.rs"):
+                return """
+use super::*;
+
+pub(crate) async fn reconcile_order_local(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> ApiResult<Vec<ReconcileOrderLocalResponse>> {
+    let _ = (state, headers);
+    Ok((axum::http::StatusCode::ACCEPTED, Json(Vec::new())))
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("ReconcileOrderLocalRequest", str(ctx.exception))
+
     def test_v12_requires_compile_request_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
