@@ -581,6 +581,55 @@ impl ServiceBackend {
                 module.validate_v15_admin_audit_and_runtime_provider(spec)
         self.assertIn("API admin audit backend", str(ctx.exception))
 
+    def test_v15_requires_in_memory_audit_store_impl_methods(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/admin/audit-events"]["get"]["parameters"] = [
+            {"name": "before_audit_id"},
+            {"name": "operation"},
+            {"name": "principal_subject"},
+            {"name": "result"},
+            {"name": "correlation_id"},
+        ]
+        spec["paths"]["/v1/admin/audit-events"]["get"]["responses"] = {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "schema": {"type": "array", "items": {"$ref": "#/components/schemas/AdminAuditEvent"}}
+                    }
+                }
+            }
+        }
+        spec["paths"]["/v1/admin/kill-switch"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/KillSwitchRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/KillSwitchReceipt"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/memory/audit.rs"):
+                return """
+use async_trait::async_trait;
+
+#[async_trait]
+impl AdminAuditStore for InMemoryStore {
+    async fn record_admin_audit_event(&self, event: &AdminAuditEvent) -> Result<(), StoreError> {
+        let stored = sanitize_admin_audit_event(event);
+        state.admin_audit.push(stored);
+        let correlation_id = event.correlation_id.clone();
+        Ok(())
+    }
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v15_admin_audit_and_runtime_provider(spec)
+        self.assertIn("in-memory admin audit store", str(ctx.exception))
+
     def test_v16_requires_store_backed_runtime_provider_tokens(self) -> None:
         spec = self._minimal_v23_spec()
         original_read_text = Path.read_text
@@ -614,6 +663,41 @@ fn runtime_observation_is_fresh() {}
             with self.assertRaises(SystemExit) as ctx:
                 module.validate_v16_postgres_runtime_provider(spec)
         self.assertIn("in-memory runtime support", str(ctx.exception))
+
+    def test_v16_requires_postgres_runtime_state_impl_methods(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/postgres_runtime.rs"):
+                return """
+use async_trait::async_trait;
+
+#[async_trait]
+impl RuntimeStateStore for PostgresStore {}
+
+#[async_trait]
+impl RuntimeControlStore for PostgresStore {
+    async fn set_account_kill_switch(&self, account_id: &str, enabled: bool, reason: Option<&str>) -> Result<(), StoreError> {
+        let _ = (account_id, enabled, reason);
+        Ok(())
+    }
+}
+
+fn helper() {
+    let _ = IsolationLevel::RepeatableRead;
+    let _ = account_collateral::load_account_state;
+    let _ = worker_rows::load_worker_rows;
+    let _ = apply_runtime_worker_observations;
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v16_postgres_runtime_provider(spec)
+        self.assertIn("postgres runtime state store", str(ctx.exception))
 
     def test_v15_requires_admin_audit_query_filters(self) -> None:
         spec = self._minimal_v23_spec()

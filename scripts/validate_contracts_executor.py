@@ -225,6 +225,27 @@ def rust_trait_method_signatures(text: str, trait_name: str) -> set[str]:
     )
 
 
+def rust_impl_trait_method_names(text: str, trait_name: str, for_type: str) -> set[str]:
+    pattern = (
+        rf"(?s)impl\s+{re.escape(trait_name)}\s+for\s+{re.escape(for_type)}[^\{{]*\{{(.*?)\n\}}"
+    )
+    match = re.search(pattern, text)
+    if not match:
+        fail(f"missing Rust impl: impl {trait_name} for {for_type}")
+    body = match.group(1)
+    return set(
+        re.findall(
+            r"(?m)^\s*async\s+fn\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(",
+            body,
+        )
+    ) | set(
+        re.findall(
+            r"(?m)^\s*fn\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(",
+            body,
+        )
+    )
+
+
 def cargo_toml(path: Path) -> dict:
     try:
         return tomllib.loads(path.read_text())
@@ -723,6 +744,12 @@ def validate_v15_admin_audit_and_runtime_provider(spec: dict | None = None) -> N
         audit_event_fields = rust_struct_field_names(audit_model_text, "AdminAuditEvent")
         audit_query_fields = rust_struct_field_names(audit_model_text, "AdminAuditQuery")
         audit_store_methods = rust_trait_method_signatures(audit_model_text, "AdminAuditStore")
+        memory_audit_impl_methods = rust_impl_trait_method_names(
+            memory_audit_text, "AdminAuditStore", "InMemoryStore"
+        )
+        postgres_audit_impl_methods = rust_impl_trait_method_names(
+            postgres_audit_text, "AdminAuditStore", "PostgresStore"
+        )
     except SystemExit as exc:
         fail(f"store admin audit model malformed: {exc}")
     if not {
@@ -758,15 +785,19 @@ def validate_v15_admin_audit_and_runtime_provider(spec: dict | None = None) -> N
         fail("API admin audit routes missing list_admin_audit_events")
     if "record_admin_audit" not in rust_async_fn_names(api_support_audit_text):
         fail("API admin audit support missing record_admin_audit")
+    if memory_audit_impl_methods != {"record_admin_audit_event", "list_admin_audit_events"}:
+        fail("in-memory admin audit store missing AdminAuditStore impl methods")
+    if postgres_audit_impl_methods != {"record_admin_audit_event", "list_admin_audit_events"}:
+        fail("postgres admin audit store missing AdminAuditStore impl methods")
     require_tokens(
         memory_audit_text,
         "in-memory admin audit store",
-        ["impl AdminAuditStore for InMemoryStore", "sanitize_admin_audit_event", "state.admin_audit.push(stored)", "correlation_id"],
+        ["sanitize_admin_audit_event", "state.admin_audit.push(stored)", "correlation_id"],
     )
     require_tokens(
         postgres_audit_text,
         "postgres admin audit store",
-        ["impl AdminAuditStore for PostgresStore", "INSERT INTO admin_audit_events", "FROM admin_audit_events", "AND ($6::text IS NULL OR correlation_id = $6)"],
+        ["INSERT INTO admin_audit_events", "FROM admin_audit_events", "AND ($6::text IS NULL OR correlation_id = $6)"],
     )
     require_tokens(
         service_audit_text,
@@ -830,6 +861,18 @@ def validate_v16_postgres_runtime_provider(spec: dict | None = None) -> None:
         runtime_control_methods = rust_trait_method_signatures(
             runtime_model_text, "RuntimeControlStore"
         )
+        memory_runtime_state_impl_methods = rust_impl_trait_method_names(
+            memory_runtime_state_text, "RuntimeStateStore", "InMemoryStore"
+        )
+        postgres_runtime_state_impl_methods = rust_impl_trait_method_names(
+            postgres_runtime_text, "RuntimeStateStore", "PostgresStore"
+        )
+        postgres_runtime_control_impl_methods = rust_impl_trait_method_names(
+            postgres_runtime_text, "RuntimeControlStore", "PostgresStore"
+        )
+        postgres_runtime_worker_impl_methods = rust_impl_trait_method_names(
+            postgres_worker_status_text, "RuntimeWorkerStatusStore", "PostgresStore"
+        )
     except SystemExit as exc:
         fail(f"store runtime model malformed: {exc}")
     if not {"account_id", "condition_id", "collateral_profile_id", "required_capabilities"}.issubset(
@@ -854,25 +897,33 @@ def validate_v16_postgres_runtime_provider(spec: dict | None = None) -> None:
         rust_async_fn_names(store_backed_runtime_text) | rust_fn_names(store_backed_runtime_text)
     ):
         fail("service store-backed runtime provider missing runtime capture/canary truth methods")
+    if memory_runtime_state_impl_methods != {"load_runtime_state"}:
+        fail("in-memory runtime state store missing RuntimeStateStore impl methods")
     require_tokens(
         memory_runtime_state_text,
         "in-memory runtime state store",
-        ["impl RuntimeStateStore for InMemoryStore", "apply_runtime_worker_observations", "worker_status_from_heartbeats", "global_kill_switch"],
+        ["apply_runtime_worker_observations", "worker_status_from_heartbeats", "global_kill_switch"],
     )
     require_tokens(
         memory_runtime_support_text,
         "in-memory runtime support",
         ["query.state_scope_key()", "runtime_observation_is_fresh", "observations_for_account"],
     )
+    if postgres_runtime_state_impl_methods != {"load_runtime_state"}:
+        fail("postgres runtime state store missing RuntimeStateStore impl methods")
+    if postgres_runtime_control_impl_methods != {"set_account_kill_switch", "set_global_kill_switch"}:
+        fail("postgres runtime state store missing RuntimeControlStore impl methods")
     require_tokens(
         postgres_runtime_text,
         "postgres runtime state store",
-        ["impl RuntimeStateStore for PostgresStore", "IsolationLevel::RepeatableRead", "account_collateral::load_account_state", "worker_rows::load_worker_rows", "apply_runtime_worker_observations", "impl RuntimeControlStore for PostgresStore"],
+        ["IsolationLevel::RepeatableRead", "account_collateral::load_account_state", "worker_rows::load_worker_rows", "apply_runtime_worker_observations"],
     )
+    if postgres_runtime_worker_impl_methods != {"list_runtime_worker_status"}:
+        fail("postgres runtime worker status store missing RuntimeWorkerStatusStore impl methods")
     require_tokens(
         postgres_worker_status_text,
         "postgres runtime worker status store",
-        ["impl RuntimeWorkerStatusStore for PostgresStore", "FROM worker_health", "FROM runtime_worker_observations", "RuntimeWorkerStatusReport"],
+        ["FROM worker_health", "FROM runtime_worker_observations", "RuntimeWorkerStatusReport"],
     )
     require_tokens(
         store_backed_runtime_text,
