@@ -810,6 +810,52 @@ fn helper() {
                 module.validate_v19_redaction_and_live_guard(self._minimal_v23_spec())
         self.assertIn("REDACTED", str(ctx.exception))
 
+    def test_v19_requires_normalization_signature_and_kind_coverage(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("adapters/pmx-official-sdk-adapter/src/liveness/error_normalization.rs"):
+                return """
+use crate::{OfficialSdkErrorCategory, OfficialSdkNormalizedError};
+use polymarket_client_sdk_v2::error::{Error as SdkError, Kind as SdkErrorKind};
+
+pub fn normalize_sdk_error(error: SdkError) -> OfficialSdkNormalizedError {
+    match error.kind() {
+        SdkErrorKind::Validation => OfficialSdkNormalizedError {
+            category: OfficialSdkErrorCategory::ValidationFailed,
+            retryable: false,
+            message: String::new(),
+            http_status: None,
+            geoblock_country: None,
+            geoblock_region: None,
+        },
+        SdkErrorKind::Status => OfficialSdkNormalizedError {
+            category: OfficialSdkErrorCategory::RemoteRejected,
+            retryable: false,
+            message: String::new(),
+            http_status: None,
+            geoblock_country: None,
+            geoblock_region: None,
+        },
+        _ => OfficialSdkNormalizedError {
+            category: OfficialSdkErrorCategory::Internal,
+            retryable: true,
+            message: String::new(),
+            http_status: None,
+            geoblock_country: None,
+            geoblock_region: None,
+        },
+    }
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v19_redaction_and_live_guard(self._minimal_v23_spec())
+        self.assertIn("OfficialSdkNormalizedError", str(ctx.exception))
+
     def test_v20_requires_reconcile_backlog_remote_unknown_field(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
@@ -839,6 +885,37 @@ pub enum RuntimeSignal {
             with self.assertRaises(SystemExit) as ctx:
                 module.validate_v20_plan_storage_and_packaging(spec)
         self.assertIn("remote_unknown_orders", str(ctx.exception))
+
+    def test_v20_requires_runtime_breakdown_signature(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-runtime/src/health/signal/breakdown.rs"):
+                return """
+use super::RuntimeSignal;
+use crate::RuntimeHealthBreakdown;
+
+pub fn runtime_breakdown_from_signals(signals: &[RuntimeSignal]) -> Vec<RuntimeHealthBreakdown> {
+    let _ = signals;
+    Vec::new()
+}
+RuntimeSignal::Geoblock
+RuntimeSignal::ReconcileBacklog
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v20_plan_storage_and_packaging(spec)
+        self.assertIn("RuntimeHealthBreakdown", str(ctx.exception))
 
     def test_v21_requires_lifecycle_record_binding(self) -> None:
         spec = self._minimal_v23_spec()
@@ -1012,6 +1089,128 @@ signed_order_ref: Some(receipt.signed_order_ref.clone())
             with self.assertRaises(SystemExit) as ctx:
                 module.validate_v21_sign_only_and_runtime_models(spec)
         self.assertIn("sign-only lifecycle adapter", str(ctx.exception))
+
+    def test_v21_requires_lifecycle_adapter_signature(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/sign-only/lifecycle-events"] = {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {"$ref": "#/components/schemas/SignOnlyLifecycleRecord"}
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/SignOnlyLifecycleRecord"}
+                            }
+                        }
+                    }
+                },
+            }
+        }
+        spec["paths"]["/v1/sign-only/standard-constructions"] = {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StandardSignOnlyConstructionRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardSignOnlyConstructionReceipt"
+                                }
+                            }
+                        }
+                    }
+                },
+            }
+        }
+        spec["paths"]["/v1/sign-only/lifecycle-events/{execution_id}"]["get"]["responses"] = {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "array",
+                            "items": {"$ref": "#/components/schemas/SignOnlyLifecycleRecord"},
+                        }
+                    }
+                }
+            }
+        }
+        spec["components"]["schemas"]["SignOnlyLifecycleRecord"] = {
+            "type": "object",
+            "required": [
+                "execution_id",
+                "account_id",
+                "state",
+                "event",
+                "signed_order_ref",
+                "no_remote_side_effect",
+            ],
+            "properties": {
+                "client_event_id": {"type": "string"},
+                "signed_order_ref": {"type": "string"},
+                "no_remote_side_effect": {"type": "boolean"},
+            },
+        }
+        spec["components"]["schemas"]["StandardSignOnlyConstructionRequest"] = {
+            "type": "object",
+            "required": ["execution_id", "account_id", "plan_hash", "no_remote_side_effect"],
+            "properties": {
+                "signed_order_ref": {"type": "string"},
+                "signed_order_digest": {"type": "string"},
+                "no_remote_side_effect": {"type": "boolean"},
+            },
+        }
+        spec["components"]["schemas"]["StandardSignOnlyConstructionReceipt"] = {
+            "type": "object",
+            "properties": {
+                "signed_order_ref": {"type": "string"},
+                "signed_order_digest": {"type": "string"},
+                "lifecycle_records": {"type": "array"},
+                "no_remote_side_effect": {"type": "boolean"},
+            },
+        }
+        spec["components"]["schemas"]["RuntimeWorkerStatusReport"] = {
+            "type": "object",
+            "properties": {"heartbeats": {"type": "array"}, "observations": {"type": "array"}},
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("adapters/pmx-official-sdk-adapter/src/lifecycle.rs"):
+                return """
+use crate::{OfficialSdkAdapterError, SignOnlyDryRunReceipt};
+
+pub fn sign_only_lifecycle_records_from_receipt(
+    receipt: SignOnlyDryRunReceipt,
+) -> Result<SignOnlyLifecycleRecord, OfficialSdkAdapterError> {
+    let _ = receipt;
+    Err(OfficialSdkAdapterError::validation("bad"))
+}
+transition_sign_only_lifecycle
+no_remote_side_effect: true
+sign-only receipt unexpectedly indicates remote posting
+signed_order_ref: Some(receipt.signed_order_ref.clone())
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v21_sign_only_and_runtime_models(spec)
+        self.assertIn("OfficialSdkAdapterError", str(ctx.exception))
 
     def test_store_and_backend_structure_rejects_missing_postgres_export(self) -> None:
         original_read_text = Path.read_text

@@ -283,6 +283,16 @@ def rust_async_fn_signature(text: str, fn_name: str) -> tuple[str, str]:
     return params, return_type
 
 
+def rust_fn_signature(text: str, fn_name: str) -> tuple[str, str]:
+    pattern = rf"(?s)fn\s+{re.escape(fn_name)}\s*\((.*?)\)\s*->\s*([^\{{]+)\{{"
+    match = re.search(pattern, text)
+    if not match:
+        fail(f"missing Rust fn signature: {fn_name}")
+    params = match.group(1)
+    return_type = match.group(2).strip()
+    return params, return_type
+
+
 def cargo_toml(path: Path) -> dict:
     try:
         return tomllib.loads(path.read_text())
@@ -1066,7 +1076,22 @@ def validate_v19_redaction_and_live_guard(spec: dict | None = None) -> None:
     error_normalization_text = (SDK_ADAPTER_SRC / "liveness/error_normalization.rs").read_text()
     if "normalize_sdk_error" not in rust_fn_names(error_normalization_text):
         fail("v0.19 liveness error normalization missing normalize_sdk_error")
-    for category in ["RemoteRejected", "WebSocketFailed", "AuthenticationFailed"]:
+    normalization_params, normalization_return = rust_fn_signature(
+        error_normalization_text, "normalize_sdk_error"
+    )
+    if "&SdkError" not in normalization_params or normalization_return != "OfficialSdkNormalizedError":
+        fail("v0.19 liveness error normalization must bind &SdkError -> OfficialSdkNormalizedError")
+    for sdk_kind in [
+        "SdkErrorKind::Validation",
+        "SdkErrorKind::Synchronization",
+        "SdkErrorKind::Geoblock",
+        "SdkErrorKind::WebSocket",
+        "SdkErrorKind::Status",
+        "SdkErrorKind::Internal",
+    ]:
+        if sdk_kind not in error_normalization_text:
+            fail(f"v0.19 liveness error normalization missing SDK error kind branch: {sdk_kind}")
+    for category in ["RemoteRejected", "RemoteUnknown", "WebSocketFailed", "AuthenticationFailed", "Geoblocked", "ValidationFailed", "Internal"]:
         if f"OfficialSdkErrorCategory::{category}" not in error_normalization_text:
             fail(f"v0.19 liveness error normalization missing category mapping: {category}")
     liveness_error_tests = (SDK_ADAPTER_SRC / "tests/liveness_errors.rs").read_text()
@@ -1143,6 +1168,11 @@ def validate_v20_plan_storage_and_packaging(spec: dict | None = None) -> None:
     runtime_breakdown_text = (EXECUTOR / "crates/pmx-runtime/src/health/signal/breakdown.rs").read_text()
     if "runtime_breakdown_from_signals" not in rust_fn_names(runtime_breakdown_text):
         fail("v0.20 runtime breakdown missing runtime_breakdown_from_signals")
+    breakdown_params, breakdown_return = rust_fn_signature(
+        runtime_breakdown_text, "runtime_breakdown_from_signals"
+    )
+    if "account_id: impl Into<String>" not in breakdown_params or "signals: &[RuntimeSignal]" not in breakdown_params or breakdown_return != "RuntimeHealthBreakdown":
+        fail("v0.20 runtime breakdown must bind account_id + &[RuntimeSignal] -> RuntimeHealthBreakdown")
     for needle in ["RuntimeSignal::Geoblock", "RuntimeSignal::ReconcileBacklog"]:
         if needle not in runtime_breakdown_text:
             fail(f"v0.20 runtime breakdown missing blocking signal handling: {needle}")
@@ -1272,6 +1302,11 @@ def validate_v21_sign_only_and_runtime_models(spec: dict | None = None) -> None:
     )
     if lifecycle_fns != {"sign_only_lifecycle_records_from_receipt"}:
         fail("v0.21 sign-only lifecycle adapter missing conversion helper")
+    lifecycle_params, lifecycle_return = rust_fn_signature(
+        lifecycle_adapter_text, "sign_only_lifecycle_records_from_receipt"
+    )
+    if "&SignOnlyDryRunReceipt" not in lifecycle_params or "Result<Vec<SignOnlyLifecycleRecord>, OfficialSdkAdapterError>" not in lifecycle_return:
+        fail("v0.21 sign-only lifecycle adapter must bind &SignOnlyDryRunReceipt -> Result<Vec<SignOnlyLifecycleRecord>, OfficialSdkAdapterError>")
     require_tokens(
         lifecycle_adapter_text,
         "v0.21 sign-only lifecycle adapter",
