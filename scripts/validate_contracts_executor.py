@@ -246,6 +246,31 @@ def rust_impl_trait_method_names(text: str, trait_name: str, for_type: str) -> s
     )
 
 
+def rust_inherent_impl_method_names(text: str, type_name: str) -> set[str]:
+    pattern = rf"(?s)impl\s+{re.escape(type_name)}[^\{{]*\{{(.*?)\n\}}"
+    match = re.search(pattern, text)
+    if not match:
+        fail(f"missing Rust impl: impl {type_name}")
+    body = match.group(1)
+    return set(
+        re.findall(
+            r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?async\s+fn\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(",
+            body,
+        )
+    ) | set(
+        re.findall(
+            r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?fn\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(",
+            body,
+        )
+    )
+
+
+def service_backend_method_names(text: str) -> set[str]:
+    if "impl ServiceBackend" not in text:
+        fail("missing Rust impl: impl ServiceBackend")
+    return rust_async_fn_names(text) | rust_fn_names(text)
+
+
 def cargo_toml(path: Path) -> dict:
     try:
         return tomllib.loads(path.read_text())
@@ -1373,18 +1398,21 @@ def validate_store_and_backend_structure() -> None:
     for module_name in ["runtime_state", "runtime_worker", "sign_only", "submit"]:
         if module_name not in service_reexports:
             fail(f"pmx-service module boundary missing token: pub use {module_name}::*;")
+    api_backend_audit_impl_methods = service_backend_method_names(api_backend_audit)
+    api_backend_sign_only_impl_methods = service_backend_method_names(api_backend_sign_only)
+    api_backend_runtime_impl_methods = service_backend_method_names(api_backend_runtime)
     if not {"record_admin_audit_event", "list_admin_audit_events"}.issubset(
-        rust_async_fn_names(api_backend_audit)
+        api_backend_audit_impl_methods
     ):
-        fail("pmx-api audit backend bridge missing async backend methods")
+        fail("pmx-api audit backend bridge missing ServiceBackend impl methods")
     if not {"record_standard_sign_only_construction", "list_sign_only_lifecycle_events"}.issubset(
-        rust_async_fn_names(api_backend_sign_only)
+        api_backend_sign_only_impl_methods
     ):
-        fail("pmx-api sign-only backend bridge missing async backend methods")
+        fail("pmx-api sign-only backend bridge missing ServiceBackend impl methods")
     if not {"list_runtime_worker_status", "set_account_kill_switch", "set_global_kill_switch"}.issubset(
-        rust_async_fn_names(api_backend_runtime)
+        api_backend_runtime_impl_methods
     ):
-        fail("pmx-api runtime backend bridge missing async backend methods")
+        fail("pmx-api runtime backend bridge missing ServiceBackend impl methods")
 
     ensure_match_arms(
         api_backend_audit,
