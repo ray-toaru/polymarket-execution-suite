@@ -29,6 +29,7 @@ DEFAULT_CLOB_URL = "https://clob.polymarket.com"
 VERSION = (Path(__file__).resolve().parents[1] / "VERSION").read_text().strip()
 USER_AGENT = f"pmx-canary-candidate-prep/{VERSION}"
 MAX_PRICE = Decimal("1")
+FETCH_RETRY_ATTEMPTS = 3
 
 
 @dataclass(frozen=True)
@@ -170,17 +171,54 @@ def fetch_json(base_url: str, path: str, query: dict[str, str], timeout_seconds:
         method="GET",
     )
     last_error: Exception | None = None
-    for attempt in range(3):
+    for attempt in range(FETCH_RETRY_ATTEMPTS):
         try:
             with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+                content_type = response.headers.get("Content-Type", "")
+                if not is_json_content_type(content_type):
+                    raise ValueError(f"unexpected content type {content_type or '<missing>'}")
                 return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            last_error = exc
+            if attempt == FETCH_RETRY_ATTEMPTS - 1 or not should_retry_http_error(exc):
+                break
+            time.sleep(retry_delay_seconds(attempt, exc.headers.get("Retry-After") if exc.headers else None))
         except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
             last_error = exc
-            if attempt == 2:
+            if attempt == FETCH_RETRY_ATTEMPTS - 1:
                 break
             time.sleep(0.2 * (attempt + 1))
     assert last_error is not None
     raise last_error
+
+
+def is_json_content_type(content_type: str) -> bool:
+    media_type = content_type.split(";", 1)[0].strip().lower()
+    return media_type == "application/json" or media_type.endswith("+json")
+
+
+def should_retry_http_error(exc: urllib.error.HTTPError) -> bool:
+    return exc.code == 429 or 500 <= exc.code < 600
+
+
+def retry_delay_seconds(attempt: int, retry_after: str | None) -> float:
+    if retry_after is not None:
+        try:
+            delay = float(retry_after.strip())
+        except ValueError:
+            delay = 0.0
+        if delay > 0:
+            return min(delay, 5.0)
+    return 0.2 * (attempt + 1)
+
+
+def audit_url_ref(url: str) -> dict[str, str]:
+    parsed = urllib.parse.urlparse(url.strip())
+    origin = f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme and parsed.netloc else ""
+    return {
+        "origin": origin,
+        "sha256": hashlib.sha256(url.encode("utf-8")).hexdigest(),
+    }
 
 
 def as_bool(value: Any) -> bool:
@@ -406,7 +444,7 @@ def fetch_json_or_error(
 ) -> Any:
     try:
         return fetch_json(base_url, path, query, timeout_seconds)
-    except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, json.JSONDecodeError, ValueError) as exc:
         audit.setdefault("fetch_errors", []).append(
             {
                 "path": path,
@@ -656,8 +694,8 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
         "market_slug": requested_slug,
         "requested_outcome": args.outcome,
         "human_review_ref_hash": hashlib.sha256(human_review_ref.encode()).hexdigest(),
-        "gamma_url": args.gamma_url,
-        "clob_url": args.clob_url,
+        "gamma_url_ref": audit_url_ref(args.gamma_url),
+        "clob_url_ref": audit_url_ref(args.clob_url),
         "max_markets": args.max_markets,
         "target_size": decimal_text(target_size) if target_size else "book_min_order_size",
         "target_size_source": "operator_override" if target_size else "book_min_order_size",
@@ -753,7 +791,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
             audit["inspected_tokens"] += 1
             try:
                 book = fetch_json(args.clob_url, "/book", {"token_id": token_id}, args.timeout_seconds)
-            except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError):
+            except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, json.JSONDecodeError, ValueError):
                 audit["rejections"]["book_unavailable"] += 1
                 continue
             if not isinstance(book, dict):
@@ -783,7 +821,7 @@ def scan(args: argparse.Namespace) -> tuple[Candidate, dict[str, Any]]:
                 continue
             try:
                 spread = fetch_json(args.clob_url, "/spread", {"token_id": token_id}, args.timeout_seconds)
-            except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError):
+            except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, json.JSONDecodeError, ValueError):
                 audit["rejections"]["spread_unavailable"] += 1
                 continue
             if not isinstance(spread, dict):

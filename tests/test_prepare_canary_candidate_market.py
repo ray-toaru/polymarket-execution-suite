@@ -1,7 +1,9 @@
 import importlib.util
 import sys
 import argparse
+import io
 import unittest
+import urllib.error
 from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
@@ -177,6 +179,8 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
         calls = []
 
         class FakeResponse:
+            headers = {"Content-Type": "application/json"}
+
             def __enter__(self):
                 return self
 
@@ -197,6 +201,59 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
                 data = self.module.fetch_json("https://gamma", "/markets", {}, 1.0)
         self.assertEqual(data["status"], "ok")
         self.assertEqual(len(calls), 3)
+
+    def test_fetch_json_retries_http_429_with_retry_after(self):
+        calls = []
+
+        class FakeResponse:
+            headers = {"Content-Type": "application/json"}
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def read(self):
+                return b"{\"status\": \"ok\"}"
+
+        def fake_urlopen(request, timeout):
+            calls.append((request.full_url, timeout))
+            if len(calls) == 1:
+                error = urllib.error.HTTPError(
+                    request.full_url,
+                    429,
+                    "too many requests",
+                    {"Retry-After": "1.5"},
+                    io.BytesIO(b""),
+                )
+                error.close()
+                raise error
+            return FakeResponse()
+
+        with patch.object(self.module.urllib.request, "urlopen", side_effect=fake_urlopen):
+            with patch.object(self.module.time, "sleep") as sleep:
+                data = self.module.fetch_json("https://gamma", "/markets", {}, 1.0)
+        self.assertEqual(data["status"], "ok")
+        sleep.assert_called_once_with(1.5)
+        self.assertEqual(len(calls), 2)
+
+    def test_fetch_json_rejects_non_json_content_type(self):
+        class FakeResponse:
+            headers = {"Content-Type": "text/html; charset=utf-8"}
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def read(self):
+                return b"<html></html>"
+
+        with patch.object(self.module.urllib.request, "urlopen", return_value=FakeResponse()):
+            with self.assertRaisesRegex(ValueError, "unexpected content type"):
+                self.module.fetch_json("https://gamma", "/markets", {}, 1.0)
 
     def test_candidate_json_uses_configured_exchange_rule_validity_window(self):
         candidate = self.module.Candidate(
@@ -255,6 +312,50 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             best_bid_price=Decimal("0.049"),
         )
         self.assertEqual(price, Decimal("0.04"))
+
+    def test_scan_audit_redacts_base_urls(self):
+        args = argparse.Namespace(
+            gamma_url="https://gamma.example/api?token=secret",
+            clob_url="https://clob.example/private?key=secret",
+            timeout_seconds=1.0,
+            max_order_notional_usd="1.00",
+            target_size="5",
+            max_markets=10,
+            max_spread_bps=100,
+            exchange_rule_valid_for_minutes=5,
+            human_review_ref="ticket://review",
+            exchange_rule_evidence_ref="ticket://reviewed-rule",
+            market_url=None,
+            market_slug=None,
+            outcome=None,
+        )
+        markets = [
+            {
+                "id": "condition-a",
+                "slug": "slug-a",
+                "active": True,
+                "acceptingOrders": True,
+                "closed": False,
+                "archived": False,
+                "outcomes": ["Yes"],
+                "clobTokenIds": ["100"],
+            },
+        ]
+        book = {
+            "asks": [{"price": "0.03", "size": "10"}],
+            "bids": [{"price": "0.0298", "size": "8"}],
+            "min_order_size": "5",
+            "min_tick_size": "0.01",
+        }
+        spread = {"spread": "0.01"}
+        with patch.object(self.module, "fetch_json", side_effect=[markets, book, spread]):
+            _candidate, audit = self.module.scan(args)
+        self.assertNotIn("gamma_url", audit)
+        self.assertNotIn("clob_url", audit)
+        self.assertEqual(audit["gamma_url_ref"]["origin"], "https://gamma.example")
+        self.assertEqual(audit["clob_url_ref"]["origin"], "https://clob.example")
+        self.assertEqual(len(audit["gamma_url_ref"]["sha256"]), 64)
+        self.assertEqual(len(audit["clob_url_ref"]["sha256"]), 64)
 
 
 if __name__ == "__main__":
