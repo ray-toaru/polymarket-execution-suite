@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -42,6 +43,7 @@ PREFLIGHT_GATE_EVIDENCE_FIELDS = (
     "cancel_only_fallback_ready",
     "balance_allowance_checked",
 )
+IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
 
 def sha256(path: Path) -> str:
@@ -78,6 +80,18 @@ def require_nonempty_text(value: object, label: str) -> str:
     if not isinstance(value, str) or not value.strip() or value.startswith("REPLACE_WITH_"):
         raise SystemExit(f"{label} must be a non-empty non-placeholder string")
     return value.strip()
+
+
+def parse_time(value: object, label: str) -> datetime:
+    if not isinstance(value, str) or not value.strip():
+        raise SystemExit(f"{label} must be an RFC3339 timestamp")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise SystemExit(f"{label} must be an RFC3339 timestamp") from exc
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
 
 
 def decimal_value(value: object, label: str) -> Decimal:
@@ -264,12 +278,23 @@ def load_release_sidecar(release_zip: Path) -> dict[str, Any]:
 
 
 def validate_candidate(candidate: dict[str, Any], max_order_notional: Decimal) -> dict[str, str]:
+    market_id = require_nonempty_text(candidate.get("market_id"), "candidate market_id")
+    if not IDENTIFIER_RE.fullmatch(market_id):
+        raise SystemExit("candidate market_id must use a stable identifier format")
     if candidate.get("side") != "BUY":
         raise SystemExit("candidate side must be BUY")
     if candidate.get("order_type") != "GTC":
         raise SystemExit("candidate order_type must be GTC")
     if candidate.get("post_only") is not True:
         raise SystemExit("candidate post_only must be true")
+    if candidate.get("active") is not True:
+        raise SystemExit("candidate active must be true")
+    if candidate.get("accepting_orders") is not True:
+        raise SystemExit("candidate accepting_orders must be true")
+    if candidate.get("closed") is not False:
+        raise SystemExit("candidate closed must be false")
+    if candidate.get("archived") is not False:
+        raise SystemExit("candidate archived must be false")
     target_size = decimal_value(candidate.get("target_size"), "candidate target_size")
     limit_price = decimal_value(candidate.get("limit_price"), "candidate limit_price")
     notional = decimal_value(candidate.get("estimated_order_notional_usd"), "candidate estimated_order_notional_usd")
@@ -280,16 +305,22 @@ def validate_candidate(candidate: dict[str, Any], max_order_notional: Decimal) -
     snapshot = candidate.get("exchange_rule_snapshot")
     if not isinstance(snapshot, dict):
         raise SystemExit("candidate exchange_rule_snapshot is required")
-    expires_at = snapshot.get("expires_at")
-    if not isinstance(expires_at, str) or not expires_at.strip():
-        raise SystemExit("candidate exchange_rule_snapshot.expires_at is required")
-    try:
-        parsed_expiry = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
-    except ValueError as exc:
-        raise SystemExit("candidate exchange_rule_snapshot.expires_at must be RFC3339") from exc
-    if parsed_expiry.astimezone(timezone.utc) <= datetime.now(timezone.utc):
+    book_snapshot_timestamp = parse_time(
+        candidate.get("book_snapshot_timestamp"), "candidate book_snapshot_timestamp"
+    )
+    captured_at = parse_time(snapshot.get("captured_at"), "candidate exchange_rule_snapshot.captured_at")
+    parsed_expiry = parse_time(snapshot.get("expires_at"), "candidate exchange_rule_snapshot.expires_at")
+    if captured_at != book_snapshot_timestamp:
+        raise SystemExit("candidate exchange_rule_snapshot.captured_at must equal book_snapshot_timestamp")
+    if parsed_expiry <= captured_at:
+        raise SystemExit("candidate exchange_rule_snapshot.expires_at must be after captured_at")
+    now = datetime.now(timezone.utc)
+    if book_snapshot_timestamp > now:
+        raise SystemExit("candidate book_snapshot_timestamp must not be in the future")
+    if parsed_expiry <= now:
         raise SystemExit("candidate exchange_rule_snapshot.expires_at must be in the future")
     return {
+        "market_id": market_id,
         "target_size": decimal_text(target_size),
         "limit_price": decimal_text(limit_price),
         "estimated_order_notional_usd": decimal_text(notional),
@@ -364,13 +395,27 @@ def main() -> int:
     max_daily_notional = decimal_value(args.max_daily_notional_usd, "max_daily_notional_usd")
     if max_order_notional > Decimal("1"):
         raise SystemExit("max_order_notional_usd must be <= 1")
-    if max_daily_notional > Decimal("5"):
-        raise SystemExit("max_daily_notional_usd must be <= 5")
+    if max_daily_notional > max_order_notional:
+        raise SystemExit("max_daily_notional_usd must be <= max_order_notional_usd for single-attempt canary")
+    if args.valid_for_minutes < 1 or args.valid_for_minutes > 60:
+        raise SystemExit("valid_for_minutes must be between 1 and 60")
     candidate_limits = validate_candidate(candidate, max_order_notional)
+    if candidate_limits["market_id"] != runtime_summary["condition_id"]:
+        raise SystemExit("candidate market_id must match runtime truth condition_id")
 
     runtime_artifact = require_sha256(runtime_truth.get("artifact_sha256"), "runtime truth artifact_sha256")
     if runtime_artifact != sidecar["artifact_sha256"]:
         raise SystemExit("runtime truth artifact hash does not match release sidecar")
+    runtime_workspace_manifest = require_sha256(
+        runtime_truth.get("workspace_manifest_sha256"), "runtime truth workspace_manifest_sha256"
+    )
+    if runtime_workspace_manifest != sidecar["workspace_manifest_sha256"]:
+        raise SystemExit("runtime truth workspace manifest hash does not match release sidecar")
+    runtime_archived_manifest = require_sha256(
+        runtime_truth.get("archived_manifest_sha256"), "runtime truth archived_manifest_sha256"
+    )
+    if runtime_archived_manifest != sidecar["archived_manifest_sha256"]:
+        raise SystemExit("runtime truth archived manifest hash does not match release sidecar")
 
     request = build_request(
         account_id=account_id,

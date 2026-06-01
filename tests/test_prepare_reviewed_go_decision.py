@@ -203,12 +203,32 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
                 approval_request_sha256="8" * 64,
             )
 
+    def test_rejects_placeholder_decision_reason(self):
+        with self.assertRaisesRegex(SystemExit, "decision_reason"):
+            self.module.build_decision(
+                self.approval_request(),
+                self.external_references(),
+                decision_id="decision-1",
+                decision_reason="REPLACE_WITH_REASON",
+                dual_control_review=self.dual_control_review(),
+            )
+
+    def test_rejects_invalid_decision_id(self):
+        with self.assertRaisesRegex(SystemExit, "decision_id"):
+            self.module.build_decision(
+                self.approval_request(),
+                self.external_references(),
+                decision_id="decision 1",
+                decision_reason="approved by independent reviewer",
+                dual_control_review=self.dual_control_review(),
+            )
+
     def test_builds_reviewed_go_with_strict_notional_limit(self):
         decision = self.module.build_decision(
             self.approval_request(),
             self.external_references(),
             decision_id="decision-1",
-            decision_reason="test",
+            decision_reason="approved by independent reviewer",
             dual_control_review=self.dual_control_review(),
             dual_control_review_sha256="9" * 64,
             approval_request_sha256="8" * 64,

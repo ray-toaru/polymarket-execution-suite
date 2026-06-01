@@ -37,7 +37,26 @@ class PrepareCanaryReviewedGoBundleTests(unittest.TestCase):
         }
 
     def candidate(self) -> dict:
-        return {"side": "BUY", "order_type": "GTC", "post_only": True}
+        captured_at = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat().replace("+00:00", "Z")
+        expires_at = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat().replace("+00:00", "Z")
+        return {
+            "market_id": "condition-1",
+            "side": "BUY",
+            "order_type": "GTC",
+            "post_only": True,
+            "active": True,
+            "accepting_orders": True,
+            "closed": False,
+            "archived": False,
+            "target_size": "5",
+            "limit_price": "0.02",
+            "estimated_order_notional_usd": "0.1",
+            "book_snapshot_timestamp": captured_at,
+            "exchange_rule_snapshot": {
+                "captured_at": captured_at,
+                "expires_at": expires_at,
+            },
+        }
 
     def runtime_truth(self, artifact_sha: str) -> dict:
         return {

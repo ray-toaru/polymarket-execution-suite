@@ -1,6 +1,7 @@
 import importlib.util
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
@@ -75,28 +76,69 @@ class PrepareOperatorApprovalRequestTests(unittest.TestCase):
 
     def test_candidate_notional_must_match_limit_times_size(self):
         candidate = {
+            "market_id": "condition-1",
             "side": "BUY",
             "order_type": "GTC",
             "post_only": True,
+            "active": True,
+            "accepting_orders": True,
+            "closed": False,
+            "archived": False,
             "target_size": "5",
             "limit_price": "0.02",
             "estimated_order_notional_usd": "0.11",
-            "exchange_rule_snapshot": {"expires_at": "2099-01-01T00:00:00Z"},
+            "book_snapshot_timestamp": "2099-01-01T00:00:00Z",
+            "exchange_rule_snapshot": {
+                "captured_at": "2099-01-01T00:00:00Z",
+                "expires_at": "2099-01-01T00:10:00Z",
+            },
         }
         with self.assertRaisesRegex(SystemExit, "estimated_order_notional_usd"):
             self.module.validate_candidate(candidate, self.module.Decimal("0.20"))
 
     def test_candidate_notional_must_fit_requested_cap(self):
         candidate = {
+            "market_id": "condition-1",
             "side": "BUY",
             "order_type": "GTC",
             "post_only": True,
+            "active": True,
+            "accepting_orders": True,
+            "closed": False,
+            "archived": False,
             "target_size": "5",
             "limit_price": "0.05",
             "estimated_order_notional_usd": "0.25",
-            "exchange_rule_snapshot": {"expires_at": "2099-01-01T00:00:00Z"},
+            "book_snapshot_timestamp": "2099-01-01T00:00:00Z",
+            "exchange_rule_snapshot": {
+                "captured_at": "2099-01-01T00:00:00Z",
+                "expires_at": "2099-01-01T00:10:00Z",
+            },
         }
         with self.assertRaisesRegex(SystemExit, "exceeds"):
+            self.module.validate_candidate(candidate, self.module.Decimal("0.20"))
+
+    def test_candidate_must_match_runtime_state_and_fresh_snapshot_shape(self):
+        future = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
+        candidate = {
+            "market_id": "condition-1",
+            "side": "BUY",
+            "order_type": "GTC",
+            "post_only": True,
+            "active": True,
+            "accepting_orders": True,
+            "closed": False,
+            "archived": False,
+            "target_size": "5",
+            "limit_price": "0.02",
+            "estimated_order_notional_usd": "0.10",
+            "book_snapshot_timestamp": future,
+            "exchange_rule_snapshot": {
+                "captured_at": future,
+                "expires_at": future,
+            },
+        }
+        with self.assertRaisesRegex(SystemExit, "expires_at must be after captured_at"):
             self.module.validate_candidate(candidate, self.module.Decimal("0.20"))
 
     def test_runtime_truth_must_bind_account_and_gate_snapshot(self):

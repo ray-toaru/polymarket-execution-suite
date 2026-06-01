@@ -2,6 +2,7 @@ import importlib.util
 import json
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
@@ -29,6 +30,8 @@ class PrepareCanaryReviewBundleTests(unittest.TestCase):
     def test_review_bundle_builds_runtime_env_approval_template_and_packet(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
+            captured_at = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat().replace("+00:00", "Z")
+            expires_at = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat().replace("+00:00", "Z")
             approval_module = self.module.load_module(
                 ROOT / "scripts" / "prepare_operator_approval_request.py",
                 "prepare_operator_approval_request",
@@ -54,13 +57,22 @@ class PrepareCanaryReviewBundleTests(unittest.TestCase):
                 tmp,
                 "candidate-market.json",
                 {
+                    "market_id": "condition-1",
                     "side": "BUY",
                     "order_type": "GTC",
                     "post_only": True,
+                    "active": True,
+                    "accepting_orders": True,
+                    "closed": False,
+                    "archived": False,
                     "target_size": "5",
                     "limit_price": "0.02",
                     "estimated_order_notional_usd": "0.1",
-                    "exchange_rule_snapshot": {"expires_at": "2099-01-01T00:00:00Z"},
+                    "book_snapshot_timestamp": captured_at,
+                    "exchange_rule_snapshot": {
+                        "captured_at": captured_at,
+                        "expires_at": expires_at,
+                    },
                 },
             )
             runtime_truth = self.write_json(

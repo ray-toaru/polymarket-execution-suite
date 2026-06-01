@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -59,6 +60,7 @@ PREFLIGHT_GATE_FIELDS = [
     "cancel_only_fallback_ready",
     "balance_allowance_checked",
 ]
+DECISION_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -93,6 +95,20 @@ def require_nonempty_text(value: object, label: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise SystemExit(f"{label} must be a non-empty string")
     return value.strip()
+
+
+def require_concrete_text(value: object, label: str) -> str:
+    text = require_nonempty_text(value, label)
+    if text.startswith("REPLACE_WITH_"):
+        raise SystemExit(f"{label} must not be a placeholder")
+    return text
+
+
+def require_decision_id(value: object) -> str:
+    decision_id = require_concrete_text(value, "decision_id")
+    if not DECISION_ID_RE.fullmatch(decision_id):
+        raise SystemExit("decision_id must use [A-Za-z0-9._:-] and be <= 128 chars")
+    return decision_id
 
 
 def parse_time(value: object, label: str) -> datetime:
@@ -274,6 +290,8 @@ def build_decision(
     approval_request_sha256: str | None = None,
 ) -> dict[str, Any]:
     validate_approval_request(request)
+    resolved_decision_id = require_decision_id(decision_id)
+    resolved_reason = require_concrete_text(decision_reason, "decision_reason")
     dual_control_review_ref = validate_dual_control_review(
         dual_control_review,
         request,
@@ -284,13 +302,25 @@ def build_decision(
         dual_control_review_ref=dual_control_review_ref,
         dual_control_review_sha256=dual_control_review_sha256,
     )
+    review_checks = dual_control_review["required_reviewer_checks"]
+    review_signals = {
+        "artifact_hash_reviewed": review_checks["artifact_hash_reviewed"] is True,
+        "evidence_manifest_hash_reviewed": review_checks["evidence_manifest_hash_reviewed"] is True,
+        "market_candidate_reviewed": review_checks["market_candidate_reviewed"] is True,
+        "operator_dual_control_reviewed": bool(dual_control_review_ref.strip()),
+        "secret_custody_reviewed": review_checks["secret_custody_reviewed"] is True and bool(refs["secret_custody_ref"].strip()),
+        "alerting_reviewed": review_checks["alerting_reviewed"] is True and bool(refs["alert_routing_ref"].strip()) and bool(refs["dashboard_ref"].strip()),
+        "rollback_reviewed": review_checks["rollback_reviewed"] is True and bool(refs["rollback_runbook_ref"].strip()) and bool(refs["incident_runbook_ref"].strip()),
+        "runtime_health_reviewed": review_checks["runtime_truth_reviewed"] is True,
+        "reconcile_and_cancel_fallback_reviewed": review_checks["reconcile_and_cancel_fallback_reviewed"] is True,
+    }
     return {
         "schema_version": 1,
-        "decision_id": decision_id,
+        "decision_id": resolved_decision_id,
         "status": "reviewed_go",
         "source_release": f"v{VERSION}",
         "decision": "go",
-        "decision_reason": decision_reason,
+        "decision_reason": resolved_reason,
         "scope": "REAL_FUNDS_CANARY",
         "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
         "expires_at": request["expires_at"],
@@ -308,7 +338,7 @@ def build_decision(
         },
         "runtime_gate_snapshot": request["runtime_gate_snapshot"],
         "runtime_gate_evidence_refs": request["runtime_gate_evidence_refs"],
-        "required_review_signals": {signal: True for signal in REVIEW_SIGNALS},
+        "required_review_signals": review_signals,
         "live_submit_authorized": True,
         "live_cancel_authorized": True,
         "production_deployment_authorized": False,
