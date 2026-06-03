@@ -159,7 +159,7 @@ def rust_struct_field_names(text: str, struct_name: str) -> set[str]:
     body = match.group(1)
     return set(
         re.findall(
-            r"(?m)^\s*(?:pub\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\s*:",
+            r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?([a-zA-Z_][a-zA-Z0-9_]*)\s*:",
             body,
         )
     )
@@ -757,13 +757,27 @@ def validate_v12_service_layer(spec: dict | None = None) -> None:
     backend_variants = rust_enum_variant_names(backend_text, "ServiceBackend")
     if backend_variants != {"InMemory", "Postgres"}:
         fail("pmx-api backend structure missing ServiceBackend variants")
+    app_state_fields = rust_struct_field_names(backend_text, "AppState")
     app_state_fns = rust_fn_names(backend_text)
     if not {"in_memory", "in_memory_with_store", "postgres"}.issubset(app_state_fns):
         fail("pmx-api backend structure missing AppState constructors")
+    if app_state_fields != {"service"}:
+        fail("pmx-api backend structure missing AppState fields")
+    in_memory_body = rust_impl_method_body(backend_text, "AppState", "in_memory")
+    in_memory_with_store_body = rust_impl_method_body(
+        backend_text, "AppState", "in_memory_with_store"
+    )
+    postgres_body = rust_impl_method_body(backend_text, "AppState", "postgres")
     hash_inputs_text = (SERVICE_SRC / "binding/hash_inputs.rs").read_text()
     try:
         plan_hash_fields = rust_struct_field_names(hash_inputs_text, "PlanHashInput")
         approval_hash_fields = rust_struct_field_names(hash_inputs_text, "ApprovalHashInput")
+        approval_hash_from_body = rust_impl_trait_method_body(
+            hash_inputs_text, "From<&'a ApprovalReceipt>", "ApprovalHashInput<'a>", "from"
+        )
+        plan_hash_from_body = rust_impl_trait_method_body(
+            hash_inputs_text, "From<&'a ExecutionPlanSummary>", "PlanHashInput<'a>", "from"
+        )
     except SystemExit as exc:
         fail(f"service binding hash inputs malformed: {exc}")
     if not {
@@ -776,9 +790,22 @@ def validate_v12_service_layer(spec: dict | None = None) -> None:
     if "bound_snapshot_hash" not in approval_hash_fields:
         fail("service binding hash inputs missing required ApprovalHashInput fields")
     require_tokens(
-        hash_inputs_text,
+        approval_hash_from_body,
         "service binding hash inputs",
-        ["impl<'a> From<&'a ApprovalReceipt> for ApprovalHashInput<'a>", "impl<'a> From<&'a ExecutionPlanSummary> for PlanHashInput<'a>"],
+        [
+            "bound_snapshot_hash: &approval.bound_snapshot_hash",
+            "bound_decision_hash: &approval.bound_decision_hash",
+            "bound_plan_hash: &approval.bound_plan_hash",
+        ],
+    )
+    require_tokens(
+        plan_hash_from_body,
+        "service binding hash inputs",
+        [
+            "approval_hash: &plan.approval_hash",
+            "executor_version: &plan.executor_version",
+            "contract_version: &plan.contract_version",
+        ],
     )
     if not {"compile_plan", "submit_plan"}.issubset(rust_async_fn_names(plan_route_text)):
         fail("API plan flow routes missing compile/submit handlers")
@@ -808,13 +835,25 @@ def validate_v12_service_layer(spec: dict | None = None) -> None:
         "API bootstrap routes",
         ["pub async fn try_postgres_app(", "AppState::postgres(store)"],
     )
-    for needle in [
-        "pub enum ServiceBackend",
-        "InMemory(ExecutorService<InMemoryStore>)",
-        "Postgres(ExecutorService<PostgresStore, StoreBackedRuntimeStateProvider<PostgresStore>>)",
-    ]:
-        if needle not in backend_text:
-            fail(f"pmx-api backend structure missing token: {needle}")
+    require_tokens(
+        in_memory_body,
+        "pmx-api backend structure",
+        ["ServiceBackend::InMemory", "ExecutorService::new(InMemoryStore::default())"],
+    )
+    require_tokens(
+        in_memory_with_store_body,
+        "pmx-api backend structure",
+        ["ServiceBackend::InMemory", "ExecutorService::new(store)"],
+    )
+    require_tokens(
+        postgres_body,
+        "pmx-api backend structure",
+        [
+            "StoreBackedRuntimeStateProvider::new(store.clone())",
+            "ExecutorService::with_runtime_provider(",
+            "ServiceBackend::Postgres",
+        ],
+    )
     validate_absent_tokens(api_text, "pmx-api", ["pub fn fake_snapshot"])
     if not (EXECUTOR / "validation/run_current_gates.sh").exists():
         fail("missing current gate runner")
