@@ -225,14 +225,31 @@ def rust_trait_method_signatures(text: str, trait_name: str) -> set[str]:
     )
 
 
-def rust_impl_trait_method_names(text: str, trait_name: str, for_type: str) -> set[str]:
-    pattern = (
-        rf"(?s)impl\s+{re.escape(trait_name)}\s+for\s+{re.escape(for_type)}[^\{{]*\{{(.*?)\n\}}"
-    )
-    match = re.search(pattern, text)
+def rust_impl_block_body(text: str, impl_pattern: str, label: str) -> str:
+    match = re.search(impl_pattern, text)
     if not match:
-        fail(f"missing Rust impl: impl {trait_name} for {for_type}")
-    body = match.group(1)
+        fail(label)
+    body_start = text.find("{", match.end() - 1)
+    if body_start == -1:
+        fail(label)
+    depth = 0
+    for index in range(body_start, len(text)):
+        char = text[index]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[body_start + 1 : index]
+    fail(label)
+
+
+def rust_impl_trait_method_names(text: str, trait_name: str, for_type: str) -> set[str]:
+    body = rust_impl_block_body(
+        text,
+        rf"(?m)^\s*impl(?:<[^>]+>)?\s+{re.escape(trait_name)}\s+for\s+{re.escape(for_type)}[^\{{]*\{{",
+        f"missing Rust impl: impl {trait_name} for {for_type}",
+    )
     return set(
         re.findall(
             r"(?m)^\s*async\s+fn\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(",
@@ -246,12 +263,39 @@ def rust_impl_trait_method_names(text: str, trait_name: str, for_type: str) -> s
     )
 
 
+def rust_impl_trait_method_body(text: str, trait_name: str, for_type: str, fn_name: str) -> str:
+    body = rust_impl_block_body(
+        text,
+        rf"(?m)^\s*impl(?:<[^>]+>)?\s+{re.escape(trait_name)}\s+for\s+{re.escape(for_type)}[^\{{]*\{{",
+        f"missing Rust impl: impl {trait_name} for {for_type}",
+    )
+    fn_pattern = re.compile(
+        rf"(?m)^\s*(?:async\s+)?fn\s+{re.escape(fn_name)}\s*\(",
+    )
+    fn_match = fn_pattern.search(body)
+    if not fn_match:
+        fail(f"missing Rust impl method body: {trait_name} for {for_type}::{fn_name}")
+    body_start = body.find("{", fn_match.end())
+    if body_start == -1:
+        fail(f"missing Rust impl method body: {trait_name} for {for_type}::{fn_name}")
+    depth = 0
+    for index in range(body_start, len(body)):
+        char = body[index]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return body[body_start + 1 : index]
+    fail(f"unterminated Rust impl method body: {trait_name} for {for_type}::{fn_name}")
+
+
 def rust_inherent_impl_method_names(text: str, type_name: str) -> set[str]:
-    pattern = rf"(?s)impl\s+{re.escape(type_name)}[^\{{]*\{{(.*?)\n\}}"
-    match = re.search(pattern, text)
-    if not match:
-        fail(f"missing Rust impl: impl {type_name}")
-    body = match.group(1)
+    body = rust_impl_block_body(
+        text,
+        rf"(?m)^\s*impl(?:<[^>]+>)?\s+{re.escape(type_name)}[^\{{]*\{{",
+        f"missing Rust impl: impl {type_name}",
+    )
     return set(
         re.findall(
             r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?async\s+fn\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(",
@@ -266,26 +310,29 @@ def rust_inherent_impl_method_names(text: str, type_name: str) -> set[str]:
 
 
 def rust_impl_method_body(text: str, type_name: str, fn_name: str) -> str:
-    if f"impl {type_name}" not in text:
-        fail(f"missing Rust impl: impl {type_name}")
+    body = rust_impl_block_body(
+        text,
+        rf"(?m)^\s*impl(?:<[^>]+>)?\s+{re.escape(type_name)}[^\{{]*\{{",
+        f"missing Rust impl: impl {type_name}",
+    )
     fn_pattern = re.compile(
         rf"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\s+{re.escape(fn_name)}\s*\(",
     )
-    fn_match = fn_pattern.search(text)
+    fn_match = fn_pattern.search(body)
     if not fn_match:
         fail(f"missing Rust impl method body: {type_name}::{fn_name}")
-    body_start = text.find("{", fn_match.end())
+    body_start = body.find("{", fn_match.end())
     if body_start == -1:
         fail(f"missing Rust impl method body: {type_name}::{fn_name}")
     depth = 0
-    for index in range(body_start, len(text)):
-        char = text[index]
+    for index in range(body_start, len(body)):
+        char = body[index]
         if char == "{":
             depth += 1
         elif char == "}":
             depth -= 1
             if depth == 0:
-                return text[body_start + 1 : index]
+                return body[body_start + 1 : index]
     fail(f"unterminated Rust impl method body: {type_name}::{fn_name}")
 
 
@@ -818,8 +865,20 @@ def validate_v15_admin_audit_and_runtime_provider(spec: dict | None = None) -> N
         memory_audit_impl_methods = rust_impl_trait_method_names(
             memory_audit_text, "AdminAuditStore", "InMemoryStore"
         )
+        memory_audit_record_body = rust_impl_trait_method_body(
+            memory_audit_text, "AdminAuditStore", "InMemoryStore", "record_admin_audit_event"
+        )
+        memory_audit_list_body = rust_impl_trait_method_body(
+            memory_audit_text, "AdminAuditStore", "InMemoryStore", "list_admin_audit_events"
+        )
         postgres_audit_impl_methods = rust_impl_trait_method_names(
             postgres_audit_text, "AdminAuditStore", "PostgresStore"
+        )
+        postgres_audit_record_body = rust_impl_trait_method_body(
+            postgres_audit_text, "AdminAuditStore", "PostgresStore", "record_admin_audit_event"
+        )
+        postgres_audit_list_body = rust_impl_trait_method_body(
+            postgres_audit_text, "AdminAuditStore", "PostgresStore", "list_admin_audit_events"
         )
     except SystemExit as exc:
         fail(f"store admin audit model malformed: {exc}")
@@ -861,14 +920,24 @@ def validate_v15_admin_audit_and_runtime_provider(spec: dict | None = None) -> N
     if postgres_audit_impl_methods != {"record_admin_audit_event", "list_admin_audit_events"}:
         fail("postgres admin audit store missing AdminAuditStore impl methods")
     require_tokens(
-        memory_audit_text,
+        memory_audit_record_body,
         "in-memory admin audit store",
-        ["sanitize_admin_audit_event", "state.admin_audit.push(stored)", "correlation_id"],
+        ["sanitize_admin_audit_event", "state.admin_audit.push(stored)", "stored.created_at = Some(Utc::now())"],
     )
     require_tokens(
-        postgres_audit_text,
+        memory_audit_list_body,
+        "in-memory admin audit store",
+        ["correlation_id", "event.correlation_id.as_ref() == Some(correlation_id)", "query.bounded_limit()"],
+    )
+    require_tokens(
+        postgres_audit_record_body,
         "postgres admin audit store",
-        ["INSERT INTO admin_audit_events", "FROM admin_audit_events", "AND ($6::text IS NULL OR correlation_id = $6)"],
+        ["INSERT INTO admin_audit_events", "&event.correlation_id", ".map_err(map_db_error)?"],
+    )
+    require_tokens(
+        postgres_audit_list_body,
+        "postgres admin audit store",
+        ["FROM admin_audit_events", "correlation_id = $6", "query.bounded_limit()"],
     )
     require_tokens(
         service_audit_text,
@@ -935,14 +1004,59 @@ def validate_v16_postgres_runtime_provider(spec: dict | None = None) -> None:
         memory_runtime_state_impl_methods = rust_impl_trait_method_names(
             memory_runtime_state_text, "RuntimeStateStore", "InMemoryStore"
         )
+        memory_runtime_state_body = rust_impl_trait_method_body(
+            memory_runtime_state_text, "RuntimeStateStore", "InMemoryStore", "load_runtime_state"
+        )
         postgres_runtime_state_impl_methods = rust_impl_trait_method_names(
             postgres_runtime_text, "RuntimeStateStore", "PostgresStore"
+        )
+        postgres_runtime_state_body = rust_impl_trait_method_body(
+            postgres_runtime_text, "RuntimeStateStore", "PostgresStore", "load_runtime_state"
         )
         postgres_runtime_control_impl_methods = rust_impl_trait_method_names(
             postgres_runtime_text, "RuntimeControlStore", "PostgresStore"
         )
+        postgres_runtime_account_kill_switch_body = rust_impl_trait_method_body(
+            postgres_runtime_text,
+            "RuntimeControlStore",
+            "PostgresStore",
+            "set_account_kill_switch",
+        )
+        postgres_runtime_global_kill_switch_body = rust_impl_trait_method_body(
+            postgres_runtime_text,
+            "RuntimeControlStore",
+            "PostgresStore",
+            "set_global_kill_switch",
+        )
         postgres_runtime_worker_impl_methods = rust_impl_trait_method_names(
             postgres_worker_status_text, "RuntimeWorkerStatusStore", "PostgresStore"
+        )
+        postgres_runtime_worker_status_body = rust_impl_trait_method_body(
+            postgres_worker_status_text,
+            "RuntimeWorkerStatusStore",
+            "PostgresStore",
+            "list_runtime_worker_status",
+        )
+        memory_runtime_support_methods = rust_inherent_impl_method_names(
+            memory_runtime_support_text, "InMemoryStore"
+        )
+        memory_runtime_support_set_body = rust_impl_method_body(
+            memory_runtime_support_text, "InMemoryStore", "set_runtime_state_for_test"
+        )
+        memory_runtime_support_observations_body = rust_impl_method_body(
+            memory_runtime_support_text, "InMemoryStore", "observations_for_account"
+        )
+        store_backed_runtime_fields = rust_struct_field_names(
+            store_backed_runtime_text, "StoreBackedRuntimeStateProvider"
+        )
+        store_backed_runtime_methods = rust_inherent_impl_method_names(
+            store_backed_runtime_text, "StoreBackedRuntimeStateProvider<S>"
+        )
+        store_backed_runtime_capture_body = rust_impl_trait_method_body(
+            store_backed_runtime_text,
+            "RuntimeStateProvider",
+            "StoreBackedRuntimeStateProvider<S>",
+            "capture_runtime_state",
         )
     except SystemExit as exc:
         fail(f"store runtime model malformed: {exc}")
@@ -958,48 +1072,63 @@ def validate_v16_postgres_runtime_provider(spec: dict | None = None) -> None:
         fail("store runtime model missing RuntimeWorkerStatusStore methods")
     if runtime_control_methods != {"set_account_kill_switch", "set_global_kill_switch"}:
         fail("store runtime model missing RuntimeControlStore methods")
-    if "set_runtime_state_for_test" not in rust_fn_names(memory_runtime_support_text):
-        fail("in-memory runtime support missing set_runtime_state_for_test")
-    if "new" not in rust_fn_names(store_backed_runtime_text):
-        fail("service store-backed runtime provider missing constructor")
-    if "with_required_capabilities" not in rust_fn_names(store_backed_runtime_text):
-        fail("service store-backed runtime provider missing capability override constructor")
-    if not {"capture_runtime_state", "load_canary_runtime_truth"}.issubset(
-        rust_async_fn_names(store_backed_runtime_text) | rust_fn_names(store_backed_runtime_text)
+    if memory_runtime_support_methods != {"set_runtime_state_for_test", "observations_for_account"}:
+        fail("in-memory runtime support missing required InMemoryStore helper methods")
+    if store_backed_runtime_fields != {"store", "required_capabilities"}:
+        fail("service store-backed runtime provider missing StoreBackedRuntimeStateProvider fields")
+    if not {"new", "with_required_capabilities", "load_canary_runtime_truth"}.issubset(
+        store_backed_runtime_methods
     ):
+        fail("service store-backed runtime provider missing constructor/canary helper methods")
+    if "capture_runtime_state" not in rust_async_fn_names(store_backed_runtime_text):
         fail("service store-backed runtime provider missing runtime capture/canary truth methods")
     if memory_runtime_state_impl_methods != {"load_runtime_state"}:
         fail("in-memory runtime state store missing RuntimeStateStore impl methods")
     require_tokens(
-        memory_runtime_state_text,
+        memory_runtime_state_body,
         "in-memory runtime state store",
-        ["apply_runtime_worker_observations", "worker_status_from_heartbeats", "global_kill_switch"],
+        ["query.state_scope_key()", "worker_status_from_heartbeats", "global_kill_switch", "apply_runtime_worker_observations"],
     )
     require_tokens(
-        memory_runtime_support_text,
+        memory_runtime_support_set_body,
         "in-memory runtime support",
-        ["query.state_scope_key()", "runtime_observation_is_fresh", "observations_for_account"],
+        ["query.state_scope_key()", ".runtime_states", ".insert("],
+    )
+    require_tokens(
+        memory_runtime_support_observations_body,
+        "in-memory runtime support",
+        ["runtime_observation_is_fresh(observation)", "observation.account_id == account_id", ".runtime_worker_observations"],
     )
     if postgres_runtime_state_impl_methods != {"load_runtime_state"}:
         fail("postgres runtime state store missing RuntimeStateStore impl methods")
     if postgres_runtime_control_impl_methods != {"set_account_kill_switch", "set_global_kill_switch"}:
         fail("postgres runtime state store missing RuntimeControlStore impl methods")
     require_tokens(
-        postgres_runtime_text,
+        postgres_runtime_state_body,
         "postgres runtime state store",
         ["IsolationLevel::RepeatableRead", "account_collateral::load_account_state", "worker_rows::load_worker_rows", "apply_runtime_worker_observations"],
+    )
+    require_tokens(
+        postgres_runtime_account_kill_switch_body,
+        "postgres runtime state store",
+        ["self.client().await?", "account_collateral::set_account_kill_switch(&client, account_id, enabled, reason).await"],
+    )
+    require_tokens(
+        postgres_runtime_global_kill_switch_body,
+        "postgres runtime state store",
+        ["self.client().await?", "account_collateral::set_global_kill_switch(&client, enabled, reason).await"],
     )
     if postgres_runtime_worker_impl_methods != {"list_runtime_worker_status"}:
         fail("postgres runtime worker status store missing RuntimeWorkerStatusStore impl methods")
     require_tokens(
-        postgres_worker_status_text,
+        postgres_runtime_worker_status_body,
         "postgres runtime worker status store",
         ["FROM worker_health", "FROM runtime_worker_observations", "RuntimeWorkerStatusReport"],
     )
     require_tokens(
-        store_backed_runtime_text,
+        store_backed_runtime_capture_body,
         "service store-backed runtime provider",
-        ["pub struct StoreBackedRuntimeStateProvider<S>", "load_runtime_state(&query)", "fail_closed_runtime_state(query.required_capabilities)"],
+        ["load_runtime_state(&query)", "fail_closed_runtime_state(query.required_capabilities)"],
     )
     require_file_tokens(
         SERVICE_SRC / "service_tests/flow.rs",

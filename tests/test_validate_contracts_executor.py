@@ -667,10 +667,13 @@ use async_trait::async_trait;
 #[async_trait]
 impl AdminAuditStore for InMemoryStore {
     async fn record_admin_audit_event(&self, event: &AdminAuditEvent) -> Result<(), StoreError> {
-        let stored = sanitize_admin_audit_event(event);
+        let stored = sanitize_admin_audit_event(event.clone());
         state.admin_audit.push(stored);
-        let correlation_id = event.correlation_id.clone();
         Ok(())
+    }
+
+    async fn list_admin_audit_events(&self, _query: &AdminAuditQuery) -> Result<Vec<AdminAuditEvent>, StoreError> {
+        Ok(Vec::new())
     }
 }
 """
@@ -681,6 +684,61 @@ impl AdminAuditStore for InMemoryStore {
                 module.validate_v15_admin_audit_and_runtime_provider(spec)
         self.assertIn("in-memory admin audit store", str(ctx.exception))
 
+    def test_v15_requires_postgres_audit_query_body_filters(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/admin/audit-events"]["get"]["parameters"] = [
+            {"name": "before_audit_id"},
+            {"name": "operation"},
+            {"name": "principal_subject"},
+            {"name": "result"},
+            {"name": "correlation_id"},
+        ]
+        spec["paths"]["/v1/admin/audit-events"]["get"]["responses"] = {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "schema": {"type": "array", "items": {"$ref": "#/components/schemas/AdminAuditEvent"}}
+                    }
+                }
+            }
+        }
+        spec["paths"]["/v1/admin/kill-switch"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/KillSwitchRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/KillSwitchReceipt"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/postgres_audit/admin.rs"):
+                return """
+use async_trait::async_trait;
+
+#[async_trait]
+impl AdminAuditStore for PostgresStore {
+    async fn record_admin_audit_event(&self, event: &AdminAuditEvent) -> Result<(), StoreError> {
+        let client = self.client().await?;
+        client.execute("INSERT INTO admin_audit_events", &[&event.correlation_id]).await.map_err(map_db_error)?;
+        Ok(())
+    }
+
+    async fn list_admin_audit_events(&self, query: &AdminAuditQuery) -> Result<Vec<AdminAuditEvent>, StoreError> {
+        let _ = query.bounded_limit();
+        let rows = client.query("SELECT * FROM admin_audit_events", &[]).await.map_err(map_db_error)?;
+        let _ = rows;
+        Ok(Vec::new())
+    }
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v15_admin_audit_and_runtime_provider(spec)
+        self.assertIn("postgres admin audit store", str(ctx.exception))
+
     def test_v16_requires_store_backed_runtime_provider_tokens(self) -> None:
         spec = self._minimal_v23_spec()
         original_read_text = Path.read_text
@@ -688,7 +746,48 @@ impl AdminAuditStore for InMemoryStore {
         def fake_read_text(path_self: Path, *args, **kwargs) -> str:
             path = str(path_self)
             if path.endswith("crates/pmx-service/src/runtime_state/store_backed.rs"):
-                return "pub struct StoreBackedRuntimeStateProvider<S>\npub fn new(store: S) -> Self\nasync fn capture_runtime_state"
+                return """
+use super::*;
+
+pub struct StoreBackedRuntimeStateProvider<S> {
+    store: S,
+    required_capabilities: Vec<String>,
+}
+
+impl<S> StoreBackedRuntimeStateProvider<S> {
+    pub fn new(store: S) -> Self {
+        Self { store, required_capabilities: Vec::new() }
+    }
+
+    pub fn with_required_capabilities(store: S, required_capabilities: Vec<String>) -> Self {
+        Self { store, required_capabilities }
+    }
+
+    pub async fn load_canary_runtime_truth(
+        &self,
+        query: &pmx_store::CanaryRuntimeTruthQuery,
+    ) -> Result<pmx_store::CanaryRuntimeTruthBindings, ServiceError>
+    where
+        S: pmx_store::CanaryRuntimeTruthStore,
+    {
+        self.store.load_canary_runtime_truth(query).await.map_err(ServiceError::Store)
+    }
+}
+
+#[async_trait]
+impl<S> RuntimeStateProvider for StoreBackedRuntimeStateProvider<S>
+where
+    S: RuntimeStateStore + Clone + Send + Sync + 'static,
+{
+    async fn capture_runtime_state(
+        &self,
+        normalized_intent: &NormalizedIntent,
+    ) -> RuntimeStateSummary {
+        let _ = normalized_intent;
+        RuntimeStateSummary::default()
+    }
+}
+"""
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
@@ -704,9 +803,25 @@ impl AdminAuditStore for InMemoryStore {
             path = str(path_self)
             if path.endswith("crates/pmx-store/src/memory/runtime/support.rs"):
                 return """
-pub fn some_other_helper() {}
-fn observations_for_account() {}
-fn runtime_observation_is_fresh() {}
+impl InMemoryStore {
+    pub fn set_runtime_state_for_test(
+        &self,
+        account_id: &str,
+        condition_id: &str,
+        collateral_profile_id: Option<&str>,
+        runtime_state: RuntimeStateSummary,
+    ) {
+        let _ = (account_id, condition_id, collateral_profile_id, runtime_state);
+    }
+
+    pub(crate) fn observations_for_account(
+        &self,
+        account_id: &str,
+    ) -> Vec<RuntimeWorkerObservation> {
+        let _ = account_id;
+        Vec::new()
+    }
+}
 """
             return original_read_text(path_self, *args, **kwargs)
 
@@ -726,21 +841,48 @@ fn runtime_observation_is_fresh() {}
 use async_trait::async_trait;
 
 #[async_trait]
-impl RuntimeStateStore for PostgresStore {}
-
-#[async_trait]
-impl RuntimeControlStore for PostgresStore {
-    async fn set_account_kill_switch(&self, account_id: &str, enabled: bool, reason: Option<&str>) -> Result<(), StoreError> {
-        let _ = (account_id, enabled, reason);
-        Ok(())
+impl RuntimeStateStore for PostgresStore {
+    async fn load_runtime_state(
+        &self,
+        query: &RuntimeStateQuery,
+    ) -> Result<RuntimeStateSummary, StoreError> {
+        let _ = query;
+        Ok(RuntimeStateSummary::default())
     }
 }
 
-fn helper() {
-    let _ = IsolationLevel::RepeatableRead;
-    let _ = account_collateral::load_account_state;
-    let _ = worker_rows::load_worker_rows;
-    let _ = apply_runtime_worker_observations;
+#[async_trait]
+impl RuntimeControlStore for PostgresStore {
+    async fn set_account_kill_switch(
+        &self,
+        account_id: &pmx_core::AccountId,
+        enabled: bool,
+        reason: &str,
+    ) -> Result<KillSwitchStateChange, StoreError> {
+        let _ = (account_id, enabled, reason);
+        Ok(KillSwitchStateChange {
+            scope: KillSwitchScope::Global,
+            account_id: None,
+            enabled: false,
+            state_version: 1,
+            effective_at: Utc::now(),
+        })
+    }
+
+    async fn set_global_kill_switch(
+        &self,
+        enabled: bool,
+        reason: &str,
+    ) -> Result<KillSwitchStateChange, StoreError> {
+        let _ = (enabled, reason);
+        Ok(KillSwitchStateChange {
+            scope: KillSwitchScope::Global,
+            account_id: None,
+            enabled: false,
+            state_version: 1,
+            effective_at: Utc::now(),
+        })
+    }
 }
 """
             return original_read_text(path_self, *args, **kwargs)
@@ -749,6 +891,62 @@ fn helper() {
             with self.assertRaises(SystemExit) as ctx:
                 module.validate_v16_postgres_runtime_provider(spec)
         self.assertIn("postgres runtime state store", str(ctx.exception))
+
+    def test_v16_requires_store_backed_capture_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-service/src/runtime_state/store_backed.rs"):
+                return """
+use super::*;
+
+pub struct StoreBackedRuntimeStateProvider<S> {
+    store: S,
+    required_capabilities: Vec<String>,
+}
+
+impl<S> StoreBackedRuntimeStateProvider<S> {
+    pub fn new(store: S) -> Self {
+        Self { store, required_capabilities: Vec::new() }
+    }
+
+    pub fn with_required_capabilities(store: S, required_capabilities: Vec<String>) -> Self {
+        Self { store, required_capabilities }
+    }
+
+    pub async fn load_canary_runtime_truth(
+        &self,
+        query: &pmx_store::CanaryRuntimeTruthQuery,
+    ) -> Result<pmx_store::CanaryRuntimeTruthBindings, ServiceError>
+    where
+        S: pmx_store::CanaryRuntimeTruthStore,
+    {
+        self.store.load_canary_runtime_truth(query).await.map_err(ServiceError::Store)
+    }
+}
+
+#[async_trait]
+impl<S> RuntimeStateProvider for StoreBackedRuntimeStateProvider<S>
+where
+    S: RuntimeStateStore + Clone + Send + Sync + 'static,
+{
+    async fn capture_runtime_state(
+        &self,
+        normalized_intent: &NormalizedIntent,
+    ) -> RuntimeStateSummary {
+        let _ = normalized_intent;
+        RuntimeStateSummary::default()
+    }
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v16_postgres_runtime_provider(spec)
+        self.assertIn("service store-backed runtime provider", str(ctx.exception))
 
     def test_v15_requires_admin_audit_query_filters(self) -> None:
         spec = self._minimal_v23_spec()
