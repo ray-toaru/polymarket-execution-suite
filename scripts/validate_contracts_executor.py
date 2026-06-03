@@ -265,6 +265,30 @@ def rust_inherent_impl_method_names(text: str, type_name: str) -> set[str]:
     )
 
 
+def rust_impl_method_body(text: str, type_name: str, fn_name: str) -> str:
+    if f"impl {type_name}" not in text:
+        fail(f"missing Rust impl: impl {type_name}")
+    fn_pattern = re.compile(
+        rf"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\s+{re.escape(fn_name)}\s*\(",
+    )
+    fn_match = fn_pattern.search(text)
+    if not fn_match:
+        fail(f"missing Rust impl method body: {type_name}::{fn_name}")
+    body_start = text.find("{", fn_match.end())
+    if body_start == -1:
+        fail(f"missing Rust impl method body: {type_name}::{fn_name}")
+    depth = 0
+    for index in range(body_start, len(text)):
+        char = text[index]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[body_start + 1 : index]
+    fail(f"unterminated Rust impl method body: {type_name}::{fn_name}")
+
+
 def service_backend_method_names(text: str) -> set[str]:
     if "impl ServiceBackend" not in text:
         fail("missing Rust impl: impl ServiceBackend")
@@ -1416,26 +1440,28 @@ def validate_store_and_backend_structure() -> None:
             fail(f"pmx-store module boundary missing token: mod {module_name};")
     if "postgres" not in rust_module_names(store_lib, "pub mod"):
         fail("pmx-store module boundary missing token: pub mod postgres;")
-    if "postgres" not in rust_pub_use_targets(store_lib) or "PostgresStore" not in store_lib:
+    if "postgres" not in rust_pub_use_targets(store_lib):
         fail("pmx-store module boundary missing token: pub use postgres::PostgresStore;")
+    try:
+        postgres_store_fields = rust_struct_field_names(postgres_rs, "PostgresStore")
+    except SystemExit as exc:
+        fail(f"PostgresStore structure malformed: {exc}")
+    postgres_store_methods = rust_fn_names(postgres_rs) | rust_async_fn_names(postgres_rs)
+    if postgres_store_fields != {"database_url"}:
+        fail("PostgresStore structure missing canonical database_url field")
 
-    postgres_async_fns = rust_async_fn_names(postgres_rs)
-    for fn_name in ["connect", "apply_schema", "applied_schema_migrations"]:
-        if fn_name not in postgres_async_fns:
-            fail(f"PostgresStore structure missing token: pub async fn {fn_name}")
-    if not re.search(r"pub\s+struct\s+PostgresStore\b", postgres_rs):
-        fail("PostgresStore structure missing token: pub struct PostgresStore")
-    if "database_url: String" not in postgres_rs:
-        fail("PostgresStore structure missing token: database_url: String")
-    if "pub(crate) async fn client" not in postgres_rs:
-        fail("PostgresStore structure missing token: pub(crate) async fn client")
-    for needle in [
-        'simple_query("SELECT 1")',
-        "tokio_postgres::connect(&self.database_url, NoTls)",
-        'client.batch_execute("ROLLBACK")',
-    ]:
-        if needle not in postgres_rs:
-            fail(f"PostgresStore structure missing token: {needle}")
+    for fn_name in ["new", "connect", "apply_schema", "applied_schema_migrations", "client", "rollback"]:
+        if fn_name not in postgres_store_methods:
+            fail(f"PostgresStore structure missing impl method: {fn_name}")
+    connect_body = rust_impl_method_body(postgres_rs, "PostgresStore", "connect")
+    client_body = rust_impl_method_body(postgres_rs, "PostgresStore", "client")
+    rollback_body = rust_impl_method_body(postgres_rs, "PostgresStore", "rollback")
+    if 'simple_query("SELECT 1")' not in connect_body:
+        fail('PostgresStore::connect must probe the database with simple_query("SELECT 1")')
+    if "tokio_postgres::connect(&self.database_url, NoTls)" not in client_body:
+        fail("PostgresStore::client must connect with tokio_postgres::connect(&self.database_url, NoTls)")
+    if 'client.batch_execute("ROLLBACK")' not in rollback_body:
+        fail('PostgresStore::rollback must issue client.batch_execute("ROLLBACK")')
 
     service_modules = rust_module_names(service_lib, "mod")
     for module_name in ["runtime_state", "runtime_worker", "sign_only", "submit"]:
