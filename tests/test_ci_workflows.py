@@ -31,6 +31,20 @@ def workflow_on(data):
 
 
 class CiWorkflowTests(unittest.TestCase):
+    def _compileall_targets(self, workflow_text: str) -> set[str]:
+        match = re.search(
+            r"python -m compileall -q \\\s*(.*?)\n\n",
+            workflow_text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match, "compileall command block missing from workflow")
+        targets = set()
+        for line in match.group(1).splitlines():
+            value = line.strip().rstrip("\\").strip()
+            if value:
+                targets.add(value)
+        return targets
+
     def test_root_ci_pins_actions_and_uploads_proof_artifacts(self):
         text = ROOT_CI.read_text()
         data = load_yaml(ROOT_CI)
@@ -51,8 +65,17 @@ class CiWorkflowTests(unittest.TestCase):
         self.assertIn("check_v28_production_live_candidate.py --require-ready", text)
         self.assertIn("cargo test --workspace --exclude pmx-api --locked", text)
         self.assertIn("PyYAML==6.0.3", (ROOT / "requirements-ci.txt").read_text())
-        self.assertIn("hermes-polymarket-executor-adapter/tests", text)
-        self.assertIn("polymarket-execution-engine/scripts", text)
+        self.assertEqual(
+            self._compileall_targets(text),
+            {
+                "scripts",
+                "tests",
+                "hermes-polymarket-executor-adapter/src",
+                "hermes-polymarket-executor-adapter/tests",
+                "polymarket-execution-engine/scripts",
+                "polymarket-execution-engine/validation",
+            },
+        )
 
     def test_adapter_ci_pins_actions_and_pip(self):
         text = ADAPTER_CI.read_text()
