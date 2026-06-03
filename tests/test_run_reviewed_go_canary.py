@@ -338,57 +338,26 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                     os.environ["PMX_KILL_SWITCH_OPEN"] = previous
         self.assertIn("disagrees with runtime truth", str(ctx.exception))
 
-    def test_build_invocation_armed_defaults_report_and_marker_in_package(self):
+    def test_build_invocation_rejects_armed_mode(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
             package, env_file = self.package_fixture(tmp)
-            plan = self.module.build_invocation(
-                package_dir=package,
-                env_file=env_file,
-                mode="armed",
-                daily_used_notional_usd="0",
-                idempotency_key=None,
-                execution_id=None,
-                plan_hash=None,
-                report_file=None,
-                approval_consumed_marker=None,
-                include_live_config_overrides=False,
-            )
-
-            self.assertEqual(plan["mode"], "armed")
-            self.assertIn("pmx-real-funds-canary-armed", plan["command"])
-            self.assertEqual(len(plan["invocation_hash"]), 64)
-            self.assertIn(f"canary-{plan['invocation_hash']}-armed", plan["command"])
-            self.assertIn(f"exec-{plan['invocation_hash']}", plan["command"])
-            self.assertIn("--report-file", plan["command"])
-            self.assertIn("--approval-consumed-marker", plan["command"])
-            self.assertTrue(plan["report_file"].endswith("post-canary-report.json"))
-            self.assertIn(str(package), plan["approval_consumed_marker"])
-            self.assertTrue(plan["requires_explicit_live_config_overrides"])
-            self.assertNotIn("--allow-live-submit-config", plan["command"])
-
-    def test_build_invocation_armed_requires_explicit_live_overrides_to_include_flags(self):
-        with tempfile.TemporaryDirectory() as tmp_name:
-            tmp = Path(tmp_name)
-            package, env_file = self.package_fixture(tmp)
-            plan = self.module.build_invocation(
-                package_dir=package,
-                env_file=env_file,
-                mode="armed",
-                daily_used_notional_usd="0",
-                idempotency_key=None,
-                execution_id=None,
-                plan_hash=None,
-                report_file=None,
-                approval_consumed_marker=None,
-                include_live_config_overrides=True,
-            )
-
-            self.assertFalse(plan["requires_explicit_live_config_overrides"])
-            self.assertTrue(plan["includes_live_config_overrides"])
-            self.assertIn("pmx-real-funds-canary-armed", plan["command"])
-            self.assertNotIn("--allow-live-submit-config", plan["command"])
-            self.assertNotIn("--allow-real-funds-canary-config", plan["command"])
+            with self.assertRaisesRegex(
+                SystemExit,
+                "only supports preflight; use run_reviewed_go_canary_armed.py",
+            ):
+                self.module.build_invocation(
+                    package_dir=package,
+                    env_file=env_file,
+                    mode="armed",
+                    daily_used_notional_usd="0",
+                    idempotency_key=None,
+                    execution_id=None,
+                    plan_hash=None,
+                    report_file=None,
+                    approval_consumed_marker=None,
+                    include_live_config_overrides=False,
+                )
 
     def test_build_invocation_rejects_consumed_package(self):
         with tempfile.TemporaryDirectory() as tmp_name:
@@ -449,7 +418,7 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                 os.environ.clear()
                 os.environ.update(original)
 
-    def test_main_run_rejects_armed_without_explicit_live_override_opt_in(self):
+    def test_main_run_rejects_live_override_opt_in_on_preflight_wrapper(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
             package, env_file = self.package_fixture(tmp)
@@ -462,19 +431,19 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                     package_dir=package,
                     env_file=env_file,
                     secrets_env_file=None,
-                    mode="armed",
+                    mode="preflight",
                     daily_used_notional_usd="0",
                     idempotency_key=None,
                     execution_id=None,
                     plan_hash=None,
                     report_file=None,
                     approval_consumed_marker=None,
-                    include_live_config_overrides=False,
+                    include_live_config_overrides=True,
                     run=True,
                 )
                 with self.assertRaisesRegex(
                     SystemExit,
-                    "requires the dedicated run_reviewed_go_canary_armed.py wrapper before execution",
+                    "live config overrides are only valid for armed reviewed-go canary invocations",
                 ):
                     self.module.main()
             finally:

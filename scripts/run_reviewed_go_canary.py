@@ -250,7 +250,11 @@ def build_invocation(
     approval_consumed_marker: Path | None,
     include_live_config_overrides: bool,
 ) -> dict[str, Any]:
-    if mode != "armed" and include_live_config_overrides:
+    if mode != "preflight":
+        raise SystemExit(
+            "run_reviewed_go_canary.py only supports preflight; use run_reviewed_go_canary_armed.py for armed invocations"
+        )
+    if include_live_config_overrides:
         raise SystemExit(
             "live config overrides are only valid for armed reviewed-go canary invocations"
         )
@@ -286,26 +290,17 @@ def build_invocation(
     if approval["archived_manifest_sha256"] != runtime_truth_summary["archived_manifest_sha256"]:
         raise SystemExit("approval archived_manifest_sha256 does not match runtime truth")
 
-    mode_bin = {
-        "preflight": "pmx-real-funds-canary-preflight",
-        "armed": "pmx-real-funds-canary-armed",
-    }.get(mode)
-    if mode_bin is None:
-        raise SystemExit(f"unsupported mode: {mode}")
-
     plan = plan_hash or plan_hash_from_package(approval)
     invocation_hash = invocation_hash_from_package(
         approval,
-        mode=mode,
+        mode="preflight",
         runtime_truth_sha256=runtime_truth_summary["sha256"],
         active_profile_ref=env_summary["active_profile_ref"],
         plan_hash=plan,
         daily_used_notional_usd=daily_used_notional_usd,
     )
-    idempotency = idempotency_key or f"canary-{invocation_hash}-{mode}"
+    idempotency = idempotency_key or f"canary-{invocation_hash}-preflight"
     execution = execution_id or f"exec-{invocation_hash}"
-    report = report_file or (package_dir / "post-canary-report.json")
-    marker = approval_consumed_marker or default_marker_path(package_dir)
 
     command = [
         "cargo",
@@ -315,7 +310,7 @@ def build_invocation(
         "--features",
         "live-submit",
         "--bin",
-        mode_bin,
+        "pmx-real-funds-canary-preflight",
         "--",
         "--env-file",
         str(env_file),
@@ -344,26 +339,10 @@ def build_invocation(
         "--daily-used-notional-usd",
         daily_used_notional_usd,
     ]
-    if include_live_config_overrides and mode == "preflight":
-        command.extend(
-            [
-                "--allow-live-submit-config",
-                "--allow-real-funds-canary-config",
-            ]
-        )
-    if mode == "armed":
-        command.extend(
-            [
-                "--approval-consumed-marker",
-                str(marker),
-                "--report-file",
-                str(report),
-            ]
-        )
 
     return {
         "status": "ready",
-        "mode": mode,
+        "mode": "preflight",
         "package_dir": str(package_dir),
         "env_file": str(env_file),
         "account_id": approval["account_id"],
@@ -378,10 +357,10 @@ def build_invocation(
         "command": command,
         "required_gate_env_vars": REQUIRED_GATE_ENV_VARS,
         "missing_gate_env_vars": missing_gate_env(),
-        "includes_live_config_overrides": include_live_config_overrides,
-        "requires_explicit_live_config_overrides": mode == "armed" and not include_live_config_overrides,
-        "report_file": str(report) if mode == "armed" else None,
-        "approval_consumed_marker": str(marker) if mode == "armed" else None,
+        "includes_live_config_overrides": False,
+        "requires_explicit_live_config_overrides": False,
+        "report_file": None,
+        "approval_consumed_marker": None,
     }
 
 
@@ -438,11 +417,6 @@ def main() -> int:
     if not args.run:
         print(json.dumps(invocation, indent=2, sort_keys=True))
         return 0
-
-    if invocation["requires_explicit_live_config_overrides"]:
-        raise SystemExit(
-            "armed reviewed-go canary requires the dedicated run_reviewed_go_canary_armed.py wrapper before execution"
-        )
 
     missing = invocation["missing_gate_env_vars"]
     if missing:
