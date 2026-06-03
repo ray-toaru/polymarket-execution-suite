@@ -364,6 +364,28 @@ def rust_fn_signature(text: str, fn_name: str) -> tuple[str, str]:
     return params, return_type
 
 
+def rust_fn_body(text: str, fn_name: str) -> str:
+    fn_pattern = re.compile(
+        rf"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?fn\s+{re.escape(fn_name)}\s*\(",
+    )
+    fn_match = fn_pattern.search(text)
+    if not fn_match:
+        fail(f"missing Rust fn body: {fn_name}")
+    body_start = text.find("{", fn_match.end())
+    if body_start == -1:
+        fail(f"missing Rust fn body: {fn_name}")
+    depth = 0
+    for index in range(body_start, len(text)):
+        char = text[index]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[body_start + 1 : index]
+    fail(f"unterminated Rust fn body: {fn_name}")
+
+
 def cargo_toml(path: Path) -> dict:
     try:
         return tomllib.loads(path.read_text())
@@ -1499,8 +1521,9 @@ def validate_v21_sign_only_and_runtime_models(spec: dict | None = None) -> None:
     )
     if "&SignOnlyDryRunReceipt" not in lifecycle_params or "Result<Vec<SignOnlyLifecycleRecord>, OfficialSdkAdapterError>" not in lifecycle_return:
         fail("v0.21 sign-only lifecycle adapter must bind &SignOnlyDryRunReceipt -> Result<Vec<SignOnlyLifecycleRecord>, OfficialSdkAdapterError>")
+    lifecycle_body = rust_fn_body(lifecycle_adapter_text, "sign_only_lifecycle_records_from_receipt")
     require_tokens(
-        lifecycle_adapter_text,
+        lifecycle_body,
         "v0.21 sign-only lifecycle adapter",
         [
             "transition_sign_only_lifecycle",
@@ -1558,13 +1581,34 @@ def validate_v21_sign_only_and_runtime_models(spec: dict | None = None) -> None:
         "ReconcileBacklog",
     }:
         fail("v0.21 runtime worker kinds missing RuntimeWorkerKind variants")
+    worker_actions_params, worker_actions_return = rust_fn_signature(
+        runtime_action_text, "worker_actions_from_runtime_signals"
+    )
+    if "signals: &[RuntimeSignal]" not in worker_actions_params or worker_actions_return != "Vec<RuntimeWorkerAction>":
+        fail("v0.21 runtime worker action model must bind &[RuntimeSignal] -> Vec<RuntimeWorkerAction>")
+    runtime_store_write_params, runtime_store_write_return = rust_fn_signature(
+        runtime_action_text, "runtime_worker_store_writes"
+    )
+    if "account_id: impl Into<String>" not in runtime_store_write_params or "signals: &[RuntimeSignal]" not in runtime_store_write_params or runtime_store_write_return != "Vec<RuntimeWorkerStoreWrite>":
+        fail("v0.21 runtime worker action model must bind account_id + &[RuntimeSignal] -> Vec<RuntimeWorkerStoreWrite>")
+    worker_actions_body = rust_fn_body(runtime_action_text, "worker_actions_from_runtime_signals")
+    runtime_store_writes_body = rust_fn_body(runtime_action_text, "runtime_worker_store_writes")
     require_tokens(
-        runtime_action_text,
+        worker_actions_body,
         "v0.21 runtime worker action model",
         [
-            "worker_actions_from_runtime_signals",
-            "runtime_worker_store_writes",
+            "signal.to_capability_health()",
+            "signal.worker_kind()",
             "should_fail_closed: health.blocks_submit()",
+        ],
+    )
+    require_tokens(
+        runtime_store_writes_body,
+        "v0.21 runtime worker action model",
+        [
+            "account_id = account_id.into()",
+            "should_fail_closed = health.blocks_submit()",
+            "RuntimeWorkerStoreWrite",
         ],
     )
     runtime_worker_tests_text = (
