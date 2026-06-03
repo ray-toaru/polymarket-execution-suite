@@ -1054,6 +1054,81 @@ pub fn normalize_sdk_error(error: SdkError) -> OfficialSdkNormalizedError {
                 module.validate_v19_redaction_and_live_guard(self._minimal_v23_spec())
         self.assertIn("OfficialSdkNormalizedError", str(ctx.exception))
 
+    def test_v19_requires_gateway_error_redaction_body(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("adapters/pmx-official-sdk-adapter/src/redaction.rs"):
+                return """
+use crate::{OfficialSdkErrorCategory, OfficialSdkNormalizedError};
+use pmx_gateway::GatewayError;
+
+pub fn gateway_error_from_normalized_sdk_error(
+    normalized: &OfficialSdkNormalizedError,
+) -> GatewayError {
+    match normalized.category {
+        OfficialSdkErrorCategory::AuthenticationFailed => GatewayError::AuthenticationFailed,
+        _ => GatewayError::RemoteUnknown(normalized.message.clone()),
+    }
+}
+
+pub fn redact_sensitive_text(input: &str) -> String {
+    input.to_string()
+}
+
+pub fn redact_normalized_error(error: &OfficialSdkNormalizedError) -> OfficialSdkNormalizedError {
+    error.clone()
+}
+
+fn looks_like_hex_private_key(_token: &str) -> bool { false }
+fn redact_assignment_value(input: &str, _key: &str) -> String { input.to_string() }
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v19_redaction_and_live_guard(self._minimal_v23_spec())
+        self.assertIn("v0.19 adapter redaction", str(ctx.exception))
+
+    def test_v19_requires_redact_sensitive_body(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("adapters/pmx-official-sdk-adapter/src/redaction.rs"):
+                return """
+use crate::{OfficialSdkErrorCategory, OfficialSdkNormalizedError};
+use pmx_gateway::GatewayError;
+
+pub fn gateway_error_from_normalized_sdk_error(
+    normalized: &OfficialSdkNormalizedError,
+) -> GatewayError {
+    match normalized.category {
+        OfficialSdkErrorCategory::AuthenticationFailed => GatewayError::AuthenticationFailed,
+        OfficialSdkErrorCategory::ValidationFailed | OfficialSdkErrorCategory::RemoteRejected => GatewayError::RemoteRejected(redact_sensitive_text(&normalized.message)),
+        _ => GatewayError::RemoteUnknown(redact_sensitive_text(&normalized.message)),
+    }
+}
+
+pub fn redact_sensitive_text(input: &str) -> String {
+    input.to_string()
+}
+
+pub fn redact_normalized_error(error: &OfficialSdkNormalizedError) -> OfficialSdkNormalizedError {
+    error.clone()
+}
+
+fn looks_like_hex_private_key(_token: &str) -> bool { false }
+fn redact_assignment_value(input: &str, _key: &str) -> String { input.to_string() }
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v19_redaction_and_live_guard(self._minimal_v23_spec())
+        self.assertIn("v0.19 adapter redaction", str(ctx.exception))
+
     def test_v20_requires_reconcile_backlog_remote_unknown_field(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {

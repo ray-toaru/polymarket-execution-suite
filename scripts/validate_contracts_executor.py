@@ -1262,6 +1262,20 @@ def validate_v19_redaction_and_live_guard(spec: dict | None = None) -> None:
         "redact_assignment_value",
     }.issubset(redaction_fn_names):
         fail("v0.19 adapter redaction missing required redaction function set")
+    gateway_error_params, gateway_error_return = rust_fn_signature(
+        redaction_text, "gateway_error_from_normalized_sdk_error"
+    )
+    if "&OfficialSdkNormalizedError" not in gateway_error_params or gateway_error_return != "GatewayError":
+        fail("v0.19 adapter redaction must bind &OfficialSdkNormalizedError -> GatewayError")
+    redact_sensitive_params, redact_sensitive_return = rust_fn_signature(
+        redaction_text, "redact_sensitive_text"
+    )
+    if "&str" not in redact_sensitive_params or redact_sensitive_return != "String":
+        fail("v0.19 adapter redaction must bind &str -> String")
+    gateway_error_body = rust_fn_body(
+        redaction_text, "gateway_error_from_normalized_sdk_error"
+    )
+    redact_sensitive_body = rust_fn_body(redaction_text, "redact_sensitive_text")
     constants_text = (SDK_ADAPTER_SRC / "model/constants.rs").read_text()
     if "REDACTED" not in rust_const_names(constants_text):
         fail("v0.19 adapter constants missing REDACTED constant")
@@ -1295,19 +1309,46 @@ def validate_v19_redaction_and_live_guard(spec: dict | None = None) -> None:
     )
     if "&SdkError" not in normalization_params or normalization_return != "OfficialSdkNormalizedError":
         fail("v0.19 liveness error normalization must bind &SdkError -> OfficialSdkNormalizedError")
-    for sdk_kind in [
-        "SdkErrorKind::Validation",
-        "SdkErrorKind::Synchronization",
-        "SdkErrorKind::Geoblock",
-        "SdkErrorKind::WebSocket",
-        "SdkErrorKind::Status",
-        "SdkErrorKind::Internal",
-    ]:
-        if sdk_kind not in error_normalization_text:
-            fail(f"v0.19 liveness error normalization missing SDK error kind branch: {sdk_kind}")
-    for category in ["RemoteRejected", "RemoteUnknown", "WebSocketFailed", "AuthenticationFailed", "Geoblocked", "ValidationFailed", "Internal"]:
-        if f"OfficialSdkErrorCategory::{category}" not in error_normalization_text:
-            fail(f"v0.19 liveness error normalization missing category mapping: {category}")
+    normalize_sdk_error_body = rust_fn_body(
+        error_normalization_text, "normalize_sdk_error"
+    )
+    require_tokens(
+        gateway_error_body,
+        "v0.19 adapter redaction",
+        [
+            "OfficialSdkErrorCategory::AuthenticationFailed",
+            "GatewayError::RemoteRejected(redact_sensitive_text(&normalized.message))",
+            "GatewayError::RemoteUnknown(redact_sensitive_text(&normalized.message))",
+        ],
+    )
+    require_tokens(
+        redact_sensitive_body,
+        "v0.19 adapter redaction",
+        [
+            "redact_known_env_values(input)",
+            "looks_like_hex_private_key(token)",
+            "\"0x[REDACTED]\".to_string()",
+        ],
+    )
+    require_tokens(
+        normalize_sdk_error_body,
+        "v0.19 liveness error normalization",
+        [
+            "SdkErrorKind::Validation",
+            "SdkErrorKind::Synchronization",
+            "SdkErrorKind::Geoblock",
+            "SdkErrorKind::WebSocket",
+            "SdkErrorKind::Status",
+            "SdkErrorKind::Internal",
+            "OfficialSdkErrorCategory::RemoteRejected",
+            "OfficialSdkErrorCategory::RemoteUnknown",
+            "OfficialSdkErrorCategory::WebSocketFailed",
+            "OfficialSdkErrorCategory::AuthenticationFailed",
+            "OfficialSdkErrorCategory::Geoblocked",
+            "OfficialSdkErrorCategory::ValidationFailed",
+            "OfficialSdkErrorCategory::Internal",
+        ],
+    )
     liveness_error_tests = (SDK_ADAPTER_SRC / "tests/liveness_errors.rs").read_text()
     liveness_error_test_names = rust_fn_names(liveness_error_tests)
     if not {
