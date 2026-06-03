@@ -1115,6 +1115,88 @@ RuntimeSignal::ReconcileBacklog
                 module.validate_v20_plan_storage_and_packaging(spec)
         self.assertIn("RuntimeHealthBreakdown", str(ctx.exception))
 
+    def test_v20_requires_runtime_breakdown_body_mappings(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-runtime/src/health/signal/breakdown.rs"):
+                return """
+use super::RuntimeSignal;
+use crate::RuntimeHealthBreakdown;
+
+pub fn runtime_breakdown_from_signals(
+    account_id: impl Into<String>,
+    signals: &[RuntimeSignal],
+) -> RuntimeHealthBreakdown {
+    let _ = signals;
+    RuntimeHealthBreakdown {
+        account_id: account_id.into(),
+        account_capabilities: Vec::new(),
+        market_capabilities: Vec::new(),
+        asset_capabilities: Vec::new(),
+        worker_capabilities: Vec::new(),
+    }
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v20_plan_storage_and_packaging(spec)
+        self.assertIn("v0.20 runtime breakdown", str(ctx.exception))
+
+    def test_v20_requires_order_lifecycle_reconcile_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-core/src/domain/lifecycle/order.rs"):
+                return """
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum OrderLifecycleState {
+    CancelRequested,
+    RemoteUnknown,
+    PartialRemoteUnknown,
+    Failed,
+}
+
+pub fn cancel_state_from_lifecycle(state: &OrderLifecycleState) -> crate::CancelState {
+    match state {
+        OrderLifecycleState::CancelRequested => crate::CancelState::Requested,
+        OrderLifecycleState::Failed => crate::CancelState::NotCanceled,
+        _ => crate::CancelState::ReconcileRequired,
+    }
+}
+
+pub fn lifecycle_requires_reconcile(state: &OrderLifecycleState) -> bool {
+    let _ = state;
+    false
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(SystemExit) as ctx:
+                module.validate_v20_plan_storage_and_packaging(spec)
+        self.assertIn("v0.20 core order lifecycle", str(ctx.exception))
+
     def test_v21_requires_lifecycle_record_binding(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/sign-only/lifecycle-events"] = {

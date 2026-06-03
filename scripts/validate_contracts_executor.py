@@ -1387,9 +1387,19 @@ def validate_v20_plan_storage_and_packaging(spec: dict | None = None) -> None:
     )
     if "account_id: impl Into<String>" not in breakdown_params or "signals: &[RuntimeSignal]" not in breakdown_params or breakdown_return != "RuntimeHealthBreakdown":
         fail("v0.20 runtime breakdown must bind account_id + &[RuntimeSignal] -> RuntimeHealthBreakdown")
-    for needle in ["RuntimeSignal::Geoblock", "RuntimeSignal::ReconcileBacklog"]:
-        if needle not in runtime_breakdown_text:
-            fail(f"v0.20 runtime breakdown missing blocking signal handling: {needle}")
+    runtime_breakdown_body = rust_fn_body(
+        runtime_breakdown_text, "runtime_breakdown_from_signals"
+    )
+    require_tokens(
+        runtime_breakdown_body,
+        "v0.20 runtime breakdown",
+        [
+            "signal.to_capability_health()",
+            "RuntimeSignal::Geoblock",
+            "RuntimeSignal::ReconcileBacklog",
+            "account_id: account_id.into()",
+        ],
+    )
     runtime_blocking_tests = (
         EXECUTOR / "crates/pmx-runtime/src/runtime_tests/breakdown_loop/capabilities/blocking.rs"
     ).read_text()
@@ -1400,9 +1410,29 @@ def validate_v20_plan_storage_and_packaging(spec: dict | None = None) -> None:
         rust_fn_names(order_lifecycle_text)
     ):
         fail("v0.20 core order lifecycle missing reconcile/cancel helper functions")
+    cancel_state_body = rust_fn_body(order_lifecycle_text, "cancel_state_from_lifecycle")
+    lifecycle_requires_reconcile_body = rust_fn_body(
+        order_lifecycle_text, "lifecycle_requires_reconcile"
+    )
     order_lifecycle_states = rust_enum_variant_names(order_lifecycle_text, "OrderLifecycleState")
     if not {"RemoteUnknown", "PartialRemoteUnknown"}.issubset(order_lifecycle_states):
         fail("v0.20 core order lifecycle missing remote unknown states")
+    require_tokens(
+        cancel_state_body,
+        "v0.20 core order lifecycle",
+        [
+            "OrderLifecycleState::CancelRequested",
+            "OrderLifecycleState::RemoteUnknown | OrderLifecycleState::PartialRemoteUnknown",
+            "crate::CancelState::RemoteUnknown",
+        ],
+    )
+    require_tokens(
+        lifecycle_requires_reconcile_body,
+        "v0.20 core order lifecycle",
+        [
+            "OrderLifecycleState::RemoteUnknown | OrderLifecycleState::PartialRemoteUnknown",
+        ],
+    )
     for doc in [
         ROOT / "scripts/package_release.py",
         ROOT / "scripts/check_release_artifact.py",
