@@ -158,6 +158,11 @@ def summarize_stage_history(
         and bool(stage.get("remote_order_id"))
         for stage in stages
     )
+    has_approval_consumed_post_remote_attempt = any(
+        stage.get("stage") == "approval_consumed_post_remote_attempt"
+        and bool(stage.get("remote_order_id"))
+        for stage in stages
+    )
     has_cancel_confirmed = any(
         stage.get("stage") == "cancel_confirmed"
         and stage.get("posted") is True
@@ -176,6 +181,7 @@ def summarize_stage_history(
         "remote_order_ids": remote_order_ids,
         "operator_required_stages": operator_required,
         "has_post_accepted": has_post_accepted,
+        "has_approval_consumed_post_remote_attempt": has_approval_consumed_post_remote_attempt,
         "has_cancel_confirmed": has_cancel_confirmed,
         "raw_signed_order_exposed": raw_signed_order_exposed,
         "remote_order_matches_report": order_matches,
@@ -417,6 +423,8 @@ def build_closeout(package_dir: Path, release_zip: Path) -> dict[str, Any]:
         ),
         "stage_history_has_post_accepted": incident_closeout
         or stage_history_summary["has_post_accepted"],
+        "stage_history_has_approval_consumed_post_remote_attempt": incident_closeout
+        or stage_history_summary["has_approval_consumed_post_remote_attempt"],
         "stage_history_has_cancel_confirmed": incident_closeout
         or stage_history_summary["has_cancel_confirmed"]
         or operator_recovery_summary["status"] == "recovered",

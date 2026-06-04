@@ -416,6 +416,18 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
                     ),
                     json.dumps(
                         {
+                            "status": "approval_consumed",
+                            "stage": "approval_consumed_post_remote_attempt",
+                            "remote_order_id": "order-1",
+                            "posted": True,
+                            "cancelled": False,
+                            "remote_side_effects": True,
+                            "operator_required": False,
+                            "raw_signed_order_exposed": False,
+                        }
+                    ),
+                    json.dumps(
+                        {
                             "status": "cancel_confirmed",
                             "stage": "cancel_confirmed",
                             "remote_order_id": "order-1",
@@ -457,8 +469,8 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         self.assertTrue((package / "closeout.json").exists())
         closeout = json.loads((package / "closeout.json").read_text())
         self.assertEqual(stage["stage_history_sha256"], closeout["stage_history_summary"]["sha256"])
-        self.assertEqual(stage["stage_history_stage_count"], 2)
-        self.assertEqual(closeout["stage_history_summary"]["stage_count"], 2)
+        self.assertEqual(stage["stage_history_stage_count"], 3)
+        self.assertEqual(closeout["stage_history_summary"]["stage_count"], 3)
         self.assertEqual(closeout["stage_history_summary"]["remote_order_ids"], ["order-1"])
 
     def test_closeout_package_stage_requires_stage_history(self):
@@ -646,6 +658,18 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
                         {
                             "status": "post_accepted",
                             "stage": "post_accepted",
+                            "remote_order_id": "order-1",
+                            "posted": True,
+                            "cancelled": False,
+                            "remote_side_effects": True,
+                            "operator_required": False,
+                            "raw_signed_order_exposed": False,
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "status": "approval_consumed",
+                            "stage": "approval_consumed_post_remote_attempt",
                             "remote_order_id": "order-1",
                             "posted": True,
                             "cancelled": False,
@@ -908,6 +932,18 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
                         {
                             "status": "post_accepted",
                             "stage": "post_accepted",
+                            "remote_order_id": "order-1",
+                            "posted": True,
+                            "cancelled": False,
+                            "remote_side_effects": True,
+                            "operator_required": False,
+                            "raw_signed_order_exposed": False,
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "status": "approval_consumed",
+                            "stage": "approval_consumed_post_remote_attempt",
                             "remote_order_id": "order-1",
                             "posted": True,
                             "cancelled": False,
