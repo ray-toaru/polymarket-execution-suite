@@ -175,6 +175,17 @@ def validate_python_field_parity(spec: dict) -> None:
         py_fields = set(py_model.model_fields.keys())
         if props != py_fields:
             fail(f"Python model {model_name} fields {sorted(py_fields)} != OpenAPI {schema_name} fields {sorted(props)}")
+        py_schema = py_model.model_json_schema()
+        schema_required = set(schema.get("required", []))
+        py_required = set(py_schema.get("required", []))
+        if schema_required != py_required:
+            fail(
+                f"Python model {model_name} required fields {sorted(py_required)} != OpenAPI {schema_name} required fields {sorted(schema_required)}"
+            )
+        if schema.get("additionalProperties") != py_schema.get("additionalProperties"):
+            fail(
+                f"Python model {model_name} additionalProperties {py_schema.get('additionalProperties')} != OpenAPI {schema_name} additionalProperties {schema.get('additionalProperties')}"
+            )
 
 
 def validate_sql_idempotency() -> None:

@@ -14,6 +14,18 @@ import validate_contracts_surface as module
 
 
 class ValidateContractsSurfaceTests(unittest.TestCase):
+    @staticmethod
+    def _model_parity_spec() -> dict:
+        models = module.import_control_models()
+        return {
+            "components": {
+                "schemas": {
+                    schema_name: getattr(models, model_name).model_json_schema()
+                    for schema_name, model_name in module.PY_MODEL_BY_SCHEMA.items()
+                }
+            }
+        }
+
     def test_split_top_level_csv_respects_nested_parentheses(self) -> None:
         parts = module.split_top_level_csv(
             "account_id TEXT NOT NULL, submit_attempt INTEGER NOT NULL CHECK ( submit_attempt >= 1 ), UNIQUE ( account_id, execution_id, submit_attempt )"
@@ -199,6 +211,28 @@ class ValidateContractsSurfaceTests(unittest.TestCase):
             mock.patch.object(module, "EXPECTED_202_PATHS", {"/v1/submissions": "submit_plan"}),
         ):
             module.validate_paths_and_statuses(spec)
+
+    def test_validate_python_field_parity_rejects_required_drift(self) -> None:
+        spec = self._model_parity_spec()
+        spec["components"]["schemas"]["TradeIntent"]["required"] = [
+            "client_intent_id",
+            "account_id",
+            "market",
+            "token_id",
+            "side",
+            "quantity",
+            "limit_price",
+        ]
+        with self.assertRaises(SystemExit) as ctx:
+            module.validate_python_field_parity(spec)
+        self.assertIn("TradeIntent required fields", str(ctx.exception))
+
+    def test_validate_python_field_parity_rejects_additional_properties_drift(self) -> None:
+        spec = self._model_parity_spec()
+        spec["components"]["schemas"]["MarketRef"]["additionalProperties"] = True
+        with self.assertRaises(SystemExit) as ctx:
+            module.validate_python_field_parity(spec)
+        self.assertIn("MarketRef additionalProperties", str(ctx.exception))
 
 
 if __name__ == "__main__":
