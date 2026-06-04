@@ -86,8 +86,12 @@ class ValidateContractsCliTests(unittest.TestCase):
         self.assertEqual(file_report["check_count"], len(file_report["checks"]))
         self.assertGreater(file_report["check_count"], 10)
         self.assertIn("structured", file_report["proof_mode_counts"])
+        self.assertEqual(set(file_report["severity_counts"]), {"S1", "S2"})
+        self.assertEqual(file_report["failed_severity_counts"], {})
         categories = {check["category"] for check in file_report["checks"]}
+        severities = {check["severity"] for check in file_report["checks"]}
         self.assertEqual(categories, {"surface", "executor", "governance"})
+        self.assertEqual(severities, {"S1", "S2"})
         self.assertTrue(any(check["id"] == "v23_lifecycle_query_and_hardening" for check in file_report["checks"]))
 
     def test_build_report_persists_failed_check_details(self) -> None:
@@ -100,8 +104,8 @@ class ValidateContractsCliTests(unittest.TestCase):
             raise ContractValidationError("contract validation failed: synthetic failure")
 
         validators = [
-            module.ValidatorSpec("ok_check", "surface", "structured", True, ok_validator),
-            module.ValidatorSpec("bad_check", "executor", "token", True, fail_validator),
+            module.ValidatorSpec("ok_check", "surface", "S2", "structured", True, ok_validator),
+            module.ValidatorSpec("bad_check", "executor", "S1", "token", True, fail_validator),
         ]
         report = module.build_report({"paths": {}, "components": {"schemas": {}}}, validators=validators)
 
@@ -109,9 +113,13 @@ class ValidateContractsCliTests(unittest.TestCase):
         self.assertEqual(report["failed_check_count"], 1)
         self.assertEqual(report["failed_check_ids"], ["bad_check"])
         self.assertEqual(report["proof_mode_counts"], {"structured": 1, "token": 1})
+        self.assertEqual(report["severity_counts"], {"S2": 1, "S1": 1})
+        self.assertEqual(report["failed_severity_counts"], {"S1": 1})
         self.assertEqual(report["checks"][0]["status"], "pass")
+        self.assertEqual(report["checks"][0]["severity"], "S2")
         self.assertEqual(report["checks"][0]["proof_mode"], "structured")
         self.assertEqual(report["checks"][1]["status"], "fail")
+        self.assertEqual(report["checks"][1]["severity"], "S1")
         self.assertEqual(report["checks"][1]["proof_mode"], "token")
         self.assertEqual(report["checks"][1]["error_type"], "ContractValidationError")
         self.assertIn("synthetic failure", report["checks"][1]["error"])
@@ -129,12 +137,15 @@ class ValidateContractsCliTests(unittest.TestCase):
                 {
                     "id": "synthetic_failure",
                     "category": "surface",
+                    "severity": "S2",
                     "status": "fail",
                     "error_type": "ContractValidationError",
                     "error": "contract validation failed: synthetic failure",
                 }
             ]
             report["check_count"] = 1
+            report["severity_counts"] = {"S2": 1}
+            report["failed_severity_counts"] = {"S2": 1}
             return report
 
         module.build_report = fake_build_report
