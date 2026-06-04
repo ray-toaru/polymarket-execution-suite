@@ -103,20 +103,70 @@ def rust_file_with_modules_text(src: Path) -> str:
     return "\n".join(texts)
 
 
+def find_matching_delimiter(text: str, start: int, opening: str, closing: str) -> int:
+    if start >= len(text) or text[start] != opening:
+        fail(f"delimiter {opening} not found at expected position")
+    depth = 0
+    for index in range(start, len(text)):
+        char = text[index]
+        if char == opening:
+            depth += 1
+        elif char == closing:
+            depth -= 1
+            if depth == 0:
+                return index
+    fail(f"unterminated delimiter {opening}{closing}")
+
+
+def extract_string_literal_prefix(text: str) -> str | None:
+    stripped = text.lstrip()
+    if not stripped.startswith('"'):
+        return None
+    escaped = False
+    chars: list[str] = []
+    for char in stripped[1:]:
+        if escaped:
+            chars.append(char)
+            escaped = False
+            continue
+        if char == "\\":
+            escaped = True
+            continue
+        if char == '"':
+            return "".join(chars)
+        chars.append(char)
+    return None
+
+
 def rust_routes() -> set[str]:
     text = rust_source_text(API_SRC)
-    return {normalize_path(m.group(1)) for m in re.finditer(r'\.route\(\s*"([^"]+)"', text)}
+    routes: set[str] = set()
+    offset = 0
+    needle = ".route("
+    while True:
+        start = text.find(needle, offset)
+        if start == -1:
+            break
+        open_paren = start + len(".route")
+        close_paren = find_matching_delimiter(text, open_paren, "(", ")")
+        literal = extract_string_literal_prefix(text[open_paren + 1 : close_paren])
+        if literal is not None:
+            routes.add(normalize_path(literal))
+        offset = close_paren + 1
+    return routes
 
 
 def rust_handler_body(name: str) -> str:
     text = rust_source_text(API_SRC)
     marker = f"async fn {name}"
-    start = text.rfind(marker)
-    if start == -1:
+    signature_start = text.rfind(marker)
+    if signature_start == -1:
         fail(f"handler {name} not found")
-    next_match = re.search(r"\nasync fn ", text[start + len(marker) :])
-    end = len(text) if not next_match else start + len(marker) + next_match.start()
-    return text[start:end]
+    body_start = text.find("{", signature_start)
+    if body_start == -1:
+        fail(f"handler {name} body start not found")
+    body_end = find_matching_delimiter(text, body_start, "{", "}")
+    return text[signature_start : body_end + 1]
 
 
 def import_control_models():
