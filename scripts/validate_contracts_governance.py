@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import inspect
 import json
 import re
+from types import SimpleNamespace
 
 from validate_contracts_support import (
     CONTROL,
@@ -12,6 +14,8 @@ from validate_contracts_support import (
     ROOT,
     SDK_ADAPTER_SRC,
     fail,
+    import_control_client,
+    import_control_models,
     rust_source_text,
 )
 
@@ -29,35 +33,101 @@ def validate_absent_tokens(text: str, label: str, tokens: list[str]) -> None:
 
 
 def validate_current_hermes_client_surface() -> None:
-    client_text = (CONTROL / "src/hermes_polymarket_executor_adapter/client.py").read_text()
-    model_text = (CONTROL / "src/hermes_polymarket_executor_adapter/models.py").read_text()
-    for needle in [
+    client_module = import_control_client()
+    models = import_control_models()
+    client_cls = client_module.ExecutorClient
+
+    def require_method(name: str, *, required_params: list[str], return_type_name: str) -> None:
+        method = getattr(client_cls, name, None)
+        if method is None:
+            fail(f"Hermes current client surface missing method: {name}")
+        signature = inspect.signature(method)
+        params = signature.parameters
+        for param in required_params:
+            if param not in params:
+                fail(f"Hermes current client surface method {name} missing parameter: {param}")
+        if return_type_name not in str(signature.return_annotation):
+            fail(f"Hermes current client surface method {name} must return {return_type_name}")
+
+    require_method(
         "record_sign_only_lifecycle_event",
+        required_params=["record", "correlation_id"],
+        return_type_name="SignOnlyLifecycleRecord",
+    )
+    require_method(
         "list_sign_only_lifecycle_events",
+        required_params=["execution_id", "before_event_id", "correlation_id"],
+        return_type_name="SignOnlyLifecycleRecord",
+    )
+    require_method(
         "list_execution_lifecycle_events",
+        required_params=["execution_id", "before_event_id", "correlation_id"],
+        return_type_name="ExecutionLifecycleEvent",
+    )
+    require_method(
         "list_admin_audit_events",
+        required_params=["principal_subject", "result", "audit_correlation_id", "correlation_id"],
+        return_type_name="AdminAuditEvent",
+    )
+    require_method(
         "reconcile_order_local",
-        "ReconcileOrderLocalResponse",
-        "principal_subject: str | None = None",
-        "result: str | None = None",
-        "execution_id: str | None = None",
-        "X-Correlation-Id",
-    ]:
-        if needle not in client_text:
-            fail(f"Hermes current client surface missing token: {needle}")
-    for needle in [
-        "class SignOnlyLifecycleRecord",
-        "client_event_id",
-        "class RedactedPayloadEnvelope",
-        "payload: RedactedPayloadEnvelope",
-        "class ExecutionLifecycleEvent",
-        "class AdminAuditEvent",
-        "class OrderLifecycleDivergence",
-        "class ReconcileOrderLocalResponse",
-        "sign-only lifecycle records must not contain remote side effects",
-    ]:
-        if needle not in model_text:
-            fail(f"Hermes current model surface missing token: {needle}")
+        required_params=["account_id", "order_id", "remote_observation", "reason", "correlation_id"],
+        return_type_name="ReconcileOrderLocalResponse",
+    )
+    require_method(
+        "cancel_order",
+        required_params=["account_id", "order_id", "reason", "execution_id", "correlation_id"],
+        return_type_name="CancelReceipt",
+    )
+    require_method(
+        "reconcile",
+        required_params=["account_id", "reason", "execution_id", "correlation_id"],
+        return_type_name="ReconcileReport",
+    )
+
+    headers_owner = client_cls.__new__(client_cls)
+    headers_owner.config = SimpleNamespace(service_token="svc", admin_token="adm")
+    headers = client_cls._headers(headers_owner, correlation_id="corr-123")
+    if headers.get("X-Correlation-Id") != "corr-123":
+        fail("Hermes current client surface must propagate X-Correlation-Id header")
+
+    required_models: dict[str, set[str]] = {
+        "SignOnlyLifecycleRecord": {"execution_id", "client_event_id", "signed_order_ref", "no_remote_side_effect"},
+        "RedactedPayloadEnvelope": {"correlation_id", "redacted_fields", "body"},
+        "ExecutionLifecycleEvent": {"execution_id", "payload"},
+        "AdminAuditEvent": {"principal_subject", "result", "correlation_id"},
+        "OrderLifecycleDivergence": set(),
+        "ReconcileOrderLocalResponse": set(),
+    }
+    for model_name, required_fields in required_models.items():
+        model = getattr(models, model_name, None)
+        if model is None:
+            fail(f"Hermes current model surface missing model: {model_name}")
+        model_fields = getattr(model, "model_fields", {})
+        for field in required_fields:
+            if field not in model_fields:
+                fail(f"Hermes current model surface {model_name} missing field: {field}")
+
+    payload_annotation = str(models.ExecutionLifecycleEvent.model_fields["payload"].annotation)
+    if "RedactedPayloadEnvelope" not in payload_annotation:
+        fail("Hermes current model surface ExecutionLifecycleEvent.payload must bind RedactedPayloadEnvelope")
+
+    try:
+        models.SignOnlyLifecycleRecord.model_validate(
+            {
+                "execution_id": "exec-1",
+                "account_id": "acct-1",
+                "state": "ABANDONED",
+                "event": "ABANDON",
+                "signed_order_ref": None,
+                "no_remote_side_effect": False,
+            }
+        )
+    except Exception as exc:
+        if "sign-only lifecycle records must not contain remote side effects" not in str(exc):
+            fail("Hermes current model surface SignOnlyLifecycleRecord must reject remote side effects with the expected boundary")
+    else:
+        fail("Hermes current model surface SignOnlyLifecycleRecord must reject remote side effects")
 
 
 def validate_current_evidence_manifest_guard() -> None:

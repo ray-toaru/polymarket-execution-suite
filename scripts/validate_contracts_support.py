@@ -185,3 +185,8 @@ def rust_handler_body(name: str) -> str:
 def import_control_models():
     sys.path.insert(0, str(CONTROL / "src"))
     return importlib.import_module("hermes_polymarket_executor_adapter.models")
+
+
+def import_control_client():
+    sys.path.insert(0, str(CONTROL / "src"))
+    return importlib.import_module("hermes_polymarket_executor_adapter.client")
