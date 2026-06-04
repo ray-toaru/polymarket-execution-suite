@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 import importlib.util
+import ast
 from pathlib import Path
 
 
@@ -26,6 +27,37 @@ def load_module():
 
 
 class ValidateContractsCliTests(unittest.TestCase):
+    def test_validate_contracts_cli_wrapper_stays_thin(self) -> None:
+        tree = ast.parse(SCRIPT.read_text())
+        imported_modules = set()
+        imported_from = set()
+        for node in tree.body:
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    imported_modules.add(alias.name)
+            elif isinstance(node, ast.ImportFrom):
+                imported_from.add(node.module or "")
+
+        self.assertNotIn("yaml", imported_modules)
+        self.assertNotIn("validate_contracts_support", imported_from)
+        self.assertIn("validate_contracts_runner", imported_from)
+
+    def test_runner_owns_openapi_loading_and_validator_registry(self) -> None:
+        runner = ROOT / "scripts" / "validate_contracts_runner.py"
+        tree = ast.parse(runner.read_text())
+        imported_modules = set()
+        imported_from = set()
+        for node in tree.body:
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    imported_modules.add(alias.name)
+            elif isinstance(node, ast.ImportFrom):
+                imported_from.add(node.module or "")
+
+        self.assertIn("yaml", imported_modules)
+        self.assertIn("validate_contracts_support", imported_from)
+        self.assertNotIn("hermes_polymarket_executor_adapter.models", imported_modules | imported_from)
+
     def test_report_file_contains_machine_readable_checks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             report_path = Path(tmp) / "contracts-report.json"
