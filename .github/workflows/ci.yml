@@ -83,7 +83,7 @@ defaults:
 jobs:
   adapter-required-ci:
     name: adapter required ci
-    uses: ray-toaru/hermes-polymarket-executor-adapter/.github/workflows/ci.yml@cf694faeea42121cf0f6c428ced06c1d53b1a467
+    uses: ray-toaru/hermes-polymarket-executor-adapter/.github/workflows/ci.yml@caec425b172e126365b2f521f70ac82badc60e70
 
   engine-required-ci:
     name: engine required ci

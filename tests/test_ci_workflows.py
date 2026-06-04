@@ -93,6 +93,10 @@ class CiWorkflowTests(unittest.TestCase):
 
         self.assertIn("python -m pip install --upgrade pip==25.3", text)
         self.assertIn('"3.12"', text)
+        self.assertIn("python -m pip install ruff==0.15.15 mypy==2.1.0 bandit==1.9.4", text)
+        self.assertIn("python -m ruff check src tests", text)
+        self.assertIn("python -m mypy src", text)
+        self.assertIn("python -m bandit -q -r src", text)
 
     def test_root_ci_references_current_submodule_workflows(self):
         data = load_yaml(ROOT_CI)
