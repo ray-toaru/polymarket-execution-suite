@@ -232,7 +232,7 @@ class RunReviewedGoCanaryArmedTests(unittest.TestCase):
         self.assertTrue(plan["armed_wrapper"])
         self.assertEqual(plan["wrapper"], "run_reviewed_go_canary_armed.py")
         self.assertEqual(len(plan["invocation_hash"]), 64)
-        self.assertTrue(plan["includes_live_config_overrides"])
+        self.assertFalse(plan["includes_live_config_overrides"])
         self.assertFalse(plan["requires_explicit_live_config_overrides"])
         self.assertEqual(plan["required_gate_env_vars"], [])
         self.assertEqual(plan["missing_gate_env_vars"], [])

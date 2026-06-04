@@ -102,6 +102,20 @@ class BlockedRehearsalPackageTests(unittest.TestCase):
             self.assertIn("--run", wrapper_command)
             self.assertEqual(wrapper_cwd, self.module.INTEGRATION_ROOT)
 
+    def test_main_reports_no_live_config_overrides(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            output_dir = Path(tmp_name)
+
+            with patch.object(self.module, "run_rehearsal", return_value=([], 1)):
+                with patch.object(self.module.sys, "argv", ["blocked-rehearsal", "--output-dir", str(output_dir)]):
+                    with patch("builtins.print"):
+                        exit_code = self.module.main()
+
+            self.assertEqual(exit_code, 0)
+            report = json.loads((output_dir / "blocked-rehearsal.report.json").read_text())
+            self.assertFalse(report["includes_live_config_overrides"])
+            self.assertTrue(report["armed_requested"])
+
 
 if __name__ == "__main__":
     unittest.main()
