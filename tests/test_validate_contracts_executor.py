@@ -11,6 +11,7 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 import validate_contracts_executor as module
+from validate_contracts_support import ContractValidationError
 
 
 class ValidateContractsExecutorTests(unittest.TestCase):
@@ -167,7 +168,7 @@ class ValidateContractsExecutorTests(unittest.TestCase):
         with mock.patch.object(module, "rust_source_text", return_value=rust_text), mock.patch(
             "pathlib.Path.read_text", autospec=True, side_effect=fake_read_text
         ):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("before_audit_id", str(ctx.exception))
 
@@ -194,7 +195,7 @@ pub fn redacted_payload_envelope() {}
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("RedactedPayloadEnvelope", str(ctx.exception))
 
@@ -255,7 +256,7 @@ pub trait RuntimeWorkerStatusStore: Send + Sync {}
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("RuntimeWorkerStatusStore", str(ctx.exception))
 
@@ -281,7 +282,7 @@ pub(crate) async fn list_runtime_worker_status(
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("RuntimeWorkerStatusListQuery", str(ctx.exception))
 
@@ -306,7 +307,7 @@ pub(crate) async fn reconcile_order_local(
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("ReconcileOrderLocalRequest", str(ctx.exception))
 
@@ -335,7 +336,7 @@ pub(crate) async fn reconcile_order_local(
                 "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReconcileReport"}}}}},
             }
         }
-        with self.assertRaises(SystemExit) as ctx:
+        with self.assertRaises(ContractValidationError) as ctx:
             module.validate_v12_service_layer(spec)
         self.assertIn("/v1/plans/compile request", str(ctx.exception))
 
@@ -349,7 +350,7 @@ pub(crate) async fn reconcile_order_local(
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v08_dependency_and_sdk_policy()
         self.assertIn("executor rust toolchain", str(ctx.exception))
 
@@ -363,7 +364,7 @@ pub(crate) async fn reconcile_order_local(
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v04_source_landings()
         self.assertIn("postgres receipt/reservation tests", str(ctx.exception))
 
@@ -377,14 +378,14 @@ pub(crate) async fn reconcile_order_local(
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v07_source_landings()
-        self.assertIn("gateway traits", str(ctx.exception))
+        self.assertIn("SignerProvider", str(ctx.exception))
 
     def test_v16_requires_runtime_worker_schema_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/runtime/workers"]["get"]["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] = "#/components/schemas/Wrong"
-        with self.assertRaises(SystemExit) as ctx:
+        with self.assertRaises(ContractValidationError) as ctx:
             module.validate_v16_postgres_runtime_provider(spec)
         self.assertIn("RuntimeWorkerStatusReport", str(ctx.exception))
 
@@ -423,9 +424,9 @@ pub(crate) async fn reconcile_order_local(
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v12_service_layer(spec)
-        self.assertIn("service binding hash inputs", str(ctx.exception))
+        self.assertIn("PlanHashInput", str(ctx.exception))
 
     def test_v12_requires_service_backend_variants(self) -> None:
         spec = self._minimal_v23_spec()
@@ -467,7 +468,7 @@ pub enum ServiceBackend {
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v12_service_layer(spec)
         self.assertIn("ServiceBackend variants", str(ctx.exception))
 
@@ -481,7 +482,7 @@ pub enum ServiceBackend {
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v09_official_adapter_boundary()
         self.assertIn("official SDK feature-gated tests", str(ctx.exception))
 
@@ -539,7 +540,7 @@ exposes_raw_signed_order: false
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v09_official_adapter_boundary()
         self.assertIn("OfficialSdkAdapterConfig fields", str(ctx.exception))
 
@@ -576,7 +577,7 @@ exposes_raw_signed_order: false
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v15_admin_audit_and_runtime_provider(spec)
         self.assertIn("API admin audit support", str(ctx.exception))
 
@@ -628,7 +629,7 @@ impl ServiceBackend {
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v15_admin_audit_and_runtime_provider(spec)
         self.assertIn("API admin audit backend", str(ctx.exception))
 
@@ -680,7 +681,7 @@ impl AdminAuditStore for InMemoryStore {
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v15_admin_audit_and_runtime_provider(spec)
         self.assertIn("in-memory admin audit store", str(ctx.exception))
 
@@ -735,7 +736,7 @@ impl AdminAuditStore for PostgresStore {
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v15_admin_audit_and_runtime_provider(spec)
         self.assertIn("postgres admin audit store", str(ctx.exception))
 
@@ -791,7 +792,7 @@ where
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v16_postgres_runtime_provider(spec)
         self.assertIn("service store-backed runtime provider", str(ctx.exception))
 
@@ -826,7 +827,7 @@ impl InMemoryStore {
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v16_postgres_runtime_provider(spec)
         self.assertIn("in-memory runtime support", str(ctx.exception))
 
@@ -888,7 +889,7 @@ impl RuntimeControlStore for PostgresStore {
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v16_postgres_runtime_provider(spec)
         self.assertIn("postgres runtime state store", str(ctx.exception))
 
@@ -944,7 +945,7 @@ where
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v16_postgres_runtime_provider(spec)
         self.assertIn("service store-backed runtime provider", str(ctx.exception))
 
@@ -966,19 +967,19 @@ where
                 "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/KillSwitchReceipt"}}}}},
             }
         }
-        with self.assertRaises(SystemExit) as ctx:
+        with self.assertRaises(ContractValidationError) as ctx:
             module.validate_v15_admin_audit_and_runtime_provider(spec)
         self.assertIn("v0.15 admin audit query must expose", str(ctx.exception))
 
     def test_validate_required_groups_reports_label(self) -> None:
-        with self.assertRaises(SystemExit) as ctx:
+        with self.assertRaises(ContractValidationError) as ctx:
             module.validate_required_groups({"demo group": ("only-one-token", ["missing-token"])})
         self.assertIn("demo group missing token: missing-token", str(ctx.exception))
 
     def test_v19_rejects_forbidden_public_contract_tokens_structurally(self) -> None:
         spec = self._minimal_v23_spec()
         spec["components"]["schemas"]["Leak"] = {"type": "object", "properties": {"danger": {"description": "signed_payload"}}}
-        with self.assertRaises(SystemExit) as ctx:
+        with self.assertRaises(ContractValidationError) as ctx:
             module.validate_v19_redaction_and_live_guard(spec)
         self.assertIn("signed_payload", str(ctx.exception))
 
@@ -990,7 +991,7 @@ where
                 "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Wrong"}}}}},
             }
         }
-        with self.assertRaises(SystemExit) as ctx:
+        with self.assertRaises(ContractValidationError) as ctx:
             module.validate_v20_plan_storage_and_packaging(spec)
         self.assertIn("ExecutionPlanSummary", str(ctx.exception))
 
@@ -1004,7 +1005,7 @@ where
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v19_redaction_and_live_guard(self._minimal_v23_spec())
         self.assertIn("REDACTED", str(ctx.exception))
 
@@ -1050,7 +1051,7 @@ pub fn normalize_sdk_error(error: SdkError) -> OfficialSdkNormalizedError {
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v19_redaction_and_live_guard(self._minimal_v23_spec())
         self.assertIn("OfficialSdkNormalizedError", str(ctx.exception))
 
@@ -1087,7 +1088,7 @@ fn redact_assignment_value(input: &str, _key: &str) -> String { input.to_string(
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v19_redaction_and_live_guard(self._minimal_v23_spec())
         self.assertIn("v0.19 adapter redaction", str(ctx.exception))
 
@@ -1125,7 +1126,7 @@ fn redact_assignment_value(input: &str, _key: &str) -> String { input.to_string(
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v19_redaction_and_live_guard(self._minimal_v23_spec())
         self.assertIn("v0.19 adapter redaction", str(ctx.exception))
 
@@ -1155,7 +1156,7 @@ pub enum RuntimeSignal {
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v20_plan_storage_and_packaging(spec)
         self.assertIn("remote_unknown_orders", str(ctx.exception))
 
@@ -1186,7 +1187,7 @@ RuntimeSignal::ReconcileBacklog
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v20_plan_storage_and_packaging(spec)
         self.assertIn("RuntimeHealthBreakdown", str(ctx.exception))
 
@@ -1224,7 +1225,7 @@ pub fn runtime_breakdown_from_signals(
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v20_plan_storage_and_packaging(spec)
         self.assertIn("v0.20 runtime breakdown", str(ctx.exception))
 
@@ -1268,7 +1269,7 @@ pub fn lifecycle_requires_reconcile(state: &OrderLifecycleState) -> bool {
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v20_plan_storage_and_packaging(spec)
         self.assertIn("v0.20 core order lifecycle", str(ctx.exception))
 
@@ -1320,7 +1321,7 @@ pub fn lifecycle_requires_reconcile(state: &OrderLifecycleState) -> bool {
             "type": "object",
             "properties": {"heartbeats": {"type": "array"}, "observations": {"type": "array"}},
         }
-        with self.assertRaises(SystemExit) as ctx:
+        with self.assertRaises(ContractValidationError) as ctx:
             module.validate_v21_sign_only_and_runtime_models(spec)
         self.assertIn("SignOnlyLifecycleRecord", str(ctx.exception))
 
@@ -1441,7 +1442,7 @@ signed_order_ref: Some(receipt.signed_order_ref.clone())
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v21_sign_only_and_runtime_models(spec)
         self.assertIn("sign-only lifecycle adapter", str(ctx.exception))
 
@@ -1563,7 +1564,7 @@ signed_order_ref: Some(receipt.signed_order_ref.clone())
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v21_sign_only_and_runtime_models(spec)
         self.assertIn("OfficialSdkAdapterError", str(ctx.exception))
 
@@ -1609,7 +1610,7 @@ signed_order_ref: Some(receipt.signed_order_ref.clone())
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_store_and_backend_structure()
         self.assertIn("pmx-store module boundary missing token: pub mod postgres;", str(ctx.exception))
 
@@ -1779,7 +1780,7 @@ signed_order_ref: Some(receipt.signed_order_ref.clone())
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_store_and_backend_structure()
         self.assertIn("runtime backend bridge missing ServiceBackend impl methods", str(ctx.exception))
 
@@ -1865,7 +1866,7 @@ signed_order_ref: Some(receipt.signed_order_ref.clone())
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_store_and_backend_structure()
         self.assertIn("audit backend bridge missing ServiceBackend impl methods", str(ctx.exception))
 

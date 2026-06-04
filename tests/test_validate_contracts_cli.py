@@ -12,6 +12,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "validate_contracts.py"
+SCRIPTS = ROOT / "scripts"
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from validate_contracts_support import ContractValidationError
 
 
 def load_module():
@@ -92,7 +97,7 @@ class ValidateContractsCliTests(unittest.TestCase):
             return None
 
         def fail_validator(spec):
-            raise SystemExit("contract validation failed: synthetic failure")
+            raise ContractValidationError("contract validation failed: synthetic failure")
 
         validators = [
             module.ValidatorSpec("ok_check", "surface", "structured", True, ok_validator),
@@ -108,7 +113,7 @@ class ValidateContractsCliTests(unittest.TestCase):
         self.assertEqual(report["checks"][0]["proof_mode"], "structured")
         self.assertEqual(report["checks"][1]["status"], "fail")
         self.assertEqual(report["checks"][1]["proof_mode"], "token")
-        self.assertEqual(report["checks"][1]["error_type"], "SystemExit")
+        self.assertEqual(report["checks"][1]["error_type"], "ContractValidationError")
         self.assertIn("synthetic failure", report["checks"][1]["error"])
 
     def test_cli_writes_report_before_exiting_non_zero(self) -> None:
@@ -125,7 +130,7 @@ class ValidateContractsCliTests(unittest.TestCase):
                     "id": "synthetic_failure",
                     "category": "surface",
                     "status": "fail",
-                    "error_type": "SystemExit",
+                    "error_type": "ContractValidationError",
                     "error": "contract validation failed: synthetic failure",
                 }
             ]

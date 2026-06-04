@@ -11,6 +11,7 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 import validate_contracts_surface as module
+from validate_contracts_support import ContractValidationError
 
 
 class ValidateContractsSurfaceTests(unittest.TestCase):
@@ -64,7 +65,7 @@ class ValidateContractsSurfaceTests(unittest.TestCase):
                 }
             }
         }
-        with self.assertRaises(SystemExit) as ctx:
+        with self.assertRaises(ContractValidationError) as ctx:
             module.validate_no_public_forbidden_tokens(spec)
         self.assertIn("forbidden token in public OpenAPI: signed_payload", str(ctx.exception))
 
@@ -76,7 +77,7 @@ class ValidateContractsSurfaceTests(unittest.TestCase):
         fake_src = mock.Mock()
         fake_src.rglob.return_value = [fake_file]
         with mock.patch.object(module, "PUBLIC_CONTRACT_SOURCE_PATHS", [fake_file]):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_no_public_forbidden_tokens({"openapi": "clean"})
         self.assertIn("forbidden token private_key in public contract source", str(ctx.exception))
 
@@ -103,7 +104,7 @@ class ValidateContractsSurfaceTests(unittest.TestCase):
             return original_read_text(path_self, *args, **kwargs)
 
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_rust_deny_unknown_fields()
         self.assertIn("ReconcileOrderLocalRequest", str(ctx.exception))
 
@@ -176,7 +177,7 @@ class ValidateContractsSurfaceTests(unittest.TestCase):
                 }
             },
         }
-        with self.assertRaises(SystemExit) as ctx:
+        with self.assertRaises(ContractValidationError) as ctx:
             module.validate_critical_contract_shapes(spec)
         self.assertIn("SubmitRequest", str(ctx.exception))
 
@@ -203,7 +204,7 @@ class ValidateContractsSurfaceTests(unittest.TestCase):
         );
         """
         with mock.patch.object(module, "SQL", mock.Mock(read_text=mock.Mock(return_value=sql))):
-            with self.assertRaises(SystemExit) as ctx:
+            with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_sql_idempotency()
         self.assertIn("idempotency_key must not be a global primary key", str(ctx.exception))
 
@@ -234,14 +235,14 @@ class ValidateContractsSurfaceTests(unittest.TestCase):
             "quantity",
             "limit_price",
         ]
-        with self.assertRaises(SystemExit) as ctx:
+        with self.assertRaises(ContractValidationError) as ctx:
             module.validate_python_field_parity(spec)
         self.assertIn("TradeIntent required fields", str(ctx.exception))
 
     def test_validate_python_field_parity_rejects_additional_properties_drift(self) -> None:
         spec = self._model_parity_spec()
         spec["components"]["schemas"]["MarketRef"]["additionalProperties"] = True
-        with self.assertRaises(SystemExit) as ctx:
+        with self.assertRaises(ContractValidationError) as ctx:
             module.validate_python_field_parity(spec)
         self.assertIn("MarketRef additionalProperties", str(ctx.exception))
 

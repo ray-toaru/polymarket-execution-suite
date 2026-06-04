@@ -90,8 +90,12 @@ PY_MODEL_BY_SCHEMA = {
 }
 
 
+class ContractValidationError(Exception):
+    pass
+
+
 def fail(message: str) -> None:
-    raise SystemExit(f"contract validation failed: {message}")
+    raise ContractValidationError(f"contract validation failed: {message}")
 
 
 def normalize_path(path: str) -> str:
