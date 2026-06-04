@@ -16,7 +16,12 @@ from pathlib import Path
 
 
 def load_helper_module():
-    helper_path = Path(__file__).with_name("prepare_operator_approval_request_helpers.py")
+    helper_path = (
+        Path(__file__).resolve().parents[1]
+        / "polymarket-execution-engine"
+        / "validation"
+        / "prepare_operator_approval_request_helpers.py"
+    )
     spec = importlib.util.spec_from_file_location("prepare_operator_approval_request_helpers", helper_path)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
