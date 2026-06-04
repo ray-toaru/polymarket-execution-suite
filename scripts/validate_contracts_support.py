@@ -37,12 +37,21 @@ SERVICE_RS = SERVICE_SRC / "lib.rs"
 SERVICE_TOML = EXECUTOR / "crates/pmx-service/Cargo.toml"
 ROOT_CARGO_TOML = EXECUTOR / "Cargo.toml"
 
-FORBIDDEN_PUBLIC_TOKENS = [
-    "SignedOrderEnvelope",
-    "private_key",
-    "clob_secret",
-    "signed_payload",
-    "sign_order",
+FORBIDDEN_PUBLIC_TOKEN_PATTERNS = {
+    "SignedOrderEnvelope": re.compile(r"\bSignedOrderEnvelope\b"),
+    "signed_payload": re.compile(r"\bsigned[_-]?payload\b", re.IGNORECASE),
+    "raw_signed_payload": re.compile(r"\braw[_-]?signed[_-]?payload\b", re.IGNORECASE),
+    "raw_signature": re.compile(r"\braw[_-]?signature\b", re.IGNORECASE),
+    "private_key": re.compile(r"\bprivate[_-]?key\b", re.IGNORECASE),
+    "clob_secret": re.compile(r"\bclob[_-]?secret\b", re.IGNORECASE),
+    "api_secret": re.compile(r"\bapi[_-]?secret\b", re.IGNORECASE),
+    "api_passphrase": re.compile(r"\bapi[_-]?passphrase\b", re.IGNORECASE),
+}
+
+PUBLIC_CONTRACT_SOURCE_PATHS = [
+    CONTROL / "src",
+    API_SRC / "model.rs",
+    API_SRC / "lib.rs",
 ]
 
 EXPECTED_202_PATHS = {

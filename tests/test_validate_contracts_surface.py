@@ -59,7 +59,7 @@ class ValidateContractsSurfaceTests(unittest.TestCase):
                 "schemas": {
                     "Example": {
                         "type": "object",
-                        "properties": {"danger": {"type": "string", "description": "signed_payload"}},
+                        "properties": {"danger": {"type": "string", "description": "raw-signed-payload"}},
                     }
                 }
             }
@@ -68,19 +68,30 @@ class ValidateContractsSurfaceTests(unittest.TestCase):
             module.validate_no_public_forbidden_tokens(spec)
         self.assertIn("forbidden token in public OpenAPI: signed_payload", str(ctx.exception))
 
-    def test_validate_no_public_forbidden_tokens_scans_control_sources(self) -> None:
+    def test_validate_no_public_forbidden_tokens_scans_public_contract_sources(self) -> None:
         fake_file = mock.Mock()
-        fake_file.read_text.return_value = "private_key"
-        fake_file.relative_to.return_value = Path("hermes-polymarket-executor-adapter/src/fake.py")
+        fake_file.read_text.return_value = "const leak = 'PRIVATE-KEY';"
+        fake_file.relative_to.return_value = Path("polymarket-execution-engine/crates/pmx-api/src/model.rs")
+        fake_file.is_dir.return_value = False
         fake_src = mock.Mock()
         fake_src.rglob.return_value = [fake_file]
-        fake_control = mock.Mock()
-        fake_control.__truediv__ = mock.Mock(return_value=fake_src)
-        fake_control.parent = ROOT
-        with mock.patch.object(module, "CONTROL", fake_control):
+        with mock.patch.object(module, "PUBLIC_CONTRACT_SOURCE_PATHS", [fake_file]):
             with self.assertRaises(SystemExit) as ctx:
                 module.validate_no_public_forbidden_tokens({"openapi": "clean"})
-        self.assertIn("forbidden token private_key in control package", str(ctx.exception))
+        self.assertIn("forbidden token private_key in public contract source", str(ctx.exception))
+
+    def test_validate_no_public_forbidden_tokens_uses_regex_patterns_not_plain_substrings(self) -> None:
+        spec = {
+            "components": {
+                "schemas": {
+                    "Example": {
+                        "type": "object",
+                        "properties": {"danger": {"type": "string", "description": "no_plaintext_private_keys_logged"}},
+                    }
+                }
+            }
+        }
+        module.validate_no_public_forbidden_tokens(spec)
 
     def test_validate_rust_deny_unknown_fields_targets_specific_files(self) -> None:
         original_read_text = Path.read_text

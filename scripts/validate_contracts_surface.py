@@ -8,7 +8,8 @@ from validate_contracts_support import (
     CONTROL,
     CORE_SRC,
     EXPECTED_202_PATHS,
-    FORBIDDEN_PUBLIC_TOKENS,
+    FORBIDDEN_PUBLIC_TOKEN_PATTERNS,
+    PUBLIC_CONTRACT_SOURCE_PATHS,
     PY_MODEL_BY_SCHEMA,
     SQL,
     fail,
@@ -146,15 +147,20 @@ def validate_critical_contract_shapes(spec: dict) -> None:
 
 
 def validate_no_public_forbidden_tokens(spec: dict) -> None:
-    public_tokens = set(iter_json_strings(spec))
-    for token in FORBIDDEN_PUBLIC_TOKENS:
-        if token in public_tokens:
-            fail(f"forbidden token in public OpenAPI: {token}")
-    for py in (CONTROL / "src").rglob("*.py"):
-        text = py.read_text()
-        for token in FORBIDDEN_PUBLIC_TOKENS:
-            if token in text:
-                fail(f"forbidden token {token} in control package {py.relative_to(CONTROL.parent)}")
+    public_strings = list(iter_json_strings(spec))
+    for token_name, pattern in FORBIDDEN_PUBLIC_TOKEN_PATTERNS.items():
+        if any(pattern.search(value) for value in public_strings):
+            fail(f"forbidden token in public OpenAPI: {token_name}")
+
+    for path in PUBLIC_CONTRACT_SOURCE_PATHS:
+        candidates = sorted(path.rglob("*.py")) if path.is_dir() else [path]
+        for candidate in candidates:
+            text = candidate.read_text()
+            for token_name, pattern in FORBIDDEN_PUBLIC_TOKEN_PATTERNS.items():
+                if pattern.search(text):
+                    fail(
+                        f"forbidden token {token_name} in public contract source {candidate.relative_to(CONTROL.parent)}"
+                    )
 
 
 def validate_additional_properties(spec: dict) -> None:
