@@ -39,6 +39,43 @@ def iter_json_strings(value: object) -> Iterator[str]:
             yield from iter_json_strings(nested)
 
 
+def split_top_level_csv(text: str) -> list[str]:
+    parts: list[str] = []
+    current: list[str] = []
+    depth = 0
+    for char in text:
+        if char == "(":
+            depth += 1
+        elif char == ")" and depth > 0:
+            depth -= 1
+        if char == "," and depth == 0:
+            item = "".join(current).strip()
+            if item:
+                parts.append(item)
+            current = []
+            continue
+        current.append(char)
+    tail = "".join(current).strip()
+    if tail:
+        parts.append(tail)
+    return parts
+
+
+def rust_struct_has_deny_unknown_fields(text: str, struct_name: str) -> bool:
+    pattern = re.compile(
+        rf"(?P<attrs>(?:\s*#\[[^\]]+\]\s*)*)"
+        rf"(?P<vis>pub(?:\([^)]*\))?\s+)?struct\s+{re.escape(struct_name)}\b"
+    )
+    match = pattern.search(text)
+    if not match:
+        return False
+    attrs = match.group("attrs")
+    return any(
+        "serde" in attr and "deny_unknown_fields" in attr
+        for attr in re.findall(r"#\[[^\]]+\]", attrs)
+    )
+
+
 def validate_paths_and_statuses(spec: dict) -> None:
     openapi_paths = set(spec["paths"].keys())
     routes = rust_routes()
@@ -49,7 +86,12 @@ def validate_paths_and_statuses(spec: dict) -> None:
     if extra:
         fail(f"Rust routes not present in OpenAPI: {sorted(extra)}")
     for path, handler in EXPECTED_202_PATHS.items():
-        statuses = set(spec["paths"][path][next(iter(spec["paths"][path]))]["responses"].keys())
+        operations = spec["paths"][path]
+        statuses = {
+            status
+            for operation in operations.values()
+            for status in operation.get("responses", {}).keys()
+        }
         if "202" not in statuses:
             fail(f"OpenAPI path {path} does not declare 202")
         body = rust_handler_body(handler)
@@ -137,8 +179,6 @@ def validate_python_field_parity(spec: dict) -> None:
 
 def validate_sql_idempotency() -> None:
     sql = SQL.read_text()
-    if re.search(r"idempotency_key\s+TEXT\s+PRIMARY\s+KEY", sql):
-        fail("idempotency_key must not be a global primary key")
     table_match = re.search(
         r"CREATE TABLE IF NOT EXISTS idempotency_records\s*\((?P<body>.*?)\);\s*",
         sql,
@@ -146,16 +186,37 @@ def validate_sql_idempotency() -> None:
     )
     if not table_match:
         fail("SQL missing idempotency_records table")
-    body = table_match.group("body")
-    required_column_patterns = {
-        "request_fingerprint TEXT NOT NULL": r"\brequest_fingerprint\s+TEXT\s+NOT\s+NULL\b",
-        "submit_attempt INTEGER NOT NULL CHECK (submit_attempt >= 1)": r"\bsubmit_attempt\s+INTEGER\s+NOT\s+NULL\s+CHECK\s*\(\s*submit_attempt\s*>=\s*1\s*\)",
-        "UNIQUE(account_id, execution_id, idempotency_key)": r"UNIQUE\s*\(\s*account_id\s*,\s*execution_id\s*,\s*idempotency_key\s*\)",
-        "UNIQUE(account_id, execution_id, submit_attempt)": r"UNIQUE\s*\(\s*account_id\s*,\s*execution_id\s*,\s*submit_attempt\s*\)",
-    }
-    for label, pattern in required_column_patterns.items():
-        if not re.search(pattern, body, re.DOTALL):
-            fail(f"SQL missing idempotency invariant: {label}")
+    entries = split_top_level_csv(table_match.group("body"))
+    normalized_entries = [" ".join(entry.split()) for entry in entries]
+
+    for entry in normalized_entries:
+        if re.match(r"idempotency_key\s+TEXT\s+PRIMARY\s+KEY\b", entry):
+            fail("idempotency_key must not be a global primary key")
+
+    if not any(re.match(r"request_fingerprint\s+TEXT\s+NOT\s+NULL\b", entry) for entry in normalized_entries):
+        fail("SQL missing idempotency invariant: request_fingerprint TEXT NOT NULL")
+    if not any(
+        re.match(
+            r"submit_attempt\s+INTEGER\s+NOT\s+NULL\s+CHECK\s*\(\s*submit_attempt\s*>=\s*1\s*\)$",
+            entry,
+        )
+        for entry in normalized_entries
+    ):
+        fail("SQL missing idempotency invariant: submit_attempt INTEGER NOT NULL CHECK (submit_attempt >= 1)")
+
+    unique_constraints = set()
+    for entry in normalized_entries:
+        match = re.match(r"UNIQUE\s*\((?P<fields>[^)]+)\)", entry)
+        if not match:
+            continue
+        unique_constraints.add(tuple(field.strip() for field in match.group("fields").split(",")))
+
+    for fields in [
+        ("account_id", "execution_id", "idempotency_key"),
+        ("account_id", "execution_id", "submit_attempt"),
+    ]:
+        if fields not in unique_constraints:
+            fail(f"SQL missing idempotency invariant: UNIQUE({', '.join(fields)})")
 
 
 def validate_rust_deny_unknown_fields() -> None:
@@ -173,6 +234,5 @@ def validate_rust_deny_unknown_fields() -> None:
     for path, struct_names in file_structs.items():
         text = path.read_text()
         for struct_name in struct_names:
-            pattern = rf"#\[serde\(deny_unknown_fields\)\]\s*pub struct {struct_name}"
-            if not re.search(pattern, text):
+            if not rust_struct_has_deny_unknown_fields(text, struct_name):
                 fail(f"Rust DTO {struct_name} missing #[serde(deny_unknown_fields)] in {path.relative_to(CONTROL.parent)}")

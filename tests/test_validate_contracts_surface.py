@@ -14,6 +14,29 @@ import validate_contracts_surface as module
 
 
 class ValidateContractsSurfaceTests(unittest.TestCase):
+    def test_split_top_level_csv_respects_nested_parentheses(self) -> None:
+        parts = module.split_top_level_csv(
+            "account_id TEXT NOT NULL, submit_attempt INTEGER NOT NULL CHECK ( submit_attempt >= 1 ), UNIQUE ( account_id, execution_id, submit_attempt )"
+        )
+        self.assertEqual(
+            parts,
+            [
+                "account_id TEXT NOT NULL",
+                "submit_attempt INTEGER NOT NULL CHECK ( submit_attempt >= 1 )",
+                "UNIQUE ( account_id, execution_id, submit_attempt )",
+            ],
+        )
+
+    def test_rust_struct_has_deny_unknown_fields_accepts_pub_crate_struct(self) -> None:
+        text = """
+        #[derive(Debug)]
+        #[serde(deny_unknown_fields)]
+        pub(crate) struct SampleRequest {
+            pub field: String,
+        }
+        """
+        self.assertTrue(module.rust_struct_has_deny_unknown_fields(text, "SampleRequest"))
+
     def test_iter_json_strings_walks_nested_values_and_keys(self) -> None:
         payload = {"a": ["x", {"b": "y"}], "c": {"d": 1}}
         self.assertEqual(set(module.iter_json_strings(payload)), {"a", "x", "b", "y", "c", "d"})
@@ -160,6 +183,22 @@ class ValidateContractsSurfaceTests(unittest.TestCase):
             with self.assertRaises(SystemExit) as ctx:
                 module.validate_sql_idempotency()
         self.assertIn("idempotency_key must not be a global primary key", str(ctx.exception))
+
+    def test_validate_paths_and_statuses_scans_all_operations_for_202(self) -> None:
+        spec = {
+            "paths": {
+                "/v1/submissions": {
+                    "get": {"responses": {"200": {}}},
+                    "post": {"responses": {"202": {}}},
+                }
+            }
+        }
+        with (
+            mock.patch.object(module, "rust_routes", return_value={"/v1/submissions"}),
+            mock.patch.object(module, "rust_handler_body", return_value="StatusCode::ACCEPTED"),
+            mock.patch.object(module, "EXPECTED_202_PATHS", {"/v1/submissions": "submit_plan"}),
+        ):
+            module.validate_paths_and_statuses(spec)
 
 
 if __name__ == "__main__":
