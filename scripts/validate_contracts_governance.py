@@ -518,9 +518,9 @@ def validate_controlled_canary_release_decision_governance() -> None:
 
 
 def validate_canary_candidate_market_prep_boundary() -> None:
-    prep_script = ROOT / "scripts/prepare_canary_candidate_market.py"
+    prep_script = EXECUTOR / "validation/prepare_canary_candidate_market.py"
     if not prep_script.exists():
-        fail("root canary candidate market prep script missing")
+        fail("execution-engine canary candidate market prep script missing")
     text = prep_script.read_text()
     for needle in [
         "candidate-market.json",
