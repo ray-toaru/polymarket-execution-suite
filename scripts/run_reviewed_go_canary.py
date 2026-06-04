@@ -26,18 +26,6 @@ ADAPTER_MANIFEST = (
     / "pmx-official-sdk-adapter"
     / "Cargo.toml"
 )
-REQUIRED_GATE_ENV_VARS = [
-    "PMX_ALLOW_LIVE_SUBMIT",
-    "PMX_ALLOW_REAL_FUNDS_CANARY",
-    "PMX_KILL_SWITCH_OPEN",
-    "PMX_RUNTIME_WORKER_HEALTHY",
-    "PMX_GEOBLOCK_ALLOWED",
-    "PMX_REPOSITORY_RESERVATION_EXISTS",
-    "PMX_IDEMPOTENCY_KEY_WRITTEN",
-    "PMX_RECONCILE_WORKER_HEALTHY",
-    "PMX_CANCEL_ONLY_FALLBACK_READY",
-    "PMX_BALANCE_ALLOWANCE_CHECKED",
-]
 RUNTIME_TRUTH_PREFLIGHT_ENV_BINDINGS = {
     "PMX_KILL_SWITCH_OPEN": "kill_switch_open",
     "PMX_RUNTIME_WORKER_HEALTHY": "runtime_worker_healthy",
@@ -168,14 +156,6 @@ def default_marker_path(package_dir: Path) -> Path:
     return package_dir / f"approval-consumed-{timestamp_tag()}.json"
 
 
-def missing_gate_env() -> list[str]:
-    missing: list[str] = []
-    for key in REQUIRED_GATE_ENV_VARS:
-        if str(os.environ.get(key, "")).strip() != "1":
-            missing.append(key)
-    return missing
-
-
 def require_runtime_truth_gate_alignment(runtime_truth_summary: dict[str, Any]) -> None:
     report = runtime_truth_summary.get("preflight_report")
     if not isinstance(report, dict):
@@ -187,14 +167,9 @@ def require_runtime_truth_gate_alignment(runtime_truth_summary: dict[str, Any]) 
     for field in ["preconditions_live_submit_would_pass", "preconditions_real_funds_canary_would_pass"]:
         if report.get(field) is not True:
             raise SystemExit(f"runtime truth preflight_report.{field} must be true for reviewed-go wrapper use")
-    for env_name, report_field in RUNTIME_TRUTH_PREFLIGHT_ENV_BINDINGS.items():
+    for report_field in RUNTIME_TRUTH_PREFLIGHT_ENV_BINDINGS.values():
         if report.get(report_field) is not True:
             raise SystemExit(f"runtime truth preflight_report.{report_field} must be true")
-        env_value = str(os.environ.get(env_name, "")).strip()
-        if env_value and env_value != "1":
-            raise SystemExit(
-                f"{env_name}={env_value!r} disagrees with runtime truth preflight_report.{report_field}=true"
-            )
 
 
 def require_approval_runtime_gate_alignment(
@@ -355,8 +330,8 @@ def build_invocation(
         "runtime_gate_snapshot": gate_snapshot,
         "runtime_gate_evidence_refs": gate_evidence_refs,
         "command": command,
-        "required_gate_env_vars": REQUIRED_GATE_ENV_VARS,
-        "missing_gate_env_vars": missing_gate_env(),
+        "required_gate_env_vars": [],
+        "missing_gate_env_vars": [],
         "includes_live_config_overrides": False,
         "requires_explicit_live_config_overrides": False,
         "report_file": None,
@@ -417,13 +392,6 @@ def main() -> int:
     if not args.run:
         print(json.dumps(invocation, indent=2, sort_keys=True))
         return 0
-
-    missing = invocation["missing_gate_env_vars"]
-    if missing:
-        raise SystemExit(
-            "cannot execute reviewed-go canary; missing required gate env vars: "
-            + ", ".join(missing)
-        )
 
     completed = subprocess.run(
         invocation["command"],

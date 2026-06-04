@@ -234,6 +234,8 @@ class RunReviewedGoCanaryArmedTests(unittest.TestCase):
         self.assertEqual(len(plan["invocation_hash"]), 64)
         self.assertTrue(plan["includes_live_config_overrides"])
         self.assertFalse(plan["requires_explicit_live_config_overrides"])
+        self.assertEqual(plan["required_gate_env_vars"], [])
+        self.assertEqual(plan["missing_gate_env_vars"], [])
         self.assertIn("pmx-real-funds-canary-armed", plan["command"])
         self.assertIn(f"canary-{plan['invocation_hash']}-armed", plan["command"])
         self.assertIn(f"exec-{plan['invocation_hash']}", plan["command"])

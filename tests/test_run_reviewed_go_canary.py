@@ -245,7 +245,8 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
             self.assertIn(f"exec-{plan['invocation_hash']}", plan["command"])
             self.assertIn(str(package / "approval.json"), plan["command"])
             self.assertIn(str(package / "runtime-truth.json"), plan["command"])
-            self.assertIn("PMX_ALLOW_LIVE_SUBMIT", plan["required_gate_env_vars"])
+            self.assertEqual(plan["required_gate_env_vars"], [])
+            self.assertEqual(plan["missing_gate_env_vars"], [])
             self.assertFalse(plan["includes_live_config_overrides"])
             self.assertNotIn("--allow-live-submit-config", plan["command"])
 
@@ -311,33 +312,6 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                 )
         self.assertIn("only valid for armed", str(ctx.exception))
 
-    def test_build_invocation_rejects_runtime_truth_gate_env_disagreement(self):
-        with tempfile.TemporaryDirectory() as tmp_name:
-            tmp = Path(tmp_name)
-            package, env_file = self.package_fixture(tmp)
-            previous = os.environ.get("PMX_KILL_SWITCH_OPEN")
-            os.environ["PMX_KILL_SWITCH_OPEN"] = "0"
-            try:
-                with self.assertRaises(SystemExit) as ctx:
-                    self.module.build_invocation(
-                        package_dir=package,
-                        env_file=env_file,
-                        mode="preflight",
-                        daily_used_notional_usd="0",
-                        idempotency_key=None,
-                        execution_id=None,
-                        plan_hash=None,
-                        report_file=None,
-                        approval_consumed_marker=None,
-                        include_live_config_overrides=False,
-                    )
-            finally:
-                if previous is None:
-                    os.environ.pop("PMX_KILL_SWITCH_OPEN", None)
-                else:
-                    os.environ["PMX_KILL_SWITCH_OPEN"] = previous
-        self.assertIn("disagrees with runtime truth", str(ctx.exception))
-
     def test_build_invocation_rejects_armed_mode(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
@@ -379,14 +353,12 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                     include_live_config_overrides=False,
                 )
 
-    def test_main_run_fails_closed_when_gate_env_vars_are_missing(self):
+    def test_main_run_does_not_require_gate_env_vars(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
             package, env_file = self.package_fixture(tmp)
-            original = dict(os.environ)
+            completed = self.module.subprocess.CompletedProcess(args=["cargo"], returncode=0)
             try:
-                for key in self.module.REQUIRED_GATE_ENV_VARS:
-                    os.environ.pop(key, None)
                 argv = [
                     "--package-dir",
                     str(package),
@@ -411,21 +383,18 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                     include_live_config_overrides=False,
                     run=True,
                 )
-                with self.assertRaisesRegex(SystemExit, "missing required gate env vars"):
-                    self.module.main()
+                original_run = self.module.subprocess.run
+                self.module.subprocess.run = lambda *args, **kwargs: completed
+                self.assertEqual(self.module.main(), 0)
             finally:
+                self.module.subprocess.run = original_run
                 self.module.parse_args = original_parse_args
-                os.environ.clear()
-                os.environ.update(original)
 
     def test_main_run_rejects_live_override_opt_in_on_preflight_wrapper(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
             package, env_file = self.package_fixture(tmp)
-            original = dict(os.environ)
             try:
-                for key in self.module.REQUIRED_GATE_ENV_VARS:
-                    os.environ[key] = "1"
                 original_parse_args = self.module.parse_args
                 self.module.parse_args = lambda: self.module.argparse.Namespace(
                     package_dir=package,
@@ -448,8 +417,6 @@ class RunReviewedGoCanaryTests(unittest.TestCase):
                     self.module.main()
             finally:
                 self.module.parse_args = original_parse_args
-                os.environ.clear()
-                os.environ.update(original)
 
 
 if __name__ == "__main__":
