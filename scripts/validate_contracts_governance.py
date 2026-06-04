@@ -602,7 +602,7 @@ def validate_canary_candidate_market_prep_boundary() -> None:
     for path, doc_text in active_texts.items():
         if "FOK limit-fill" in doc_text or "FOK_LIMIT_FILL" in doc_text:
             fail(f"active canary docs must not describe the current canary as FOK limit-fill: {path}")
-    closeout_script = ROOT / "scripts/prepare_canary_closeout.py"
+    closeout_script = EXECUTOR / "validation/prepare_canary_closeout.py"
     if not closeout_script.exists():
         fail("canary closeout script missing")
     closeout_text = closeout_script.read_text()
