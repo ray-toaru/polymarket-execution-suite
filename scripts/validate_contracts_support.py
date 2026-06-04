@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import json
 import re
 import sys
@@ -190,3 +191,12 @@ def import_control_models():
 def import_control_client():
     sys.path.insert(0, str(CONTROL / "src"))
     return importlib.import_module("hermes_polymarket_executor_adapter.client")
+
+
+def import_module_from_path(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        fail(f"unable to load module {name} from {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module

@@ -16,6 +16,7 @@ from validate_contracts_support import (
     fail,
     import_control_client,
     import_control_models,
+    import_module_from_path,
     rust_source_text,
 )
 
@@ -162,33 +163,68 @@ def validate_current_evidence_manifest_guard() -> None:
     ]:
         if data.get(section, {}).get("status") != "pending":
             fail(f"current evidence template {section} must stay pending")
-    guard_text = guard.read_text()
-    for needle in [
-        "validated_release=true",
-        "non-pass evidence sections",
-        "artifact_kind=validated_release",
-        "artifact.sha256",
-    ]:
-        if needle not in guard_text:
-            fail(f"current evidence guard missing token: {needle}")
-    governance_text = governance_guard.read_text()
-    for needle in [
-        "docs/evidence governance guard passed",
-        "canonical evidence manifest",
-        "archive-excluded-from-release-package",
-    ]:
-        if needle not in governance_text:
-            fail(f"current docs/evidence governance guard missing token: {needle}")
-    writer_text = writer.read_text()
-    for needle in [
-        "canonical_evidence_dir",
-        "artifact",
-        "sha256",
-        "generated_from_gate_logs",
+    guard_module = import_module_from_path("pmx_check_current_evidence_manifest", guard)
+    writer_module = import_module_from_path("pmx_write_current_evidence_manifest", writer)
+    docs_module = import_module_from_path("pmx_check_docs_evidence_governance", governance_guard)
+
+    if set(getattr(guard_module, "REQUIRED_SECTIONS", [])) != {
+        "local_static_validation",
+        "rust_workspace_validation",
+        "postgres_validation",
+        "sdk_adapter_validation",
+        "credentialed_non_trading_validation",
+    }:
+        fail("current evidence guard REQUIRED_SECTIONS drifted from canonical release gate set")
+    if set(getattr(guard_module, "VALID_STATUSES", set())) != {"pending", "pass", "fail", "skipped", "not_run"}:
+        fail("current evidence guard VALID_STATUSES drifted")
+    if getattr(guard_module, "TEST_LOG_RULES", None) != getattr(writer_module, "TEST_LOG_RULES", None):
+        fail("current evidence guard TEST_LOG_RULES must match manifest writer")
+    if getattr(guard_module, "JSON_LOG_RULES", None) != getattr(writer_module, "JSON_LOG_RULES", None):
+        fail("current evidence guard JSON_LOG_RULES must match manifest writer")
+
+    writer_sections = getattr(writer_module, "SECTIONS", {})
+    if not isinstance(writer_sections, dict):
+        fail("current evidence manifest writer must export SECTIONS")
+    for section in [
+        "local_static_validation",
         "runtime_worker_status_validation",
+        "real_funds_canary_store_truth_cli_validation",
     ]:
-        if needle not in writer_text:
-            fail(f"current evidence manifest writer missing token: {needle}")
+        if section not in writer_sections:
+            fail(f"current evidence manifest writer missing section: {section}")
+    if getattr(writer_module, "CURRENT_DIR", None) != EXECUTOR / "evidence" / "current":
+        fail("current evidence manifest writer CURRENT_DIR must bind evidence/current")
+    if getattr(writer_module, "OUT", None) != EXECUTOR / "evidence" / "current" / "manifest.json":
+        fail("current evidence manifest writer OUT must bind evidence/current/manifest.json")
+    if not callable(getattr(writer_module, "build_section", None)):
+        fail("current evidence manifest writer missing build_section")
+    if not callable(getattr(guard_module, "validate", None)):
+        fail("current evidence guard missing validate()")
+    if not callable(getattr(guard_module, "validate_test_log_semantics", None)):
+        fail("current evidence guard missing validate_test_log_semantics()")
+    if not callable(getattr(guard_module, "validate_json_log_semantics", None)):
+        fail("current evidence guard missing validate_json_log_semantics()")
+
+    if getattr(docs_module, "CURRENT_MANIFEST", None) != EXECUTOR / "evidence" / "current" / "manifest.json":
+        fail("current docs/evidence governance guard must bind canonical current manifest")
+    if getattr(docs_module, "RELEASE_MANIFEST", None) != EXECUTOR / "release" / "manifest.json":
+        fail("current docs/evidence governance guard must bind release manifest")
+    if getattr(docs_module, "PACKAGE_SCRIPT", None) != ROOT / "scripts" / "package_release.py":
+        fail("current docs/evidence governance guard must bind package_release.py")
+    if getattr(docs_module, "ARTIFACT_CHECK", None) != ROOT / "scripts" / "check_release_artifact.py":
+        fail("current docs/evidence governance guard must bind check_release_artifact.py")
+    if getattr(docs_module, "RELEASE_POLICY", None) != ROOT / "scripts" / "release_policy.py":
+        fail("current docs/evidence governance guard must bind release_policy.py")
+    for func_name in [
+        "validate_root_docs",
+        "validate_evidence_layout",
+        "validate_release_binding",
+        "validate_current_manifest",
+        "validate_execution_docs_and_gates",
+        "validate_agents_guidance",
+    ]:
+        if not callable(getattr(docs_module, func_name, None)):
+            fail(f"current docs/evidence governance guard missing function: {func_name}")
 
 
 def validate_current_docs_and_release_governance() -> None:

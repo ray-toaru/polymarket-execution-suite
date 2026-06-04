@@ -145,6 +145,60 @@ class ValidateContractsGovernanceTests(unittest.TestCase):
                 module.validate_current_hermes_client_surface()
         self.assertIn("record_sign_only_lifecycle_event", str(ctx.exception))
 
+    def test_validate_current_evidence_manifest_guard_uses_structural_module_checks(self) -> None:
+        fake_guard = SimpleNamespace(
+            REQUIRED_SECTIONS=[
+                "local_static_validation",
+                "rust_workspace_validation",
+                "postgres_validation",
+                "sdk_adapter_validation",
+                "credentialed_non_trading_validation",
+            ],
+            VALID_STATUSES={"pending", "pass", "fail", "skipped", "not_run"},
+            TEST_LOG_RULES={"x": {"min_passed": 1}},
+            JSON_LOG_RULES={"y": {"status": "pass"}},
+            validate=lambda *args, **kwargs: 0,
+            validate_test_log_semantics=lambda *args, **kwargs: None,
+            validate_json_log_semantics=lambda *args, **kwargs: None,
+        )
+        fake_writer = SimpleNamespace(
+            TEST_LOG_RULES={"x": {"min_passed": 1}},
+            JSON_LOG_RULES={"y": {"status": "pass"}},
+            SECTIONS={
+                "local_static_validation": [],
+                "runtime_worker_status_validation": [],
+                "real_funds_canary_store_truth_cli_validation": [],
+            },
+            CURRENT_DIR=ROOT / "polymarket-execution-engine" / "evidence" / "current",
+            OUT=ROOT / "polymarket-execution-engine" / "evidence" / "current" / "manifest.json",
+            build_section=lambda *args, **kwargs: {},
+        )
+        fake_docs = SimpleNamespace(
+            CURRENT_MANIFEST=ROOT / "polymarket-execution-engine" / "evidence" / "current" / "manifest.json",
+            RELEASE_MANIFEST=ROOT / "polymarket-execution-engine" / "release" / "manifest.json",
+            PACKAGE_SCRIPT=ROOT / "scripts" / "package_release.py",
+            ARTIFACT_CHECK=ROOT / "scripts" / "check_release_artifact.py",
+            RELEASE_POLICY=ROOT / "scripts" / "release_policy.py",
+            validate_root_docs=lambda failures: None,
+            validate_evidence_layout=lambda failures: None,
+            validate_release_binding=lambda failures: None,
+            validate_current_manifest=lambda failures: None,
+            validate_execution_docs_and_gates=lambda failures: None,
+            validate_agents_guidance=lambda failures: None,
+        )
+
+        def fake_import(name: str, path: Path):
+            if path.name == "check_current_evidence_manifest.py":
+                return fake_guard
+            if path.name == "write_current_evidence_manifest.py":
+                return fake_writer
+            if path.name == "check_docs_evidence_governance.py":
+                return fake_docs
+            raise AssertionError(path)
+
+        with mock.patch.object(module, "import_module_from_path", side_effect=fake_import):
+            module.validate_current_evidence_manifest_guard()
+
 
 if __name__ == "__main__":
     unittest.main()
