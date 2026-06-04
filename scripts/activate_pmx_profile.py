@@ -191,6 +191,10 @@ def verify_runtime_outputs(output: Path, *, write_secrets: bool) -> None:
 
 
 def write_runtime_env(output: Path, activated: dict[str, str], *, write_secrets: bool) -> None:
+    if write_secrets:
+        raise SystemExit(
+            "local runtime secret file generation is disabled; provide secrets via an external env file only"
+        )
     lines = [
         "# Generated runtime env for a single active Polymarket account profile.",
         "# This file carries active identity only; do not store PMX_PROFILE_* source inventory here.",
@@ -204,52 +208,13 @@ def write_runtime_env(output: Path, activated: dict[str, str], *, write_secrets:
         "# Local non-secret profile reference.",
         f"PMX_ACTIVE_PROFILE_REF={activated['PMX_ACTIVE_PROFILE_REF']}",
     ]
-    if write_secrets:
-        secrets_output = runtime_secrets_output_path(output)
-        lines.extend(
-            [
-                "",
-                "# Secret-bearing runtime fields are written to a companion file.",
-                f"# Companion secrets file: {secrets_output.name}",
-            ]
-        )
-        secret_lines = [
-            "# Generated runtime secret env for a single active Polymarket account profile.",
-            "# Keep this file local. It contains private key and API credentials.",
+    lines.extend(
+        [
             "",
-            "# Generic runtime signer material.",
-            f"POLYMARKET_PRIVATE_KEY={activated['POLYMARKET_PRIVATE_KEY']}",
-            "",
-            "# Generic runtime L2 API key.",
-            f"POLY_API_KEY={activated['POLY_API_KEY']}",
-            "",
-            "# Generic runtime L2 API secret.",
-            f"POLY_API_SECRET={activated['POLY_API_SECRET']}",
-            "",
-            "# Generic runtime L2 API passphrase.",
-            f"POLY_API_PASSPHRASE={activated['POLY_API_PASSPHRASE']}",
-            "",
-            "# Generic runtime signature type for the active account.",
-            f"PMX_CLOB_SIGNATURE_TYPE={activated['PMX_CLOB_SIGNATURE_TYPE']}",
+            "# Secret-bearing runtime fields intentionally omitted.",
+            "# Local secret file generation is disabled; supply an explicit external secrets env file at runtime.",
         ]
-        funder = activated.get("PMX_CLOB_FUNDER")
-        if funder:
-            secret_lines.extend(
-                [
-                    "",
-                    "# Generic runtime CLOB funder for deposit-wallet / Poly1271 auth.",
-                    f"PMX_CLOB_FUNDER={funder}",
-                ]
-            )
-        write_restrictive_file(secrets_output, "\n".join(secret_lines) + "\n")
-    else:
-        lines.extend(
-            [
-                "",
-                "# Secret-bearing runtime fields intentionally omitted.",
-                "# Re-run with --write-secrets only when a local runtime env must hold active credentials.",
-            ]
-        )
+    )
     write_restrictive_file(output, "\n".join(lines) + "\n")
     verify_runtime_outputs(output, write_secrets=write_secrets)
 
@@ -267,8 +232,8 @@ def parse_args() -> argparse.Namespace:
         "--write-secrets",
         action="store_true",
         help=(
-            "Write secret-bearing runtime fields (private key and API credentials) into the "
-            "output env file. Without this flag the file contains only active identity fields."
+            "Deprecated and rejected. Local secret-bearing runtime env generation is disabled; "
+            "use an external explicit secrets env file instead."
         ),
     )
     return parser.parse_args()

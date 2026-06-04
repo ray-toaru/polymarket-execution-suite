@@ -5,14 +5,12 @@ import stat
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "activate_pmx_profile.py"
 RUNTIME_EXAMPLE = ROOT / "polymarket-execution-engine" / ".env.runtime.example"
-RUNTIME_SECRETS_EXAMPLE = (
-    ROOT / "polymarket-execution-engine" / ".env.runtime.secrets.example"
-)
 
 
 def load_module():
@@ -101,7 +99,7 @@ class ActivatePmxProfileTests(unittest.TestCase):
         activated = self.module.activate_profile("acct_b", source)
         self.assertNotIn("PMX_CLOB_FUNDER", activated)
 
-    def test_write_runtime_env_contains_comments_and_no_profile_source_vars(self):
+    def test_write_runtime_env_rejects_local_secret_file_generation(self):
         activated = {
             "PMX_ACTIVE_ACCOUNT_PROFILE": "acct_b",
             "PMX_ACTIVE_ACCOUNT_ID": "acct_b",
@@ -115,15 +113,10 @@ class ActivatePmxProfileTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as tmp_name:
             output = Path(tmp_name) / ".env.runtime"
-            self.module.write_runtime_env(output, activated, write_secrets=True)
-            text = output.read_text()
-        self.assertIn("# Active local account profile label.", text)
-        self.assertIn("PMX_ACTIVE_ACCOUNT_PROFILE=acct_b", text)
-        self.assertIn("Companion secrets file: .env.runtime.secrets", text)
-        self.assertNotIn("PMX_PROFILE_ACCT_B_", text)
-        self.assertNotIn("POLYMARKET_PRIVATE_KEY=", text)
+            with self.assertRaisesRegex(SystemExit, "local runtime secret file generation is disabled"):
+                self.module.write_runtime_env(output, activated, write_secrets=True)
 
-    def test_runtime_examples_match_generated_runtime_keys(self):
+    def test_runtime_examples_match_generated_runtime_identity_keys(self):
         activated = {
             "PMX_ACTIVE_ACCOUNT_PROFILE": "acct_b",
             "PMX_ACTIVE_ACCOUNT_ID": "acct_b",
@@ -137,16 +130,10 @@ class ActivatePmxProfileTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as tmp_name:
             output = Path(tmp_name) / ".env.runtime"
-            self.module.write_runtime_env(output, activated, write_secrets=True)
+            self.module.write_runtime_env(output, activated, write_secrets=False)
             generated_identity_keys = {
                 line.split("=", 1)[0]
                 for line in output.read_text().splitlines()
-                if line and not line.startswith("#")
-            }
-            secrets_output = self.module.runtime_secrets_output_path(output)
-            generated_secret_keys = {
-                line.split("=", 1)[0]
-                for line in secrets_output.read_text().splitlines()
                 if line and not line.startswith("#")
             }
         identity_example_keys = {
@@ -154,13 +141,7 @@ class ActivatePmxProfileTests(unittest.TestCase):
             for line in RUNTIME_EXAMPLE.read_text().splitlines()
             if line and not line.startswith("#")
         }
-        secrets_example_keys = {
-            line.split("=", 1)[0]
-            for line in RUNTIME_SECRETS_EXAMPLE.read_text().splitlines()
-            if line and not line.startswith("#")
-        }
         self.assertEqual(identity_example_keys, generated_identity_keys)
-        self.assertEqual(secrets_example_keys, generated_secret_keys)
 
     def test_write_runtime_env_sets_owner_only_permissions(self):
         activated = {
@@ -176,13 +157,9 @@ class ActivatePmxProfileTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as tmp_name:
             output = Path(tmp_name) / ".env.runtime"
-            self.module.write_runtime_env(output, activated, write_secrets=True)
+            self.module.write_runtime_env(output, activated, write_secrets=False)
             mode = stat.S_IMODE(output.stat().st_mode)
-            secrets_mode = stat.S_IMODE(
-                self.module.runtime_secrets_output_path(output).stat().st_mode
-            )
         self.assertEqual(mode, stat.S_IRUSR | stat.S_IWUSR)
-        self.assertEqual(secrets_mode, stat.S_IRUSR | stat.S_IWUSR)
 
     def test_write_runtime_env_omits_secret_material_without_explicit_opt_in(self):
         activated = {
@@ -205,7 +182,7 @@ class ActivatePmxProfileTests(unittest.TestCase):
         self.assertNotIn("POLY_API_SECRET=", text)
         self.assertIn("Secret-bearing runtime fields intentionally omitted.", text)
 
-    def test_write_runtime_env_creates_companion_secrets_file_when_opted_in(self):
+    def test_write_runtime_env_does_not_allow_companion_secrets_file_when_opted_in(self):
         activated = {
             "PMX_ACTIVE_ACCOUNT_PROFILE": "acct_b",
             "PMX_ACTIVE_ACCOUNT_ID": "acct_b",
@@ -219,12 +196,9 @@ class ActivatePmxProfileTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as tmp_name:
             output = Path(tmp_name) / ".env.runtime"
-            self.module.write_runtime_env(output, activated, write_secrets=True)
-            secrets_output = self.module.runtime_secrets_output_path(output)
-            self.assertTrue(secrets_output.is_file())
-            secrets_text = secrets_output.read_text()
-        self.assertIn("POLYMARKET_PRIVATE_KEY=0xabc123", secrets_text)
-        self.assertIn("POLY_API_SECRET=api-secret", secrets_text)
+            with self.assertRaisesRegex(SystemExit, "local runtime secret file generation is disabled"):
+                self.module.write_runtime_env(output, activated, write_secrets=True)
+            self.assertFalse(self.module.runtime_secrets_output_path(output).exists())
 
     def test_parse_env_file_preserves_unquoted_value_spacing(self):
         with tempfile.TemporaryDirectory() as tmp_name:
@@ -284,6 +258,42 @@ class ActivatePmxProfileTests(unittest.TestCase):
                 os.sys.argv = saved_argv
         self.assertNotIn("account_id", payload)
         self.assertNotIn("profile_ref", payload)
+
+    def test_main_rejects_write_secrets_flag(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            source = tmp / ".env.profiles"
+            output = tmp / ".env.runtime"
+            source.write_text(
+                "\n".join(
+                    [
+                        "PMX_PROFILE_ACCT_B_ACCOUNT_ID=acct_b",
+                        "PMX_PROFILE_ACCT_B_PROFILE_REF=local-profile://acct_b",
+                        "PMX_PROFILE_ACCT_B_POLYMARKET_PRIVATE_KEY=0xabc123",
+                        "PMX_PROFILE_ACCT_B_POLY_API_KEY=api-key",
+                        "PMX_PROFILE_ACCT_B_POLY_API_SECRET=api-secret",
+                        "PMX_PROFILE_ACCT_B_POLY_API_PASSPHRASE=api-pass",
+                        "PMX_PROFILE_ACCT_B_CLOB_SIGNATURE_TYPE=EOA",
+                        "",
+                    ]
+                )
+            )
+            with self.assertRaisesRegex(SystemExit, "local runtime secret file generation is disabled"):
+                with mock.patch.object(
+                    self.module.argparse.ArgumentParser,
+                    "parse_args",
+                    return_value=type(
+                        "Args",
+                        (),
+                        {
+                            "profile": "acct_b",
+                            "source_env_file": source,
+                            "output": output,
+                            "write_secrets": True,
+                        },
+                    )(),
+                ):
+                    self.module.main()
 
     def test_verify_runtime_outputs_rejects_profile_inventory_text(self):
         with tempfile.TemporaryDirectory() as tmp_name:
