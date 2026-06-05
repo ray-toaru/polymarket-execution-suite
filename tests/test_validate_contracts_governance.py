@@ -320,6 +320,62 @@ class ValidateContractsGovernanceTests(unittest.TestCase):
         with mock.patch.object(module, "import_module_from_path", side_effect=fake_import):
             module.validate_controlled_canary_release_decision_governance()
 
+    def test_validate_single_host_deployment_governance_uses_structural_module_checks(self) -> None:
+        deploy = ROOT / "polymarket-execution-engine" / "deploy" / "single-host"
+        manifest_writer = ROOT / "polymarket-execution-engine" / "validation" / "write_current_evidence_manifest.py"
+        deployment_validator = ROOT / "polymarket-execution-engine" / "validation" / "run_single_host_deployment_drill.py"
+        candidate_validator = ROOT / "polymarket-execution-engine" / "validation" / "run_single_host_canary_candidate_drill.py"
+        go_candidate_validator = ROOT / "polymarket-execution-engine" / "validation" / "run_single_host_go_candidate_drill.py"
+
+        deployment_module = SimpleNamespace(
+            DEPLOY=deploy,
+            README=deploy / "README.md",
+            API_ENV=deploy / "env/pmx-api.env.example",
+            CANARY_ENV=deploy / "env/pmx-real-funds-canary.env.example",
+            API_SERVICE=deploy / "systemd/pmx-api.service",
+            CANARY_SERVICE=deploy / "systemd/pmx-real-funds-canary@.service",
+            PREFLIGHT=deploy / "bin/pmx-single-host-preflight.sh",
+            ROLLBACK=deploy / "bin/pmx-single-host-rollback.sh",
+            CANARY_PACKAGE_PREFLIGHT=deploy / "bin/pmx-single-host-canary-package-preflight.sh",
+            MANIFEST_WRITER=manifest_writer,
+            FAIL_CLOSED_FLAGS=["PMX_ALLOW_REAL_FUNDS_CANARY=0"],
+            FORBIDDEN_VALUE_FRAGMENTS=["PMX_PRODUCTION_DEPLOYMENT_ENABLED=1"],
+            run_api_bind_smoke=lambda failures: True,
+            read=lambda path: "",
+            main=lambda: 0,
+        )
+        candidate_module = SimpleNamespace(
+            CANARY_SERVICE=deploy / "systemd/pmx-real-funds-canary@.service",
+            MANIFEST_WRITER=manifest_writer,
+            main=lambda: 0,
+        )
+        go_candidate_module = SimpleNamespace(
+            MANIFEST_WRITER=manifest_writer,
+            main=lambda: 0,
+        )
+        writer_module = SimpleNamespace(
+            SECTIONS={
+                "single_host_deployment_validation": ["69-single-host-deployment-drill.log"],
+                "single_host_canary_candidate_validation": ["70-single-host-canary-candidate-drill.log"],
+                "single_host_go_candidate_validation": ["71-single-host-go-candidate-drill.log"],
+            }
+        )
+        path_map = {
+            deployment_validator.name: deployment_module,
+            candidate_validator.name: candidate_module,
+            go_candidate_validator.name: go_candidate_module,
+            manifest_writer.name: writer_module,
+        }
+
+        def fake_import(name: str, path: Path):
+            module_obj = path_map.get(path.name)
+            if module_obj is None:
+                raise AssertionError(path)
+            return module_obj
+
+        with mock.patch.object(module, "import_module_from_path", side_effect=fake_import):
+            module.validate_single_host_deployment_governance()
+
 
 if __name__ == "__main__":
     unittest.main()
