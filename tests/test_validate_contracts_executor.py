@@ -341,6 +341,53 @@ pub(crate) async fn record_cancel_order_non_live(
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("current API cancel route", str(ctx.exception))
 
+    def test_v23_requires_lifecycle_read_route_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/src/routes/read/lifecycle.rs"):
+                return """
+use super::*;
+
+pub(crate) async fn list_sign_only_lifecycle_events(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(execution_id): Path<String>,
+    Query(query): Query<EventListQuery>,
+) -> ApiResult<Vec<SignOnlyLifecycleRecord>> {
+    let _ = (state, headers, execution_id, query);
+    Ok((StatusCode::OK, Json(Vec::new())))
+}
+
+pub(crate) async fn list_execution_lifecycle_events(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(execution_id): Path<String>,
+    Query(query): Query<EventListQuery>,
+) -> ApiResult<Vec<ExecutionLifecycleEvent>> {
+    let _ = (state, headers, execution_id, query);
+    Ok((StatusCode::OK, Json(Vec::new())))
+}
+
+pub(crate) async fn list_order_lifecycle_events(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(order_id): Path<String>,
+    Query(query): Query<EventListQuery>,
+) -> ApiResult<Vec<OrderLifecycleEventRecord>> {
+    let _ = (state, headers, order_id, query);
+    Ok((StatusCode::OK, Json(Vec::new())))
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current API lifecycle read route", str(ctx.exception))
+
     def test_v12_requires_compile_request_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
