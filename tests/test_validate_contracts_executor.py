@@ -1170,6 +1170,53 @@ where
             module.validate_v20_plan_storage_and_packaging(spec)
         self.assertIn("ExecutionPlanSummary", str(ctx.exception))
 
+    def test_v20_requires_mapping_validation_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("adapters/pmx-official-sdk-adapter/src/mapping/validation.rs"):
+                return """
+use crate::OfficialSdkAdapterError;
+use pmx_core::{validate_limit_price_decimal_string, validate_positive_decimal_string};
+
+pub(super) fn validate_token_id(raw: &str) -> Result<(), OfficialSdkAdapterError> {
+    Ok(())
+}
+
+pub(super) fn validate_limit_price_for_sdk(raw: &str) -> Result<(), OfficialSdkAdapterError> {
+    validate_limit_price_decimal_string(raw).map_err(|_| {
+        OfficialSdkAdapterError::InvalidInput(format!(
+            "invalid limit_price for official SDK order builder: {raw}"
+        ))
+    })
+}
+
+pub(super) fn validate_positive_quantity_for_sdk(
+    raw: &str,
+    field: &str,
+) -> Result<(), OfficialSdkAdapterError> {
+    validate_positive_decimal_string(raw).map_err(|_| {
+        OfficialSdkAdapterError::InvalidInput(format!(
+            "invalid {field} for official SDK order builder: {raw}"
+        ))
+    })
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v20_plan_storage_and_packaging(spec)
+        self.assertIn("v0.20 SDK mapping validation", str(ctx.exception))
+
     def test_v19_requires_redacted_constant(self) -> None:
         original_read_text = Path.read_text
 
