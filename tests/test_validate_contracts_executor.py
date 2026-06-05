@@ -1037,6 +1037,63 @@ where
                 module.validate_v16_postgres_runtime_provider(spec)
         self.assertIn("service store-backed runtime provider", str(ctx.exception))
 
+    def test_v16_requires_store_backed_canary_truth_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-service/src/runtime_state/store_backed.rs"):
+                return """
+use super::*;
+
+pub struct StoreBackedRuntimeStateProvider<S> {
+    store: S,
+    required_capabilities: Vec<String>,
+}
+
+impl<S> StoreBackedRuntimeStateProvider<S> {
+    pub fn new(store: S) -> Self {
+        Self { store, required_capabilities: Vec::new() }
+    }
+
+    pub fn with_required_capabilities(store: S, required_capabilities: Vec<String>) -> Self {
+        Self { store, required_capabilities }
+    }
+
+    pub async fn load_canary_runtime_truth(
+        &self,
+        query: &pmx_store::CanaryRuntimeTruthQuery,
+    ) -> Result<pmx_store::CanaryRuntimeTruthBindings, ServiceError>
+    where
+        S: pmx_store::CanaryRuntimeTruthStore,
+    {
+        let _ = query;
+        Err(ServiceError::Invariant("wrong path".into()))
+    }
+}
+
+#[async_trait]
+impl<S> RuntimeStateProvider for StoreBackedRuntimeStateProvider<S>
+where
+    S: RuntimeStateStore + Clone + Send + Sync + 'static,
+{
+    async fn capture_runtime_state(
+        &self,
+        normalized_intent: &NormalizedIntent,
+    ) -> RuntimeStateSummary {
+        let _ = normalized_intent;
+        RuntimeStateSummary::default()
+    }
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v16_postgres_runtime_provider(spec)
+        self.assertIn("service store-backed runtime provider", str(ctx.exception))
+
     def test_v15_requires_admin_audit_query_filters(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/admin/audit-events"]["get"]["parameters"] = [{"name": "before_audit_id"}]
