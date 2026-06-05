@@ -1125,6 +1125,136 @@ pub fn runtime_worker_store_writes(
                 module.validate_v21_sign_only_and_runtime_models(spec)
         self.assertIn("v0.21 runtime worker action model", str(ctx.exception))
 
+    def test_v21_requires_sign_only_receipt_lifecycle_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/sign-only/lifecycle-events"] = {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {"$ref": "#/components/schemas/SignOnlyLifecycleRecord"}
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/SignOnlyLifecycleRecord"}
+                            }
+                        }
+                    }
+                },
+            }
+        }
+        spec["paths"]["/v1/sign-only/lifecycle-events/{execution_id}"] = {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {"$ref": "#/components/schemas/SignOnlyLifecycleRecord"},
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        spec["paths"]["/v1/sign-only/standard-constructions"] = {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StandardSignOnlyConstructionRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardSignOnlyConstructionReceipt"
+                                }
+                            }
+                        }
+                    }
+                },
+            }
+        }
+        spec["components"]["schemas"]["StandardSignOnlyConstructionRequest"] = {
+            "type": "object",
+            "required": ["execution_id", "account_id", "plan_hash", "no_remote_side_effect"],
+            "properties": {
+                "execution_id": {"type": "string"},
+                "account_id": {"type": "string"},
+                "plan_hash": {"type": "string"},
+                "no_remote_side_effect": {"type": "boolean"},
+                "signed_order_ref": {"type": "string"},
+                "signed_order_digest": {"type": "string"},
+            },
+        }
+        spec["components"]["schemas"]["StandardSignOnlyConstructionReceipt"] = {
+            "type": "object",
+            "properties": {
+                "signed_order_ref": {"type": "string"},
+                "signed_order_digest": {"type": "string"},
+                "lifecycle_records": {"type": "array"},
+                "no_remote_side_effect": {"type": "boolean"},
+            },
+        }
+        spec["components"]["schemas"]["RuntimeWorkerStatusReport"] = {
+            "type": "object",
+            "properties": {"heartbeats": {"type": "array"}, "observations": {"type": "array"}},
+        }
+        spec["components"]["schemas"]["SignOnlyLifecycleRecord"] = {
+            "type": "object",
+            "required": [
+                "execution_id",
+                "account_id",
+                "state",
+                "event",
+                "signed_order_ref",
+                "no_remote_side_effect",
+            ],
+            "properties": {
+                "execution_id": {"type": "string"},
+                "account_id": {"type": "string"},
+                "state": {"type": "string"},
+                "event": {"type": "string"},
+                "client_event_id": {"type": "string"},
+                "signed_order_ref": {"type": "string"},
+                "no_remote_side_effect": {"type": "boolean"},
+            },
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("adapters/pmx-official-sdk-adapter/src/lifecycle.rs"):
+                return """
+use crate::{OfficialSdkAdapterError, SignOnlyDryRunReceipt};
+use pmx_core::{SignOnlyLifecycleRecord};
+
+pub fn sign_only_lifecycle_records_from_receipt(
+    receipt: &SignOnlyDryRunReceipt,
+) -> Result<Vec<SignOnlyLifecycleRecord>, OfficialSdkAdapterError> {
+    let _ = receipt;
+    Ok(vec![])
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v21_sign_only_and_runtime_models(spec)
+        self.assertIn("v0.21 sign-only lifecycle adapter", str(ctx.exception))
+
     def test_v12_requires_compile_request_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
