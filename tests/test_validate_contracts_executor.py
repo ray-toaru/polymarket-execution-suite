@@ -448,6 +448,62 @@ where
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("current service order lifecycle divergence helper", str(ctx.exception))
 
+    def test_v23_requires_store_sign_only_replay_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/helpers/lifecycle.rs"):
+                return """
+use super::*;
+
+pub(crate) fn sign_only_lifecycle_record_is_replay(
+    existing: &[SignOnlyLifecycleRecord],
+    record: &SignOnlyLifecycleRecord,
+) -> Result<bool, StoreError> {
+    let _ = (existing, record);
+    Ok(false)
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current store sign-only replay helper", str(ctx.exception))
+
+    def test_v23_requires_store_runtime_ttl_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/helpers/runtime/freshness.rs"):
+                return """
+use super::*;
+
+pub fn runtime_observation_ttl_seconds() -> i64 {
+    DEFAULT_RUNTIME_OBSERVATION_TTL_SECONDS
+}
+
+pub(crate) fn runtime_observation_is_fresh(observation: &RuntimeWorkerObservation) -> bool {
+    let _ = observation;
+    true
+}
+
+pub(crate) fn runtime_worker_heartbeat_is_fresh(heartbeat: &RuntimeWorkerHeartbeat) -> bool {
+    let _ = heartbeat;
+    true
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current store runtime freshness helper", str(ctx.exception))
+
     def test_v12_requires_compile_request_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
