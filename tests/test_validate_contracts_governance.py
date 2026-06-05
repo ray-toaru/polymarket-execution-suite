@@ -199,6 +199,27 @@ class ValidateContractsGovernanceTests(unittest.TestCase):
         with mock.patch.object(module, "import_module_from_path", side_effect=fake_import):
             module.validate_current_evidence_manifest_guard()
 
+    def test_validate_current_docs_and_release_governance_uses_structural_guard_checks(self) -> None:
+        fake_docs = SimpleNamespace(
+            PACKAGE_SCRIPT=ROOT / "scripts" / "package_release.py",
+            ARTIFACT_CHECK=ROOT / "scripts" / "check_release_artifact.py",
+            RELEASE_POLICY=ROOT / "scripts" / "release_policy.py",
+            validate_root_docs=lambda failures: None,
+            validate_evidence_layout=lambda failures: None,
+            validate_release_binding=lambda failures: None,
+            validate_current_manifest=lambda failures: None,
+            validate_execution_docs_and_gates=lambda failures: None,
+            validate_agents_guidance=lambda failures: None,
+            validate_packaging_scripts=lambda failures: None,
+        )
+
+        original_release = (ROOT / "polymarket-execution-engine" / "release" / "manifest.json").read_text()
+        try:
+            with mock.patch.object(module, "import_module_from_path", return_value=fake_docs):
+                module.validate_current_docs_and_release_governance()
+        finally:
+            (ROOT / "polymarket-execution-engine" / "release" / "manifest.json").write_text(original_release)
+
 
 if __name__ == "__main__":
     unittest.main()
