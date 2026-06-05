@@ -581,6 +581,32 @@ pub(crate) fn map_db_error(err: tokio_postgres::Error) -> StoreError {
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("current postgres map_db_error path", str(ctx.exception))
 
+    def test_v23_requires_postgres_order_lifecycle_write_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/postgres_order_lifecycle/write.rs"):
+                return """
+use crate::postgres::PostgresStore;
+use crate::{OrderLifecycleEventRecord, OrderLifecycleRecord, StoreError};
+
+pub(super) async fn record_order_lifecycle_event(
+    store: &PostgresStore,
+    event: &OrderLifecycleEventRecord,
+) -> Result<OrderLifecycleRecord, StoreError> {
+    let _ = (store, event);
+    unimplemented!()
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current postgres order lifecycle write path", str(ctx.exception))
+
     def test_v12_requires_compile_request_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
