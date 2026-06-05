@@ -643,6 +643,64 @@ impl AdminAuditStore for PostgresStore {
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("current postgres admin audit list path", str(ctx.exception))
 
+    def test_v23_requires_runtime_worker_status_route_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/src/routes/read/runtime.rs"):
+                return """
+use super::*;
+
+pub(crate) async fn list_runtime_worker_status(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<RuntimeWorkerStatusListQuery>,
+) -> ApiResult<RuntimeWorkerStatusReport> {
+    let _ = (state, headers, query);
+    unimplemented!()
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current runtime worker status route", str(ctx.exception))
+
+    def test_v23_requires_api_support_admin_audit_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/src/support/audit.rs"):
+                return """
+use axum::{Json, http::StatusCode};
+use pmx_authz::Principal;
+
+use crate::backend::AppState;
+
+pub(crate) async fn record_admin_audit(
+    state: &AppState,
+    principal: &Principal,
+    operation: &'static str,
+    request_fingerprint: Option<String>,
+    correlation_id: Option<String>,
+    result: impl Into<String>,
+) -> Result<(), (StatusCode, Json<serde_json::Value>)> {
+    let _ = (state, principal, operation, request_fingerprint, correlation_id, result);
+    Ok(())
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current API support admin audit helper", str(ctx.exception))
+
     def test_v12_requires_compile_request_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
