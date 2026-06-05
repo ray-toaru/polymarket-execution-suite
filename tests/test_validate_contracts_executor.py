@@ -607,6 +607,42 @@ pub(super) async fn record_order_lifecycle_event(
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("current postgres order lifecycle write path", str(ctx.exception))
 
+    def test_v23_requires_postgres_admin_audit_list_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/postgres_audit/admin.rs"):
+                return """
+use async_trait::async_trait;
+
+use crate::postgres::PostgresStore;
+use crate::{AdminAuditEvent, AdminAuditQuery, AdminAuditStore, StoreError};
+
+#[async_trait]
+impl AdminAuditStore for PostgresStore {
+    async fn record_admin_audit_event(&self, event: &AdminAuditEvent) -> Result<(), StoreError> {
+        let _ = event;
+        Ok(())
+    }
+
+    async fn list_admin_audit_events(
+        &self,
+        query: &AdminAuditQuery,
+    ) -> Result<Vec<AdminAuditEvent>, StoreError> {
+        let _ = query;
+        unimplemented!()
+    }
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current postgres admin audit list path", str(ctx.exception))
+
     def test_v12_requires_compile_request_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
