@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 import sys
 import unittest
@@ -219,6 +220,105 @@ class ValidateContractsGovernanceTests(unittest.TestCase):
                 module.validate_current_docs_and_release_governance()
         finally:
             (ROOT / "polymarket-execution-engine" / "release" / "manifest.json").write_text(original_release)
+
+    def test_validate_controlled_canary_release_decision_governance_uses_structural_module_checks(self) -> None:
+        template = ROOT / "polymarket-execution-engine" / "config" / "controlled-canary.release-decision.template.json"
+        example = ROOT / "polymarket-execution-engine" / "config" / "controlled-canary.release-decision.example.json"
+        invalid = ROOT / "polymarket-execution-engine" / "config" / "controlled-canary.release-decision.invalid-partial.fixture.json"
+        invalid_mismatched = ROOT / "polymarket-execution-engine" / "config" / "controlled-canary.release-decision.invalid-mismatched.fixture.json"
+        external_template = ROOT / "polymarket-execution-engine" / "config" / "controlled-canary.external-references.template.json"
+        external_example = ROOT / "polymarket-execution-engine" / "config" / "controlled-canary.external-references.example.json"
+        external_invalid = ROOT / "polymarket-execution-engine" / "config" / "controlled-canary.external-references.invalid-sensitive.fixture.json"
+        runtime_truth_template = ROOT / "polymarket-execution-engine" / "config" / "controlled-canary.runtime-truth.template.json"
+        runtime_truth_invalid_partial = ROOT / "polymarket-execution-engine" / "config" / "controlled-canary.runtime-truth.invalid-partial.fixture.json"
+        runtime_truth_invalid_sensitive = ROOT / "polymarket-execution-engine" / "config" / "controlled-canary.runtime-truth.invalid-sensitive.fixture.json"
+        validator = ROOT / "polymarket-execution-engine" / "validation" / "validate_controlled_canary_release_decision.py"
+        external_validator = ROOT / "polymarket-execution-engine" / "validation" / "validate_controlled_canary_external_references.py"
+        runtime_truth_validator = ROOT / "polymarket-execution-engine" / "validation" / "validate_controlled_canary_runtime_truth.py"
+        review_script = ROOT / "polymarket-execution-engine" / "validation" / "prepare_real_funds_canary_review.py"
+        review_drill = ROOT / "polymarket-execution-engine" / "validation" / "run_real_funds_canary_review_package_drill.py"
+        readiness_doc = ROOT / "polymarket-execution-engine" / "docs" / "REAL_FUNDS_CANARY_OPERATIONS_READINESS.md"
+        rehearsal = ROOT / "polymarket-execution-engine" / "validation" / "run_real_funds_canary_blocked_rehearsal_package.py"
+
+        template_data = json.loads(template.read_text())
+        example_data = json.loads(example.read_text())
+        invalid_data = json.loads(invalid.read_text())
+        invalid_mismatched_data = json.loads(invalid_mismatched.read_text())
+        external_example_data = json.loads(external_example.read_text())
+        runtime_truth_template_data = json.loads(runtime_truth_template.read_text())
+
+        validator_module = SimpleNamespace(
+            TEMPLATE=template,
+            EXAMPLE=example,
+            INVALID_PARTIAL=invalid,
+            INVALID_MISMATCHED=invalid_mismatched,
+            EXPECTED_RUN_IDS={
+                "root_ci_run_id": "26268697168",
+                "hermes_ci_run_id": "26267887116",
+                "execution_engine_ci_run_id": "26268276210",
+                "credentialed_sdk_run_id": "local-current-gates-20260523",
+            },
+            ALLOWED_TOP_LEVEL_FIELDS={"reviewed_release_decision_present", "real_funds_canary_authorized"},
+            AUTHORIZATION_FLAGS=["real_funds_canary_authorized"],
+            validate_shape=lambda *args, **kwargs: [],
+            main=lambda: 0,
+        )
+        review_module = SimpleNamespace(
+            DEFAULT_RELEASE_DECISION=template,
+            DEFAULT_EXTERNAL_REFERENCES=external_template,
+            DEFAULT_ROOT_CI_RUN_ID="26268697168",
+            DEFAULT_HERMES_CI_RUN_ID="26267887116",
+            DEFAULT_EXECUTION_ENGINE_CI_RUN_ID="26268276210",
+            DEFAULT_CREDENTIALED_SDK_RUN_ID="local-current-gates-20260523",
+            resolve_input_path=lambda path: path,
+            require_sha256=lambda value, label: value,
+            validate_candidate_market_json=lambda *args, **kwargs: None,
+            main=lambda: 0,
+        )
+        drill_module = SimpleNamespace(
+            SCRIPT=review_script,
+            DECISION_VALIDATOR=validator,
+            EXTERNAL_REFERENCES_VALIDATOR=external_validator,
+            BLOCKED_REHEARSAL=rehearsal,
+            EXTERNAL_REFERENCES_EXAMPLE=external_example,
+            EXTERNAL_REFERENCES_TEMPLATE=external_template,
+            DOC=readiness_doc,
+            main=lambda: 0,
+        )
+        external_module = SimpleNamespace(
+            EXPECTED_ARTIFACT_SHA256="b" * 64,
+            EXPECTED_RUN_IDS={
+                "root_ci_run_id": "26268697168",
+                "credentialed_sdk_run_id": "local-current-gates-20260523",
+            },
+            validate_shape=lambda *args, **kwargs: [],
+            placeholder_paths=lambda *args, **kwargs: [],
+            has_placeholder=lambda *args, **kwargs: False,
+            main=lambda: 0,
+        )
+        runtime_truth_module = SimpleNamespace(
+            validate_shape=lambda *args, **kwargs: [],
+            placeholder_paths=lambda *args, **kwargs: [],
+            has_placeholder=lambda *args, **kwargs: False,
+            main=lambda: 0,
+        )
+
+        path_map = {
+            validator.name: validator_module,
+            external_validator.name: external_module,
+            runtime_truth_validator.name: runtime_truth_module,
+            review_script.name: review_module,
+            review_drill.name: drill_module,
+        }
+
+        def fake_import(name: str, path: Path):
+            module_obj = path_map.get(path.name)
+            if module_obj is None:
+                raise AssertionError(path)
+            return module_obj
+
+        with mock.patch.object(module, "import_module_from_path", side_effect=fake_import):
+            module.validate_controlled_canary_release_decision_governance()
 
 
 if __name__ == "__main__":
