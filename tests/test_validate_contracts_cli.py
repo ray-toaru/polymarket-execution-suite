@@ -49,6 +49,7 @@ class ValidateContractsCliTests(unittest.TestCase):
 
     def test_runner_owns_openapi_loading_and_validator_registry(self) -> None:
         runner = ROOT / "scripts" / "validate_contracts_runner.py"
+        engine_runner = ROOT / "polymarket-execution-engine" / "validation" / "validate_contracts_runner.py"
         tree = ast.parse(runner.read_text())
         imported_modules = set()
         imported_from = set()
@@ -59,9 +60,26 @@ class ValidateContractsCliTests(unittest.TestCase):
             elif isinstance(node, ast.ImportFrom):
                 imported_from.add(node.module or "")
 
-        self.assertIn("yaml", imported_modules)
-        self.assertIn("validate_contracts_support", imported_from)
-        self.assertNotIn("hermes_polymarket_executor_adapter.models", imported_modules | imported_from)
+        self.assertNotIn("yaml", imported_modules)
+        self.assertNotIn("validate_contracts_support", imported_from)
+        self.assertIn("importlib.util", imported_modules)
+
+        engine_tree = ast.parse(engine_runner.read_text())
+        engine_imported_modules = set()
+        engine_imported_from = set()
+        for node in engine_tree.body:
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    engine_imported_modules.add(alias.name)
+            elif isinstance(node, ast.ImportFrom):
+                engine_imported_from.add(node.module or "")
+
+        self.assertIn("yaml", engine_imported_modules)
+        self.assertIn("validate_contracts_support", engine_imported_from)
+        self.assertNotIn(
+            "hermes_polymarket_executor_adapter.models",
+            engine_imported_modules | engine_imported_from,
+        )
 
     def test_report_file_contains_machine_readable_checks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
