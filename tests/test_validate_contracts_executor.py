@@ -533,6 +533,21 @@ pub struct OfficialSdkStandardSignOnlyProfile {
     pub may_post_order: bool,
     pub may_cancel_order: bool,
 }
+impl Default for OfficialSdkStandardSignOnlyProfile {
+    fn default() -> Self {
+        Self {
+            clob_host: CLOB_PRODUCTION_HOST.into(),
+            collateral_symbol: CLOB_V2_COLLATERAL_SYMBOL.into(),
+            signing_protocol: CLOB_V2_SIGNING_PROTOCOL.into(),
+            uses_deposit_wallet_order_path: true,
+            supports_builder_attribution: true,
+            supports_fee_metadata: true,
+            exposes_raw_signed_order: false,
+            may_post_order: false,
+            may_cancel_order: false,
+        }
+    }
+}
 may_post_order: false
 may_cancel_order: false
 exposes_raw_signed_order: false
@@ -543,6 +558,79 @@ exposes_raw_signed_order: false
             with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v09_official_adapter_boundary()
         self.assertIn("OfficialSdkAdapterConfig fields", str(ctx.exception))
+
+    def test_v09_requires_structured_standard_profile_default_semantics(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("adapters/pmx-official-sdk-adapter/src/model/config.rs"):
+                return """
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OfficialSdkAdapterConfig {
+    pub clob_host: String,
+    pub allow_read_only_smoke: bool,
+    pub allow_authenticated_non_trading_smoke: bool,
+    pub allow_sign_only_dry_run: bool,
+    pub allow_live_submit: bool,
+    pub allow_real_funds_canary: bool,
+    pub require_kill_switch_open_for_live_submit: bool,
+    pub require_repository_reservation_for_live_submit: bool,
+    pub require_reconcile_worker_for_live_submit: bool,
+}
+
+impl Default for OfficialSdkAdapterConfig {
+    fn default() -> Self {
+        Self {
+            clob_host: CLOB_PRODUCTION_HOST.to_string(),
+            allow_read_only_smoke: true,
+            allow_authenticated_non_trading_smoke: false,
+            allow_sign_only_dry_run: false,
+            allow_live_submit: false,
+            allow_real_funds_canary: false,
+            require_kill_switch_open_for_live_submit: true,
+            require_repository_reservation_for_live_submit: true,
+            require_reconcile_worker_for_live_submit: true,
+        }
+    }
+}
+
+pub struct OfficialSdkStandardSignOnlyProfile {
+    pub clob_host: String,
+    pub collateral_symbol: String,
+    pub signing_protocol: String,
+    pub uses_deposit_wallet_order_path: bool,
+    pub supports_builder_attribution: bool,
+    pub supports_fee_metadata: bool,
+    pub exposes_raw_signed_order: bool,
+    pub may_post_order: bool,
+    pub may_cancel_order: bool,
+}
+
+impl Default for OfficialSdkStandardSignOnlyProfile {
+    fn default() -> Self {
+        Self {
+            clob_host: CLOB_PRODUCTION_HOST.into(),
+            collateral_symbol: CLOB_V2_COLLATERAL_SYMBOL.into(),
+            signing_protocol: CLOB_V2_SIGNING_PROTOCOL.into(),
+            uses_deposit_wallet_order_path: true,
+            supports_builder_attribution: true,
+            supports_fee_metadata: true,
+            exposes_raw_signed_order: true,
+            may_post_order: false,
+            may_cancel_order: false,
+        }
+    }
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v09_official_adapter_boundary()
+        self.assertIn("standard sign-only profile default", str(ctx.exception))
 
     def test_v15_requires_api_admin_audit_support_tokens(self) -> None:
         spec = self._minimal_v23_spec()
