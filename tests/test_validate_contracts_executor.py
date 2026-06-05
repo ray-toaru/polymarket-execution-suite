@@ -754,6 +754,49 @@ pub(crate) fn collect_runtime_reasons(state: &RuntimeStateSummary, reasons: &mut
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("current runtime policy worker handling", str(ctx.exception))
 
+    def test_v19_requires_live_submit_guard_module_bindings(self) -> None:
+        class GuardModule:
+            ALLOWED_GATEWAY_POST_ORDER_FILE = Path("sdk_runtime/gateway.rs")
+            ALLOWED_POST_ORDER_FILE = Path("sdk_runtime/live_canary.rs")
+            ALLOWED_SERVICE_POST_ORDER_FILE = Path("submit/live.rs")
+            PUBLIC_CONTRACT = Path("openapi/executor.v1.yaml")
+            FORBIDDEN_PUBLIC_TERMS = ["SignedOrderEnvelope"]
+            REQUIRED_CANARY_TOKENS = []
+            REQUIRED_IDEMPOTENCY_TOKENS = []
+
+            @staticmethod
+            def strip_rust_comments(text: str) -> str:
+                return text
+
+            @staticmethod
+            def validate_allowed_call_sites(**kwargs):
+                return []
+
+            @staticmethod
+            def validate_required_tokens(**kwargs):
+                return []
+
+            @staticmethod
+            def validate_idempotency_guard_tokens():
+                return []
+
+            @staticmethod
+            def validate_canary_guard_tokens(raw_adapter_text: str):
+                return []
+
+            @staticmethod
+            def validate_service_live_submit_tokens():
+                return []
+
+            @staticmethod
+            def main() -> int:
+                return 0
+
+        with mock.patch.object(module, "import_module_from_path", return_value=GuardModule):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v19_redaction_and_live_guard({})
+        self.assertIn("live-submit static guard missing forbidden public terms", str(ctx.exception))
+
     def test_v12_requires_compile_request_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {

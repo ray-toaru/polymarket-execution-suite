@@ -46,6 +46,7 @@ STORE_SRC = _ENGINE.STORE_SRC
 fail = _ENGINE.fail
 rust_file_with_modules_text = _ENGINE.rust_file_with_modules_text
 rust_source_text = _ENGINE.rust_source_text
+import_module_from_path = _ENGINE.import_module_from_path
 
 _ORIGINALS = {
     name: getattr(_ENGINE, name)
@@ -122,6 +123,7 @@ def _sync_engine_state() -> None:
         "SQL",
         "STORE_SRC",
         "fail",
+        "import_module_from_path",
         "rust_file_with_modules_text",
         "rust_source_text",
     ]:
