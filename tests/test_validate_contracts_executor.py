@@ -1275,6 +1275,124 @@ fn redact_assignment_value(input: &str, _key: &str) -> String { input.to_string(
                 module.validate_v19_redaction_and_live_guard(self._minimal_v23_spec())
         self.assertIn("v0.19 adapter redaction", str(ctx.exception))
 
+    def test_v19_requires_redact_normalized_error_body(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("adapters/pmx-official-sdk-adapter/src/redaction.rs"):
+                return """
+use crate::{OfficialSdkErrorCategory, OfficialSdkNormalizedError, REDACTED};
+use pmx_gateway::GatewayError;
+
+pub fn gateway_error_from_normalized_sdk_error(
+    normalized: &OfficialSdkNormalizedError,
+) -> GatewayError {
+    match normalized.category {
+        OfficialSdkErrorCategory::AuthenticationFailed => GatewayError::AuthenticationFailed,
+        OfficialSdkErrorCategory::ValidationFailed | OfficialSdkErrorCategory::RemoteRejected => GatewayError::RemoteRejected(redact_sensitive_text(&normalized.message)),
+        _ => GatewayError::RemoteUnknown(redact_sensitive_text(&normalized.message)),
+    }
+}
+
+fn redact_assignment_value(input: &str, key: &str) -> String {
+    let marker = format!("{key}=");
+    let mut out = String::with_capacity(input.len());
+    out.push_str(&marker);
+    out.push_str(REDACTED);
+    out.push_str(input);
+    out
+}
+
+pub fn redact_sensitive_text(input: &str) -> String {
+    let env_redacted = redact_known_env_values(input);
+    env_redacted
+        .split_whitespace()
+        .map(|token| {
+            if looks_like_hex_private_key(token) {
+                "0x[REDACTED]".to_string()
+            } else {
+                token.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+pub fn redact_normalized_error(error: &OfficialSdkNormalizedError) -> OfficialSdkNormalizedError {
+    error.clone()
+}
+
+fn looks_like_hex_private_key(_token: &str) -> bool { false }
+fn redact_known_env_values(input: &str) -> String { input.to_string() }
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v19_redaction_and_live_guard(self._minimal_v23_spec())
+        self.assertIn("v0.19 adapter redaction", str(ctx.exception))
+
+    def test_v19_requires_redact_assignment_value_body(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("adapters/pmx-official-sdk-adapter/src/redaction.rs"):
+                return """
+use crate::{OfficialSdkErrorCategory, OfficialSdkNormalizedError, REDACTED};
+use pmx_gateway::GatewayError;
+
+pub fn gateway_error_from_normalized_sdk_error(
+    normalized: &OfficialSdkNormalizedError,
+) -> GatewayError {
+    match normalized.category {
+        OfficialSdkErrorCategory::AuthenticationFailed => GatewayError::AuthenticationFailed,
+        OfficialSdkErrorCategory::ValidationFailed | OfficialSdkErrorCategory::RemoteRejected => GatewayError::RemoteRejected(redact_sensitive_text(&normalized.message)),
+        _ => GatewayError::RemoteUnknown(redact_sensitive_text(&normalized.message)),
+    }
+}
+
+fn redact_assignment_value(input: &str, key: &str) -> String {
+    let marker = format!("{key}=");
+    let mut out = String::with_capacity(input.len());
+    out.push_str(&marker);
+    out.push_str(REDACTED);
+    out.push_str(input);
+    out
+}
+
+pub fn redact_sensitive_text(input: &str) -> String {
+    let env_redacted = redact_known_env_values(input);
+    env_redacted
+        .split_whitespace()
+        .map(|token| {
+            if looks_like_hex_private_key(token) {
+                "0x[REDACTED]".to_string()
+            } else {
+                token.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+pub fn redact_normalized_error(error: &OfficialSdkNormalizedError) -> OfficialSdkNormalizedError {
+    let mut redacted = error.clone();
+    redacted.message = redact_sensitive_text(&redacted.message);
+    redacted
+}
+
+fn looks_like_hex_private_key(_token: &str) -> bool { false }
+fn redact_known_env_values(input: &str) -> String { input.to_string() }
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v19_redaction_and_live_guard(self._minimal_v23_spec())
+        self.assertIn("v0.19 adapter redaction", str(ctx.exception))
+
     def test_v20_requires_reconcile_backlog_remote_unknown_field(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
