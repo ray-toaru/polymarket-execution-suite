@@ -731,6 +731,29 @@ pub(crate) async fn reconcile_order_local(
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("current reconcile local route", str(ctx.exception))
 
+    def test_v23_requires_runtime_policy_worker_handling(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-policy/src/runtime.rs"):
+                return """
+use pmx_core::{
+    BlockReason, CollateralProfileStatus, GeoblockStatus, RuntimeStateSummary, WorkerStatus,
+};
+
+pub(crate) fn collect_runtime_reasons(state: &RuntimeStateSummary, reasons: &mut Vec<BlockReason>) {
+    let _ = (state, reasons);
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current runtime policy worker handling", str(ctx.exception))
+
     def test_v12_requires_compile_request_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
