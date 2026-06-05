@@ -388,6 +388,66 @@ pub(crate) async fn list_order_lifecycle_events(
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("current API lifecycle read route", str(ctx.exception))
 
+    def test_v23_requires_service_sign_only_lifecycle_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-service/src/sign_only/lifecycle.rs"):
+                return """
+use super::*;
+
+pub async fn record_sign_only_lifecycle_event<S>(
+    store: &S,
+    mut record: SignOnlyLifecycleRecord,
+) -> Result<SignOnlyLifecycleRecord, ServiceError>
+where
+    S: SignOnlyLifecycleStore + Send + Sync,
+{
+    let _ = (store, record);
+    Err(ServiceError::Invariant("wrong path".into()))
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current service sign-only lifecycle helper", str(ctx.exception))
+
+    def test_v23_requires_service_order_lifecycle_divergence_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-service/src/order_lifecycle/divergence.rs"):
+                return """
+use super::*;
+
+pub async fn reconcile_order_lifecycle_divergence<S>(
+    store: &S,
+    order_id: &str,
+    account_id: Option<&str>,
+    remote_observation: RemoteOrderObservation,
+    reason: &str,
+    correlation_id: Option<String>,
+) -> Result<Option<(OrderLifecycleDivergence, Option<OrderLifecycleRecord>)>, ServiceError>
+where
+    S: OrderLifecycleStore + Send + Sync,
+{
+    let _ = (store, order_id, account_id, remote_observation, reason, correlation_id);
+    Ok(None)
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current service order lifecycle divergence helper", str(ctx.exception))
+
     def test_v12_requires_compile_request_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
