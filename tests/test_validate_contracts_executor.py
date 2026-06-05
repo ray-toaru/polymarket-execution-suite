@@ -311,6 +311,36 @@ pub(crate) async fn reconcile_order_local(
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("ReconcileOrderLocalRequest", str(ctx.exception))
 
+    def test_v23_requires_cancel_route_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/src/routes/admin/cancel.rs"):
+                return """
+use super::*;
+
+pub(crate) async fn record_cancel_order_non_live(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(req): Json<CancelOrderRequest>,
+) -> ApiResult<CancelReceipt> {
+    let _ = (state, headers, req);
+    Ok((StatusCode::ACCEPTED, Json(CancelReceipt {
+        cancel_id: "cancel-1".into(),
+        order_id: "order-1".into(),
+        state: CancelState::ReconcileRequired,
+    })))
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current API cancel route", str(ctx.exception))
+
     def test_v12_requires_compile_request_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
