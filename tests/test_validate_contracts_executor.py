@@ -1519,6 +1519,198 @@ fn worker_actions_mark_stale_runtime_inputs_as_fail_closed_updates() {
                 module.validate_v21_sign_only_and_runtime_models(spec)
         self.assertIn("v0.21 runtime worker tests", str(ctx.exception))
 
+    def test_v21_requires_sign_only_remote_side_effect_helper_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/sign-only/lifecycle-events"] = {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {"$ref": "#/components/schemas/SignOnlyLifecycleRecord"}
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/SignOnlyLifecycleRecord"}
+                            }
+                        }
+                    }
+                },
+            }
+        }
+        spec["paths"]["/v1/sign-only/lifecycle-events/{execution_id}"] = {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {"$ref": "#/components/schemas/SignOnlyLifecycleRecord"},
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        spec["paths"]["/v1/sign-only/standard-constructions"] = {
+            "post": {
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StandardSignOnlyConstructionRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardSignOnlyConstructionReceipt"
+                                }
+                            }
+                        }
+                    }
+                },
+            }
+        }
+        spec["components"]["schemas"]["StandardSignOnlyConstructionRequest"] = {
+            "type": "object",
+            "required": ["execution_id", "account_id", "plan_hash", "no_remote_side_effect"],
+            "properties": {
+                "execution_id": {"type": "string"},
+                "account_id": {"type": "string"},
+                "plan_hash": {"type": "string"},
+                "no_remote_side_effect": {"type": "boolean"},
+                "signed_order_ref": {"type": "string"},
+                "signed_order_digest": {"type": "string"},
+            },
+        }
+        spec["components"]["schemas"]["StandardSignOnlyConstructionReceipt"] = {
+            "type": "object",
+            "properties": {
+                "signed_order_ref": {"type": "string"},
+                "signed_order_digest": {"type": "string"},
+                "lifecycle_records": {"type": "array"},
+                "no_remote_side_effect": {"type": "boolean"},
+            },
+        }
+        spec["components"]["schemas"]["RuntimeWorkerStatusReport"] = {
+            "type": "object",
+            "properties": {"heartbeats": {"type": "array"}, "observations": {"type": "array"}},
+        }
+        spec["components"]["schemas"]["SignOnlyLifecycleRecord"] = {
+            "type": "object",
+            "required": [
+                "execution_id",
+                "account_id",
+                "state",
+                "event",
+                "signed_order_ref",
+                "no_remote_side_effect",
+            ],
+            "properties": {
+                "execution_id": {"type": "string"},
+                "account_id": {"type": "string"},
+                "state": {"type": "string"},
+                "event": {"type": "string"},
+                "client_event_id": {"type": "string"},
+                "signed_order_ref": {"type": "string"},
+                "no_remote_side_effect": {"type": "boolean"},
+            },
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-core/src/domain/lifecycle/sign_only.rs"):
+                return """
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+
+use crate::{AccountId, CoreError, ExecutionId};
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SignOnlyLifecycleState {
+    Planned,
+    ReservationPrepared,
+    SigningRequested,
+    SignedDryRun,
+    Failed,
+    Abandoned,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SignOnlyLifecycleEventKind {
+    PrepareReservation,
+    RequestSigning,
+    SignedWithoutPost,
+    SigningFailed,
+    Abandon,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SignOnlyLifecycleRecord {
+    pub execution_id: ExecutionId,
+    pub account_id: AccountId,
+    pub state: SignOnlyLifecycleState,
+    pub event: SignOnlyLifecycleEventKind,
+    pub client_event_id: Option<String>,
+    pub signed_order_ref: Option<String>,
+    pub no_remote_side_effect: bool,
+    pub event_id: Option<i64>,
+    pub created_at: Option<DateTime<Utc>>,
+}
+
+pub fn sign_only_lifecycle_records_equivalent(
+    left: &SignOnlyLifecycleRecord,
+    right: &SignOnlyLifecycleRecord,
+) -> bool {
+    left.execution_id == right.execution_id
+        && left.account_id == right.account_id
+        && left.state == right.state
+        && left.event == right.event
+        && left.client_event_id == right.client_event_id
+        && left.signed_order_ref == right.signed_order_ref
+        && left.no_remote_side_effect == right.no_remote_side_effect
+}
+
+pub fn transition_sign_only_lifecycle(
+    from: SignOnlyLifecycleState,
+    event: SignOnlyLifecycleEventKind,
+) -> Result<SignOnlyLifecycleState, CoreError> {
+    let next = match (&from, &event) {
+        (SignOnlyLifecycleState::Planned, SignOnlyLifecycleEventKind::PrepareReservation) => SignOnlyLifecycleState::ReservationPrepared,
+        (SignOnlyLifecycleState::ReservationPrepared, SignOnlyLifecycleEventKind::RequestSigning) => SignOnlyLifecycleState::SigningRequested,
+        (SignOnlyLifecycleState::SigningRequested, SignOnlyLifecycleEventKind::SignedWithoutPost) => SignOnlyLifecycleState::SignedDryRun,
+        (SignOnlyLifecycleState::SigningRequested, SignOnlyLifecycleEventKind::SigningFailed)
+        | (SignOnlyLifecycleState::ReservationPrepared, SignOnlyLifecycleEventKind::SigningFailed) => SignOnlyLifecycleState::Failed,
+        (SignOnlyLifecycleState::Planned, SignOnlyLifecycleEventKind::Abandon)
+        | (SignOnlyLifecycleState::ReservationPrepared, SignOnlyLifecycleEventKind::Abandon)
+        | (SignOnlyLifecycleState::SigningRequested, SignOnlyLifecycleEventKind::Abandon) => SignOnlyLifecycleState::Abandoned,
+        _ => return Err(CoreError::InvalidSignOnlyTransition { from, event }),
+    };
+    Ok(next)
+}
+
+pub fn sign_only_lifecycle_has_remote_side_effect(record: &SignOnlyLifecycleRecord) -> bool {
+    record.no_remote_side_effect
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v21_sign_only_and_runtime_models(spec)
+        self.assertIn("v0.21 sign-only lifecycle core", str(ctx.exception))
+
     def test_v12_requires_compile_request_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
