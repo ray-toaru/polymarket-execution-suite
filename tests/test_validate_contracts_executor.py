@@ -2840,6 +2840,42 @@ fn redact_known_env_values(input: &str) -> String { input.to_string() }
                 module.validate_v19_redaction_and_live_guard(self._minimal_v23_spec())
         self.assertIn("v0.19 adapter redaction", str(ctx.exception))
 
+    def test_v19_requires_redaction_test_bodies(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("adapters/pmx-official-sdk-adapter/src/tests/liveness_errors.rs"):
+                return """
+use super::*;
+
+#[test]
+fn redacts_named_secret_assignments() {
+    assert!(true);
+}
+
+#[test]
+fn redacts_private_key_like_hex_tokens() {
+    assert!(true);
+}
+
+#[test]
+fn gateway_error_conversion_redacts_sensitive_message() {
+    assert!(true);
+}
+
+#[test]
+fn normalized_error_redaction_covers_remote_unknown_messages() {
+    assert!(true);
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v19_redaction_and_live_guard(self._minimal_v23_spec())
+        self.assertIn("v0.19 adapter redaction tests", str(ctx.exception))
+
     def test_v20_requires_reconcile_backlog_remote_unknown_field(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
