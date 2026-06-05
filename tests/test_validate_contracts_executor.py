@@ -701,6 +701,36 @@ pub(crate) async fn record_admin_audit(
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("current API support admin audit helper", str(ctx.exception))
 
+    def test_v23_requires_reconcile_local_route_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/src/routes/admin/reconcile/local.rs"):
+                return """
+use axum::{Json, extract::State, http::HeaderMap};
+
+use crate::backend::AppState;
+use crate::model::{ReconcileOrderLocalRequest, ReconcileOrderLocalResponse};
+use crate::support::ApiResult;
+
+pub(crate) async fn reconcile_order_local(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(req): Json<ReconcileOrderLocalRequest>,
+) -> ApiResult<ReconcileOrderLocalResponse> {
+    let _ = (state, headers, req);
+    unimplemented!()
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current reconcile local route", str(ctx.exception))
+
     def test_v12_requires_compile_request_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
