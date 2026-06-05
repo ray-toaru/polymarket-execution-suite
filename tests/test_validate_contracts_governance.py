@@ -376,6 +376,53 @@ class ValidateContractsGovernanceTests(unittest.TestCase):
         with mock.patch.object(module, "import_module_from_path", side_effect=fake_import):
             module.validate_single_host_deployment_governance()
 
+    def test_validate_canary_candidate_market_prep_boundary_uses_structural_module_checks(self) -> None:
+        prep_script = ROOT / "polymarket-execution-engine" / "validation" / "prepare_canary_candidate_market.py"
+
+        class FakeCandidate:
+            def __init__(self, **kwargs) -> None:
+                self.kwargs = kwargs
+
+            def to_engine_json(self) -> dict[str, object]:
+                return {
+                    "side": "BUY",
+                    "order_type": "GTC",
+                    "post_only": True,
+                    "human_review_ref": "https://example.invalid/review/123",
+                    "exchange_rule_snapshot": {
+                        "order_mode": "post_only_limit",
+                        "order_type": "GTC",
+                        "side": "BUY",
+                        "target_size_semantics": "outcome_shares",
+                        "evidence_ref": "https://example.invalid/rules/123",
+                    },
+                }
+
+        fake_module = SimpleNamespace(
+            ROOT=ROOT / "polymarket-execution-engine",
+            INTEGRATION_ROOT=ROOT,
+            DEFAULT_GAMMA_URL="https://gamma-api.polymarket.com",
+            DEFAULT_CLOB_URL="https://clob.polymarket.com",
+            FETCH_RETRY_ATTEMPTS=3,
+            Candidate=FakeCandidate,
+            parse_args=lambda: None,
+            fetch_json=lambda *args, **kwargs: {},
+            fetch_json_or_error=lambda *args, **kwargs: {},
+            post_only_buy_limit_price=lambda *args, **kwargs: None,
+            candidate_from_market=lambda *args, **kwargs: None,
+            load_market_by_slug=lambda *args, **kwargs: {},
+            scan=lambda *args, **kwargs: ({}, {}),
+            main=lambda: 0,
+        )
+
+        def fake_import(name: str, path: Path):
+            if path != prep_script:
+                raise AssertionError(path)
+            return fake_module
+
+        with mock.patch.object(module, "import_module_from_path", side_effect=fake_import):
+            module.validate_canary_candidate_market_prep_boundary()
+
 
 if __name__ == "__main__":
     unittest.main()

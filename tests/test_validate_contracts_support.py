@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -63,6 +64,19 @@ class ValidateContractsSupportTests(unittest.TestCase):
             body = module.rust_handler_body("submit_plan")
         self.assertIn("retry_submit();", body)
         self.assertNotIn("next_handler", body)
+
+    def test_import_module_from_path_registers_module_for_dataclass_annotations(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "demo_module.py"
+            path.write_text(
+                "from __future__ import annotations\n"
+                "from dataclasses import dataclass\n"
+                "@dataclass(frozen=True)\n"
+                "class Demo:\n"
+                "    value: int\n"
+            )
+            loaded = module.import_module_from_path("demo_validate_contracts_module", path)
+        self.assertEqual(loaded.Demo(1).value, 1)
 
 
 if __name__ == "__main__":
