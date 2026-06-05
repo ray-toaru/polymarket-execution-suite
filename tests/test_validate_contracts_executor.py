@@ -529,6 +529,58 @@ pub(super) async fn record_sign_only_lifecycle_event(
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("current postgres sign-only write path", str(ctx.exception))
 
+    def test_v23_requires_postgres_worker_status_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/postgres_worker/status.rs"):
+                return """
+use async_trait::async_trait;
+
+use crate::postgres::PostgresStore;
+use crate::{RuntimeWorkerStatusQuery, RuntimeWorkerStatusReport, RuntimeWorkerStatusStore, StoreError};
+
+#[async_trait]
+impl RuntimeWorkerStatusStore for PostgresStore {
+    async fn list_runtime_worker_status(
+        &self,
+        query: &RuntimeWorkerStatusQuery,
+    ) -> Result<RuntimeWorkerStatusReport, StoreError> {
+        let _ = query;
+        unimplemented!()
+    }
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current postgres worker status path", str(ctx.exception))
+
+    def test_v23_requires_postgres_map_db_error_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/postgres_support/error.rs"):
+                return """
+use super::*;
+
+pub(crate) fn map_db_error(err: tokio_postgres::Error) -> StoreError {
+    StoreError::DatabaseUnavailable(err.to_string())
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current postgres map_db_error path", str(ctx.exception))
+
     def test_v12_requires_compile_request_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
