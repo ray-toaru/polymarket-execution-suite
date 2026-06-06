@@ -399,6 +399,10 @@ class ValidateContractsGovernanceTests(unittest.TestCase):
                 }
 
         fake_module = SimpleNamespace(
+            __doc__=(
+                "Prepare a reviewed canary market candidate from public read-only APIs.\n\n"
+                "The output shape matches the execution engine RealFundsCanaryMarketCandidate."
+            ),
             ROOT=ROOT / "polymarket-execution-engine",
             INTEGRATION_ROOT=ROOT,
             DEFAULT_GAMMA_URL="https://gamma-api.polymarket.com",
@@ -422,6 +426,106 @@ class ValidateContractsGovernanceTests(unittest.TestCase):
 
         with mock.patch.object(module, "import_module_from_path", side_effect=fake_import):
             module.validate_canary_candidate_market_prep_boundary()
+
+    def test_validate_canary_candidate_market_prep_boundary_rejects_missing_scan_audit_tokens(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("polymarket-execution-engine/validation/prepare_canary_candidate_market.py"):
+                return """
+\"\"\"Prepare a reviewed canary market candidate from public read-only APIs.
+
+The output shape matches the execution engine RealFundsCanaryMarketCandidate.
+\"\"\"
+
+from pathlib import Path
+from dataclasses import dataclass
+from decimal import Decimal
+
+ROOT = Path(".")
+INTEGRATION_ROOT = Path(".")
+DEFAULT_GAMMA_URL = "https://gamma-api.polymarket.com"
+DEFAULT_CLOB_URL = "https://clob.polymarket.com"
+FETCH_RETRY_ATTEMPTS = 3
+
+@dataclass(frozen=True)
+class Candidate:
+    market_id: str
+    token_id: str
+    outcome: str
+    market_slug: str
+    active: bool
+    accepting_orders: bool
+    closed: bool
+    archived: bool
+    best_ask: Decimal
+    limit_price: Decimal
+    ask_size: Decimal
+    target_size: Decimal
+    spread_bps: int
+    min_order_size: Decimal
+    min_tick_size: Decimal
+    liquidity_score: int
+    source_market_hash: str
+    book_snapshot_timestamp: str
+    human_review_ref: str
+    exchange_rule_evidence_ref: str
+    exchange_rule_valid_for_minutes: int
+
+    def to_engine_json(self):
+        return {
+            "side": "BUY",
+            "order_type": "GTC",
+            "post_only": True,
+            "human_review_ref": self.human_review_ref,
+            "exchange_rule_snapshot": {
+                "order_mode": "post_only_limit",
+                "order_type": "GTC",
+                "side": "BUY",
+                "target_size_semantics": "outcome_shares",
+                "evidence_ref": self.exchange_rule_evidence_ref,
+            },
+        }
+
+def parse_args():
+    \"\"\"candidate-market.json public read-only Polymarket APIs.\"\"\"
+    return None
+
+def fetch_json(*args, **kwargs):
+    urllib.request.Request("https://example.invalid")
+    urllib.request.urlopen("https://example.invalid")
+    FETCH_RETRY_ATTEMPTS
+
+def fetch_json_or_error(*args, **kwargs):
+    return {}
+
+def post_only_buy_limit_price(*args, **kwargs):
+    return None
+
+def candidate_from_market(*args, **kwargs):
+    \"/book\"
+    \"/spread\"
+    post_only_buy_limit_price()
+    raise RuntimeError("selected market spread is unavailable")
+
+def load_market_by_slug(args, slug, requested_outcome):
+    fetch_json(args.gamma_url, "/markets", {"slug": slug}, args.timeout_seconds)
+    fetch_json(args.gamma_url, "/events", {"slug": slug}, args.timeout_seconds)
+    return {}
+
+def scan(args):
+    return {}, {}
+
+def main():
+    return 0
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_canary_candidate_market_prep_boundary()
+        self.assertIn("canary candidate market prep scan", str(ctx.exception))
 
 
 if __name__ == "__main__":

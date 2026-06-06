@@ -30,6 +30,7 @@ _ORIGINALS = {
         "extract_string_literal_prefix",
         "rust_routes",
         "rust_handler_body",
+        "python_function_body",
         "import_control_models",
         "import_control_client",
         "import_module_from_path",
@@ -73,6 +74,7 @@ rust_source_text = _ENGINE.rust_source_text
 rust_file_with_modules_text = _ENGINE.rust_file_with_modules_text
 find_matching_delimiter = _ENGINE.find_matching_delimiter
 extract_string_literal_prefix = _ENGINE.extract_string_literal_prefix
+python_function_body = _ENGINE.python_function_body
 import_control_models = _ENGINE.import_control_models
 import_control_client = _ENGINE.import_control_client
 import_module_from_path = _ENGINE.import_module_from_path
@@ -116,6 +118,7 @@ def _sync_engine_state() -> None:
         "rust_file_with_modules_text",
         "find_matching_delimiter",
         "extract_string_literal_prefix",
+        "python_function_body",
         "import_control_models",
         "import_control_client",
         "import_module_from_path",
@@ -134,3 +137,7 @@ def rust_routes(*args, **kwargs):
 
 def rust_handler_body(*args, **kwargs):
     return _with_engine_state(_ORIGINALS["rust_handler_body"], *args, **kwargs)
+
+
+def python_function_body(*args, **kwargs):
+    return _with_engine_state(_ORIGINALS["python_function_body"], *args, **kwargs)
