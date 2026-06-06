@@ -199,6 +199,46 @@ pub fn redacted_payload_envelope() {}
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("RedactedPayloadEnvelope", str(ctx.exception))
 
+    def test_v23_requires_redacted_payload_envelope_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-core/src/domain/plan/redaction.rs"):
+                return """
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RedactedPayloadEnvelope {
+    pub schema_version: u32,
+    pub kind: String,
+    pub correlation_id: Option<String>,
+    pub redacted_fields: Vec<String>,
+    pub body: Value,
+}
+
+pub fn redacted_payload_envelope(
+    kind: impl Into<String>,
+    correlation_id: Option<String>,
+    body: Value,
+) -> Value {
+    serde_json::json!({
+        "kind": kind.into(),
+        "correlation_id": correlation_id,
+        "body": body,
+    })
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current core redaction helper", str(ctx.exception))
+
     def test_v23_requires_runtime_worker_status_trait_method(self) -> None:
         spec = self._minimal_v23_spec()
         original_read_text = Path.read_text
@@ -285,6 +325,37 @@ pub(crate) async fn list_runtime_worker_status(
             with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("RuntimeWorkerStatusListQuery", str(ctx.exception))
+
+    def test_v23_requires_api_error_support_bodies(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/src/support/error.rs"):
+                return """
+use axum::{Json, http::StatusCode};
+use axum::http::HeaderMap;
+
+pub(crate) fn api_error_with_correlation(
+    status: StatusCode,
+    message: impl Into<String>,
+    correlation_id: impl Into<String>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    (status, Json(serde_json::json!({ "error": message.into() })))
+}
+
+pub(crate) fn correlation_id_from_headers(headers: &HeaderMap) -> String {
+    let _ = headers;
+    String::new()
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current API error support", str(ctx.exception))
 
     def test_v23_requires_reconcile_route_signature(self) -> None:
         spec = self._minimal_v23_spec()
