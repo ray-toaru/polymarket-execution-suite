@@ -2540,6 +2540,65 @@ where
             module.validate_v20_plan_storage_and_packaging(spec)
         self.assertIn("ExecutionPlanSummary", str(ctx.exception))
 
+    def test_v20_requires_plan_summaries_drop_statement(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("polymarket-execution-engine/migrations/0001_initial.sql"):
+                return """
+CREATE TABLE IF NOT EXISTS execution_plans (
+    execution_id TEXT PRIMARY KEY,
+    plan_hash TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL,
+    summary_json JSONB NOT NULL
+);
+-- plan_summaries intentionally removed. Use execution_plans.summary_json as canonical plan summary storage.
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v20_plan_storage_and_packaging(spec)
+        self.assertIn("drop legacy plan_summaries table", str(ctx.exception))
+
+    def test_v20_requires_summary_json_canonicalization_note(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("polymarket-execution-engine/migrations/0001_initial.sql"):
+                return """
+DROP TABLE IF EXISTS plan_summaries;
+CREATE TABLE IF NOT EXISTS execution_plans (
+    execution_id TEXT PRIMARY KEY,
+    plan_hash TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL,
+    summary_json JSONB NOT NULL
+);
+-- legacy plan table removed
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v20_plan_storage_and_packaging(spec)
+        self.assertIn("summary_json as canonical storage", str(ctx.exception))
+
     def test_v20_requires_mapping_validation_body(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/plans/compile"] = {
