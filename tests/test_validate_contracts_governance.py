@@ -221,6 +221,39 @@ class ValidateContractsGovernanceTests(unittest.TestCase):
         finally:
             (ROOT / "polymarket-execution-engine" / "release" / "manifest.json").write_text(original_release)
 
+    def test_validate_v28_production_live_candidate_guard_uses_structural_module_checks(self) -> None:
+        fake_guard = SimpleNamespace(
+            ROOT=ROOT,
+            TARGET_VERSION="0.28.0",
+            HEX64=SimpleNamespace(pattern=r"^[0-9a-f]{64}$"),
+            REQUIRED_CANDIDATE_TERMS=[
+                "production-live-candidate",
+                "validated_release=false",
+                "production_ready=false",
+                "live_trading_ready=false",
+                "operator approval",
+                "runtime state healthy",
+                "kill switch open",
+                "no geoblock",
+                "idempotency reservation",
+                "rollback",
+                "incident",
+                "alert",
+                "custody",
+            ],
+            __doc__="Audit v0.28 production-live-candidate readiness.",
+            read_text=lambda path: "",
+            load_json=lambda path: {},
+            component_matrix_versions=lambda text: {},
+            require_contains=lambda blockers, label, text, token: None,
+            require_false=lambda blockers, data, key, label: None,
+            evaluate=lambda root=None, target_version="0.28.0": {},
+            main=lambda argv=None: 0,
+        )
+
+        with mock.patch.object(module, "import_module_from_path", return_value=fake_guard):
+            module.validate_v28_production_live_candidate_guard()
+
     def test_validate_controlled_canary_release_decision_governance_uses_structural_module_checks(self) -> None:
         template = ROOT / "polymarket-execution-engine" / "config" / "controlled-canary.release-decision.template.json"
         example = ROOT / "polymarket-execution-engine" / "config" / "controlled-canary.release-decision.example.json"
