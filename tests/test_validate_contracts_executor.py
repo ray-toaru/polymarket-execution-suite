@@ -3019,6 +3019,78 @@ pub fn lifecycle_requires_reconcile(state: &OrderLifecycleState) -> bool {
                 module.validate_v20_plan_storage_and_packaging(spec)
         self.assertIn("v0.20 core order lifecycle", str(ctx.exception))
 
+    def test_v20_requires_remote_unknown_liveness_test_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        spec.setdefault("components", {}).setdefault("schemas", {})["CompilePlanRequest"] = {
+            "type": "object",
+            "properties": {},
+        }
+        spec["components"]["schemas"]["ExecutionPlanSummary"] = {
+            "type": "object",
+            "properties": {},
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("adapters/pmx-official-sdk-adapter/src/tests/liveness_errors.rs"):
+                return """
+use super::*;
+
+#[test]
+fn normalized_error_redaction_covers_remote_unknown_messages() {
+    assert!(true);
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v20_plan_storage_and_packaging(spec)
+        self.assertIn("v0.20 SDK liveness tests", str(ctx.exception))
+
+    def test_v20_requires_runtime_blocking_test_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        spec.setdefault("components", {}).setdefault("schemas", {})["CompilePlanRequest"] = {
+            "type": "object",
+            "properties": {},
+        }
+        spec["components"]["schemas"]["ExecutionPlanSummary"] = {
+            "type": "object",
+            "properties": {},
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-runtime/src/runtime_tests/breakdown_loop/capabilities/blocking.rs"):
+                return """
+use super::super::super::*;
+
+#[test]
+fn geoblock_unknown_and_reconcile_backlog_block_submit() {
+    assert!(true);
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v20_plan_storage_and_packaging(spec)
+        self.assertIn("v0.20 runtime evaluation tests", str(ctx.exception))
+
     def test_v21_requires_lifecycle_record_binding(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/sign-only/lifecycle-events"] = {
