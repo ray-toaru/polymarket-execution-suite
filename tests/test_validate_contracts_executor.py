@@ -3289,6 +3289,64 @@ if __name__ == "__main__":
         self.assertIn("v0.20 plan storage guard", str(ctx.exception))
         self.assertIn('paths.extend(sorted(POSTGRES_EXECUTION.rglob("*.rs")))', str(ctx.exception))
 
+    def test_v23_requires_sign_only_equivalence_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-core/src/domain/lifecycle/sign_only.rs"):
+                return """
+use super::*;
+
+pub struct SignOnlyLifecycleRecord {
+    pub execution_id: String,
+    pub account_id: String,
+    pub state: String,
+    pub event: String,
+    pub client_event_id: Option<String>,
+    pub signed_order_ref: Option<String>,
+    pub no_remote_side_effect: bool,
+    pub event_id: Option<i64>,
+    pub created_at: Option<String>,
+}
+
+pub fn sign_only_lifecycle_records_equivalent(
+    left: &SignOnlyLifecycleRecord,
+    right: &SignOnlyLifecycleRecord,
+) -> bool {
+    left.execution_id == right.execution_id
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current sign-only replay equivalence helper", str(ctx.exception))
+
+    def test_v23_requires_memory_runtime_worker_test_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/memory_tests/runtime_worker_health.rs"):
+                return """
+use super::*;
+
+#[test]
+async fn in_memory_worker_heartbeat_informs_runtime_state() {
+    assert!(true);
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current in-memory runtime worker tests", str(ctx.exception))
+
     def test_v21_requires_lifecycle_record_binding(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/sign-only/lifecycle-events"] = {
