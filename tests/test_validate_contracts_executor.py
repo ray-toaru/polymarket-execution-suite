@@ -3221,6 +3221,74 @@ fn geoblock_unknown_and_reconcile_backlog_block_submit() {
                 module.validate_v20_plan_storage_and_packaging(spec)
         self.assertIn("v0.20 runtime evaluation tests", str(ctx.exception))
 
+    def test_v20_requires_plan_storage_guard_structure(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        spec.setdefault("components", {}).setdefault("schemas", {})["CompilePlanRequest"] = {
+            "type": "object",
+            "properties": {},
+        }
+        spec["components"]["schemas"]["ExecutionPlanSummary"] = {
+            "type": "object",
+            "properties": {},
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("validation/check_plan_storage.py"):
+                return """
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+MIGRATION = ROOT / "migrations" / "0001_initial.sql"
+POSTGRES_ENTRYPOINT = ROOT / "crates" / "pmx-store" / "src" / "postgres.rs"
+POSTGRES_EXECUTION = ROOT / "crates" / "pmx-store" / "src" / "postgres_execution"
+
+def read_postgres_store_sources() -> str:
+    paths = [POSTGRES_ENTRYPOINT]
+    paths.extend([])
+    return "\\n".join(path.read_text() for path in paths)
+
+def main() -> int:
+    failures: list[str] = []
+    migration = MIGRATION.read_text()
+    postgres = read_postgres_store_sources()
+    if "DROP TABLE IF EXISTS plan_summaries" not in migration:
+        failures.append("migration must explicitly remove legacy plan_summaries")
+    if "CREATE TABLE IF NOT EXISTS plan_summaries" in migration:
+        failures.append("migration must not recreate plan_summaries")
+    if "INSERT INTO plan_summaries" in postgres or '"plan_summaries"' in postgres:
+        failures.append("PostgresStore must not read/write plan_summaries")
+    if "INSERT INTO execution_plans" not in postgres:
+        failures.append("PostgresStore must write canonical execution_plans")
+    if failures:
+        for failure in failures:
+            print(f"FAIL: {failure}")
+        return 1
+    print("plan storage guard passed: execution_plans is canonical")
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v20_plan_storage_and_packaging(spec)
+        self.assertIn("v0.20 plan storage guard", str(ctx.exception))
+        self.assertIn('paths.extend(sorted(POSTGRES_EXECUTION.rglob("*.rs")))', str(ctx.exception))
+
     def test_v21_requires_lifecycle_record_binding(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/sign-only/lifecycle-events"] = {
