@@ -78,6 +78,17 @@ def target():
         self.assertIn("value = 2", body)
         self.assertNotIn("def first", body)
 
+    def test_python_function_body_finds_class_method(self) -> None:
+        source = """
+class Demo:
+    def target(self):
+        value = 2
+        return value
+"""
+        body = module.python_function_body(source, "target")
+        self.assertIn("value = 2", body)
+        self.assertIn("def target", body)
+
     def test_import_module_from_path_registers_module_for_dataclass_annotations(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "demo_module.py"
