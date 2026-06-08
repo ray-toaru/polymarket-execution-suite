@@ -825,6 +825,118 @@ pub(crate) fn collect_runtime_reasons(state: &RuntimeStateSummary, reasons: &mut
                 module.validate_v23_lifecycle_query_and_hardening(spec)
         self.assertIn("current runtime policy worker handling", str(ctx.exception))
 
+    def test_v23_requires_lifecycle_gate_source_text_helper(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("validation/check_current_lifecycle_api.py"):
+                return """
+#!/usr/bin/env python3
+from __future__ import annotations
+
+from pathlib import Path
+
+from current_gate_chain import ACTIVE_GATE_IMPLEMENTATION, CURRENT_GATES
+
+ROOT = Path(__file__).resolve().parents[1]
+GATE = CURRENT_GATES
+ACTIVE_GATE = ACTIVE_GATE_IMPLEMENTATION
+VERSION_GUARD = ROOT.parent / "scripts" / "check_version_consistency.py"
+HERMES_CLIENT = ROOT.parent / "hermes-polymarket-executor-adapter" / "src" / "hermes_polymarket_executor_adapter" / "client.py"
+HERMES_MODELS = ROOT.parent / "hermes-polymarket-executor-adapter" / "src" / "hermes_polymarket_executor_adapter" / "models.py"
+REQUIRED = {ACTIVE_GATE: ["current gates completed"]}
+FORBIDDEN = {}
+
+def source_text(path: Path) -> str:
+    return path.read_text()
+
+def main() -> int:
+    failures: list[str] = []
+    for path, needles in REQUIRED.items():
+        if not path.exists() and path in {VERSION_GUARD, HERMES_CLIENT, HERMES_MODELS}:
+            continue
+        text = source_text(path)
+        for needle in needles:
+            if needle not in text:
+                failures.append(f"{path.relative_to(ROOT)} missing {needle}")
+    for path, needles in FORBIDDEN.items():
+        text = source_text(path)
+        for needle in needles:
+            if needle in text:
+                failures.append(f"{path.relative_to(ROOT)} contains forbidden token {needle}")
+    print("current lifecycle/query static guard passed")
+    return 0
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("current lifecycle gate guard", str(ctx.exception))
+
+    def test_v23_requires_runtime_status_gate_helpers(self) -> None:
+        spec = self._minimal_v23_spec()
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("validation/check_runtime_worker_status_query.py"):
+                return """
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+
+from current_gate_chain import ACTIVE_GATE_IMPLEMENTATION, CURRENT_GATES
+
+ROOT = Path(__file__).resolve().parents[1]
+API = ROOT / "crates" / "pmx-api" / "src"
+GATES = CURRENT_GATES
+ACTIVE_GATES = ACTIVE_GATE_IMPLEMENTATION
+REQUIRED = {ACTIVE_GATES: ["42-runtime-worker-status-query.log"], API: ["/v1/runtime/workers"]}
+
+def env_enabled(name: str) -> bool:
+    return bool(os.environ.get(name))
+
+def source_text(path: Path) -> str:
+    return path.read_text()
+
+def main() -> int:
+    failures: list[str] = []
+    for path, needles in REQUIRED.items():
+        if not path.exists():
+            failures.append(f"missing artifact: {path.relative_to(ROOT)}")
+            continue
+        text = source_text(path)
+        for needle in needles:
+            if needle not in text:
+                failures.append(f"{path.relative_to(ROOT)} missing {needle}")
+    if env_enabled("PMX_ALLOW_LIVE_SUBMIT"):
+        failures.append("PMX_ALLOW_LIVE_SUBMIT=1 is not allowed during runtime status query guard")
+    if env_enabled("PMX_ALLOW_LIVE_CANCEL"):
+        failures.append("PMX_ALLOW_LIVE_CANCEL=1 is not allowed during runtime status query guard")
+    result = {
+        "status": "fail" if failures else "pass",
+        "route": "/v1/runtime/workers",
+        "live_submit_env_enabled": env_enabled("PMX_ALLOW_LIVE_SUBMIT"),
+        "live_cancel_env_enabled": env_enabled("PMX_ALLOW_LIVE_CANCEL"),
+        "remote_trading_side_effect": "not_executed",
+        "failures": failures,
+    }
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 1 if failures else 0
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v23_lifecycle_query_and_hardening(spec)
+        self.assertIn("runtime status query guard", str(ctx.exception))
+
     def test_v19_requires_live_submit_guard_module_bindings(self) -> None:
         class GuardModule:
             ALLOWED_GATEWAY_POST_ORDER_FILE = Path("sdk_runtime/gateway.rs")
