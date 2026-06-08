@@ -316,14 +316,22 @@ class ValidateContractsGovernanceTests(unittest.TestCase):
             EXTERNAL_REFERENCES_EXAMPLE=external_example,
             EXTERNAL_REFERENCES_TEMPLATE=external_template,
             DOC=readiness_doc,
+            EXAMPLE_REVIEW_ARTIFACT_SHA256="c0c22c91541d48c508a588b06a2fa5d7051bc6c8e29df626de67a59cc96c24e6",
+            MANIFEST_WRITER=ROOT / "polymarket-execution-engine" / "validation" / "write_current_evidence_manifest.py",
             main=lambda: 0,
         )
         external_module = SimpleNamespace(
+            TEMPLATE=external_template,
+            EXAMPLE=external_example,
+            INVALID_SENSITIVE=external_invalid,
             EXPECTED_ARTIFACT_SHA256="b" * 64,
             EXPECTED_RUN_IDS={
                 "root_ci_run_id": "26268697168",
                 "credentialed_sdk_run_id": "local-current-gates-20260523",
             },
+            REQUIRED_FIELDS={"runbooks": ["rollback_runbook_ref", "incident_runbook_ref", "canary_retry_policy_ref"]},
+            FORBIDDEN_VALUE_FRAGMENTS=("fixture-sensitive-value-must-not-be-logged",),
+            FORBIDDEN_KEYS={"SignedOrderEnvelope"},
             validate_shape=lambda *args, **kwargs: [],
             placeholder_paths=lambda *args, **kwargs: [],
             has_placeholder=lambda *args, **kwargs: False,
