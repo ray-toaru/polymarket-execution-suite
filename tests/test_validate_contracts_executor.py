@@ -2074,6 +2074,43 @@ async fn reservation_double_spend_is_prevented_concurrently() {
                 module.validate_v07_source_landings()
         self.assertIn("SignerProvider", str(ctx.exception))
 
+    def test_v07_requires_gateway_post_cancel_test_bodies(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-gateway/src/tests/post_cancel.rs"):
+                return """
+use super::*;
+
+#[tokio::test]
+async fn deterministic_signer_provider_posts_reads_and_cancels() {
+    assert!(true);
+}
+
+#[tokio::test]
+async fn fake_gateway_surfaces_remote_unknown_without_local_success() {
+    let gateway = FakeGateway::new().with_post_failure(FakeGatewayFailure::RemoteUnknown(
+        "timeout after signing".into(),
+    ));
+    let signed = DeterministicTestSigner
+        .sign_order(&sample_order())
+        .await
+        .expect("signed");
+    let err = gateway.post_order(&signed).await.expect_err("remote unknown");
+    assert_eq!(
+        err,
+        GatewayError::RemoteUnknown("timeout after signing".into())
+    );
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v07_source_landings()
+        self.assertIn("gateway post/cancel tests", str(ctx.exception))
+
     def test_v16_requires_runtime_worker_schema_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/runtime/workers"]["get"]["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] = "#/components/schemas/Wrong"
