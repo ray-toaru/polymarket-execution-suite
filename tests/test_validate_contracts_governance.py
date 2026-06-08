@@ -539,10 +539,24 @@ def fetch_json(*args, **kwargs):
     FETCH_RETRY_ATTEMPTS
 
 def fetch_json_or_error(*args, **kwargs):
-    return {}
+    try:
+        return fetch_json(base_url, path, query, timeout_seconds)
+    except Exception as exc:
+        audit.setdefault("fetch_errors", []).append(
+            {"path": path, "query": query, "error": f"{type(exc).__name__}: {exc}"}
+        )
+        raise CandidateError(failure_message, audit) from exc
 
 def post_only_buy_limit_price(*args, **kwargs):
-    return None
+    ask_ticks = (best_ask_price / min_tick_size).to_integral_value(rounding=ROUND_FLOOR)
+    upper = ask_ticks * min_tick_size
+    upper -= min_tick_size
+    improved_bid = ((best_bid_price / min_tick_size).to_integral_value(rounding=ROUND_FLOOR) + 1) * min_tick_size
+    if improved_bid < best_ask_price and improved_bid <= upper:
+        return improved_bid
+    if bid_grid > 0 and bid_grid < best_ask_price and bid_grid <= upper:
+        return bid_grid
+    return upper
 
 def candidate_from_market(*args, **kwargs):
     \"/book\"
@@ -640,10 +654,24 @@ def fetch_json(*args, **kwargs):
     FETCH_RETRY_ATTEMPTS
 
 def fetch_json_or_error(*args, **kwargs):
-    return {}
+    try:
+        return fetch_json(base_url, path, query, timeout_seconds)
+    except Exception as exc:
+        audit.setdefault("fetch_errors", []).append(
+            {"path": path, "query": query, "error": f"{type(exc).__name__}: {exc}"}
+        )
+        raise CandidateError(failure_message, audit) from exc
 
 def post_only_buy_limit_price(*args, **kwargs):
-    return None
+    ask_ticks = (best_ask_price / min_tick_size).to_integral_value(rounding=ROUND_FLOOR)
+    upper = ask_ticks * min_tick_size
+    upper -= min_tick_size
+    improved_bid = ((best_bid_price / min_tick_size).to_integral_value(rounding=ROUND_FLOOR) + 1) * min_tick_size
+    if improved_bid < best_ask_price and improved_bid <= upper:
+        return improved_bid
+    if bid_grid > 0 and bid_grid < best_ask_price and bid_grid <= upper:
+        return bid_grid
+    return upper
 
 def candidate_from_market(*args, **kwargs):
     \"/book\"
