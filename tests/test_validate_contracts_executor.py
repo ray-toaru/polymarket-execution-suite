@@ -2002,6 +2002,62 @@ jobs:
         with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
             with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v04_source_landings()
+        self.assertIn("remote_unknown_is_persisted_conservatively", str(ctx.exception))
+
+    def test_v04_requires_remote_unknown_receipt_test_body(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/postgres_tests/receipt_reservation.rs"):
+                return """
+use super::*;
+
+#[tokio::test]
+async fn remote_unknown_is_persisted_conservatively() {
+    assert!(true);
+}
+
+#[tokio::test]
+async fn reservation_double_spend_is_prevented_concurrently() {
+    let Some(store) = test_store().await else {
+        return;
+    };
+    let account = unique("acct");
+    let execution = unique("exec");
+    let reservation = OrderReservation {
+        reservation_id: unique("reservation"),
+        account_id: AccountId(account.clone()),
+        execution_id: ExecutionId(execution.clone()),
+        internal_order_id: None,
+        quantity_bound: QuantityBound::WorstCaseQuoteNotional(DecimalString("10".into())),
+        state: ReservationState::Active,
+    };
+    let a = store.clone();
+    let b = store.clone();
+    let r1 = reservation.clone();
+    let r2 = reservation;
+    let (_left, _right) = tokio::join!(
+        async move { a.save_order_reservation(&r1).await },
+        async move { b.save_order_reservation(&r2).await }
+    );
+    let client = store.client().await.expect("test postgres client");
+    let count: i64 = client
+        .query_one(
+            "SELECT COUNT(*) FROM order_reservations WHERE account_id = $1 AND execution_id = $2",
+            &[&account, &execution],
+        )
+        .await
+        .expect("query reservations")
+        .get(0);
+    assert_eq!(count, 1);
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v04_source_landings()
         self.assertIn("postgres receipt/reservation tests", str(ctx.exception))
 
     def test_v07_requires_gateway_traits_file_tokens(self) -> None:
