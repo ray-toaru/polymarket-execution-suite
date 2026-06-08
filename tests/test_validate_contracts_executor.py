@@ -1959,6 +1959,37 @@ updates:
                 module.validate_v08_dependency_and_sdk_policy()
         self.assertIn("dependabot github-actions update schedule must stay weekly", str(ctx.exception))
 
+    def test_v08_requires_integration_static_contract_step_names(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith(".github/workflows/ci.yml"):
+                return """
+name: ci
+jobs:
+  adapter-required-ci:
+    uses: ray-toaru/hermes-polymarket-executor-adapter/.github/workflows/ci.yml@caec425b172e126365b2f521f70ac82badc60e70
+  engine-required-ci:
+    uses: ray-toaru/polymarket-execution-engine/.github/workflows/ci.yml@edc1b62b531b84a3297f254a48b8e17e01610f84
+  engine-rust-locked:
+    runs-on: ubuntu-latest
+  integration-python-compat:
+    runs-on: ubuntu-latest
+  integration-static:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate root and API contracts
+      - name: Run integration Python tests
+      - name: Run adapter tests
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v08_dependency_and_sdk_policy()
+        self.assertIn("root CI workflow integration-static job missing step", str(ctx.exception))
+
     def test_v04_requires_postgres_receipt_reservation_tests(self) -> None:
         original_read_text = Path.read_text
 
