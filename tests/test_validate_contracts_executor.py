@@ -3318,6 +3318,45 @@ if __name__ == "__main__":
                 module.validate_v20_plan_storage_and_packaging(spec)
         self.assertIn("v0.20 plan storage documentation", str(ctx.exception))
 
+    def test_v20_requires_plan_storage_guard_to_run_before_manifest_refresh(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        spec.setdefault("components", {}).setdefault("schemas", {})["CompilePlanRequest"] = {
+            "type": "object",
+            "properties": {},
+        }
+        spec["components"]["schemas"]["ExecutionPlanSummary"] = {
+            "type": "object",
+            "properties": {},
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("validation/run_current_gates_impl.sh"):
+                return """
+python validation/check_live_submit_guard.py 2>&1 | tee "${EVIDENCE_DIR}/19-live-submit-static-guard.log"
+python validation/check_sign_only_lifecycle.py 2>&1 | tee "${EVIDENCE_DIR}/20-sign-only-lifecycle-guard.log"
+python validation/check_runtime_worker_models.py 2>&1 | tee "${EVIDENCE_DIR}/21-runtime-worker-model-guard.log"
+python validation/write_current_evidence_manifest.py "${EVIDENCE_DIR}" >/dev/null
+python validation/check_plan_storage.py 2>&1 | tee "${EVIDENCE_DIR}/18-plan-storage-guard.log"
+python validation/check_current_evidence_manifest.py 2>&1 | tee "${EVIDENCE_DIR}/23-current-evidence-manifest-guard.log"
+ARTIFACT_PATH="$(python "${INTEGRATION_ROOT}/scripts/package_release.py" "${VERSION}" --output-dir "${INTEGRATION_ROOT}/dist")"
+python "${INTEGRATION_ROOT}/scripts/check_release_artifact.py" "${ARTIFACT_PATH}" "$(cat "${INTEGRATION_ROOT}/VERSION")"
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v20_plan_storage_and_packaging(spec)
+        self.assertIn("v0.20 current gates implementation", str(ctx.exception))
+        self.assertIn("missing ordered token", str(ctx.exception))
+
     def test_v23_requires_sign_only_equivalence_body(self) -> None:
         spec = self._minimal_v23_spec()
         original_read_text = Path.read_text
