@@ -3289,6 +3289,35 @@ if __name__ == "__main__":
         self.assertIn("v0.20 plan storage guard", str(ctx.exception))
         self.assertIn('paths.extend(sorted(POSTGRES_EXECUTION.rglob("*.rs")))', str(ctx.exception))
 
+    def test_v20_requires_plan_storage_documentation_tokens(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        spec.setdefault("components", {}).setdefault("schemas", {})["CompilePlanRequest"] = {
+            "type": "object",
+            "properties": {},
+        }
+        spec["components"]["schemas"]["ExecutionPlanSummary"] = {
+            "type": "object",
+            "properties": {},
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("docs/PLAN_STORAGE_CANONICALIZATION.md"):
+                return "# Plan storage canonicalization\n\nThis document is intentionally too thin.\n"
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v20_plan_storage_and_packaging(spec)
+        self.assertIn("v0.20 plan storage documentation", str(ctx.exception))
+
     def test_v23_requires_sign_only_equivalence_body(self) -> None:
         spec = self._minimal_v23_spec()
         original_read_text = Path.read_text
