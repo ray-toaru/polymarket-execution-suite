@@ -3408,6 +3408,112 @@ async fn service_rejects_tampered_approval_hash() { assert!(true); }
                 module.validate_v12_service_layer(spec)
         self.assertIn("service flow tests", str(ctx.exception))
 
+    def test_v12_requires_try_postgres_app_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        spec["paths"]["/v1/submissions"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/SubmitRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/SubmitReceipt"}}}}},
+            }
+        }
+        spec["paths"]["/v1/admin/cancel-order"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CancelOrderRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CancelReceipt"}}}}},
+            }
+        }
+        spec["paths"]["/v1/admin/reconcile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReconcileRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReconcileReport"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/src/routes/bootstrap.rs"):
+                return """
+use super::*;
+use axum::routing::{get, post};
+
+fn router_with_state(state: AppState) -> Router {
+    Router::new()
+        .route("/v1/health", get(health))
+        .route("/v1/plans/compile", post(flow::compile_plan))
+        .route("/v1/submissions", post(flow::submit_plan))
+        .route("/v1/admin/cancel-order", post(admin::record_cancel_order_non_live))
+        .route("/v1/admin/reconcile", post(admin::record_reconcile_non_live))
+        .with_state(state)
+}
+
+pub async fn try_postgres_app(
+    database_url: impl Into<String>,
+    apply_schema: bool,
+) -> Result<Router, String> {
+    let _ = (database_url.into(), apply_schema);
+    Ok(router_with_state(AppState::default()))
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v12_service_layer(spec)
+        self.assertIn("API bootstrap routes", str(ctx.exception))
+
+    def test_v12_requires_postgres_e2e_main_bodies(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        spec["paths"]["/v1/submissions"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/SubmitRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/SubmitReceipt"}}}}},
+            }
+        }
+        spec["paths"]["/v1/admin/cancel-order"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CancelOrderRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CancelReceipt"}}}}},
+            }
+        }
+        spec["paths"]["/v1/admin/reconcile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReconcileRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReconcileReport"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/tests/http_postgres_e2e/smoke.rs"):
+                return """
+use super::*;
+
+#[tokio::test]
+async fn http_postgres_backed_e2e_smoke() {
+    assert!(true);
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v12_service_layer(spec)
+        self.assertIn("PostgreSQL API E2E", str(ctx.exception))
+
     def test_v09_requires_feature_gated_adapter_tests(self) -> None:
         original_read_text = Path.read_text
 
