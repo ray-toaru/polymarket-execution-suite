@@ -2111,6 +2111,44 @@ async fn fake_gateway_surfaces_remote_unknown_without_local_success() {
                 module.validate_v07_source_landings()
         self.assertIn("gateway post/cancel tests", str(ctx.exception))
 
+    def test_v07_requires_http_scaffold_flow_body(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/tests/http_and_fake_e2e/scaffold.rs"):
+                return """
+use super::*;
+
+#[path = "scaffold/admin_paths.rs"]
+mod admin_paths;
+
+#[path = "scaffold/compile_plan.rs"]
+mod compile_plan;
+
+#[path = "scaffold/public_queries.rs"]
+mod public_queries;
+
+#[path = "scaffold/submit_sign_only.rs"]
+mod submit_sign_only;
+
+#[tokio::test]
+async fn full_scaffold_path_compile_submit_cancel_and_reconcile() {
+    let _guard = env_lock().await;
+    let store = pmx_store::InMemoryStore::default();
+    let app = pmx_api::try_in_memory_app_with_store(store.clone()).expect("in-memory app");
+    let (execution_id, plan_hash) = compile_plan::compile_blocked_plan(app.clone()).await;
+    submit_sign_only::verify_submit_and_sign_only(app.clone(), &execution_id, &plan_hash).await;
+    public_queries::verify_public_queries(app, &execution_id).await;
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v07_source_landings()
+        self.assertIn("HTTP scaffold E2E", str(ctx.exception))
+
     def test_v16_requires_runtime_worker_schema_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/runtime/workers"]["get"]["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] = "#/components/schemas/Wrong"
