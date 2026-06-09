@@ -2650,6 +2650,68 @@ pub(super) async fn begin_submit_attempt(
                 module.validate_v07_source_landings()
         self.assertIn("SignerProvider", str(ctx.exception))
 
+    def test_v07_requires_gateway_trait_signature_bindings(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-gateway/src/traits.rs"):
+                return """
+use crate::{
+    GatewayError, PlanOrder, PostOrderAck, RemoteOrder, RemoteReconcileReadReport,
+    RemoteReconcileReadRequest,
+};
+use async_trait::async_trait;
+use pmx_core::{AccountId, CancelState, RemoteOrderId, SignedOrderEnvelope};
+use std::sync::Arc;
+
+#[async_trait]
+pub trait Signer: Send + Sync {
+    async fn sign_order(&self, order: &PlanOrder) -> Result<SignedOrderEnvelope, GatewayError>;
+}
+
+#[async_trait]
+pub trait ClobGateway: Send + Sync {
+    async fn post_order(&self, order: &SignedOrderEnvelope) -> Result<PostOrderAck, GatewayError>;
+    async fn cancel_order(
+        &self,
+        account_id: &AccountId,
+        remote_order_id: &RemoteOrderId,
+    ) -> Result<RemoteOrder, GatewayError>;
+    async fn get_order(
+        &self,
+        account_id: &AccountId,
+        remote_order_id: &RemoteOrderId,
+    ) -> Result<Option<RemoteOrder>, GatewayError>;
+    async fn get_open_orders(
+        &self,
+        account_id: &AccountId,
+    ) -> Result<Vec<RemoteOrder>, GatewayError>;
+}
+
+#[async_trait]
+pub trait RemoteReconcileReader: Send + Sync {
+    async fn read_remote_order_observations(
+        &self,
+        request: &RemoteReconcileReadRequest,
+    ) -> Result<RemoteReconcileReadReport, GatewayError>;
+}
+
+#[async_trait]
+pub trait SignerProvider: Send + Sync {
+    async fn signer_for_account(
+        &self,
+        account_id: &AccountId,
+    ) -> Result<Arc<dyn Signer>, GatewayError>;
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v07_source_landings()
+        self.assertIn("gateway traits", str(ctx.exception))
+
     def test_v07_requires_gateway_post_cancel_test_bodies(self) -> None:
         original_read_text = Path.read_text
 
