@@ -2131,6 +2131,34 @@ Official SDK version: =0.6.0-canary.1
                 module.validate_v08_dependency_and_sdk_policy()
         self.assertIn("dependency policy doc", str(ctx.exception))
 
+    def test_v08_requires_root_cargo_workspace_version_alignment(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("polymarket-execution-engine/Cargo.toml"):
+                return """
+[workspace]
+members = ["crates/pmx-core"]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+license = "Apache-2.0"
+version = "0.27.9"
+rust-version = "1.88"
+
+[workspace.dependencies]
+serde = { version = "1.0.228", features = ["derive"] }
+tokio = { version = "1.52.3", features = ["macros"] }
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v08_dependency_and_sdk_policy()
+        self.assertIn("workspace.package.version aligned with VERSION", str(ctx.exception))
+
     def test_v08_requires_sdk_plan_tokens_under_expected_sections(self) -> None:
         original_read_text = Path.read_text
 
