@@ -2044,6 +2044,52 @@ Official SDK version: =0.6.0-canary.1
                 module.validate_v08_dependency_and_sdk_policy()
         self.assertIn("dependency policy doc", str(ctx.exception))
 
+    def test_v07_requires_scaffold_admin_paths_body(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/tests/http_and_fake_e2e/scaffold/admin_paths.rs"):
+                return """
+use super::super::*;
+
+pub(super) async fn verify_non_live_admin_paths(app: axum::Router, execution_id: &str) {
+    let _ = (app, execution_id);
+    assert!(true);
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v07_source_landings()
+        self.assertIn("HTTP scaffold admin paths", str(ctx.exception))
+
+    def test_v07_requires_scaffold_submit_sign_only_body(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/tests/http_and_fake_e2e/scaffold/submit_sign_only.rs"):
+                return """
+use super::super::*;
+
+pub(super) async fn verify_submit_and_sign_only(
+    app: axum::Router,
+    execution_id: &str,
+    plan_hash: &str,
+) {
+    let _ = (app, execution_id, plan_hash);
+    assert!(true);
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v07_source_landings()
+        self.assertIn("HTTP scaffold submit/sign-only", str(ctx.exception))
+
     def test_v08_requires_dependabot_weekly_root_updates(self) -> None:
         original_read_text = Path.read_text
 
