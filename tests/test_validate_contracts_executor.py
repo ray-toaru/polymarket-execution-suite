@@ -2090,6 +2090,155 @@ pub(super) async fn verify_submit_and_sign_only(
                 module.validate_v07_source_landings()
         self.assertIn("HTTP scaffold submit/sign-only", str(ctx.exception))
 
+    def test_v07_requires_signer_provider_default_body(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-gateway/src/signer.rs"):
+                return """
+use crate::{GatewayError, PlanOrder, Signer, SignerProvider};
+use async_trait::async_trait;
+use pmx_core::{AccountId, InternalOrderId, SignedOrderEnvelope};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum SignerBackendKind {
+    Disabled,
+    DeterministicTest,
+    OfficialSdkLocal,
+    OfficialSdkRemoteKms,
+    OfficialSdkExternal,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SignerProviderConfig {
+    pub backend: SignerBackendKind,
+    pub allow_local_private_key_material: bool,
+    pub require_remote_signer_in_production: bool,
+}
+
+impl Default for SignerProviderConfig {
+    fn default() -> Self {
+        Self {
+            backend: SignerBackendKind::Disabled,
+            allow_local_private_key_material: true,
+            require_remote_signer_in_production: true,
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct DeterministicTestSignerProvider;
+
+#[async_trait]
+impl SignerProvider for DeterministicTestSignerProvider {
+    async fn signer_for_account(
+        &self,
+        _account_id: &AccountId,
+    ) -> Result<Arc<dyn Signer>, GatewayError> {
+        Ok(Arc::new(DeterministicTestSigner))
+    }
+}
+
+pub struct DeterministicTestSigner;
+
+#[async_trait]
+impl Signer for DeterministicTestSigner {
+    async fn sign_order(&self, order: &PlanOrder) -> Result<SignedOrderEnvelope, GatewayError> {
+        Ok(SignedOrderEnvelope {
+            internal_order_id: InternalOrderId(format!("test-order-{}", order.execution_id)),
+            account_id: order.account_id.clone(),
+            signer_fingerprint: format!(
+                "deterministic-test-signer:{}:{}",
+                order.side, order.time_in_force
+            ),
+            signed_payload_ref: "test-only-no-real-signature".into(),
+        })
+    }
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v07_source_landings()
+        self.assertIn("gateway signer provider", str(ctx.exception))
+
+    def test_v07_requires_deterministic_signer_body(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-gateway/src/signer.rs"):
+                return """
+use crate::{GatewayError, PlanOrder, Signer, SignerProvider};
+use async_trait::async_trait;
+use pmx_core::{AccountId, InternalOrderId, SignedOrderEnvelope};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum SignerBackendKind {
+    Disabled,
+    DeterministicTest,
+    OfficialSdkLocal,
+    OfficialSdkRemoteKms,
+    OfficialSdkExternal,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SignerProviderConfig {
+    pub backend: SignerBackendKind,
+    pub allow_local_private_key_material: bool,
+    pub require_remote_signer_in_production: bool,
+}
+
+impl Default for SignerProviderConfig {
+    fn default() -> Self {
+        Self {
+            backend: SignerBackendKind::Disabled,
+            allow_local_private_key_material: false,
+            require_remote_signer_in_production: true,
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct DeterministicTestSignerProvider;
+
+#[async_trait]
+impl SignerProvider for DeterministicTestSignerProvider {
+    async fn signer_for_account(
+        &self,
+        _account_id: &AccountId,
+    ) -> Result<Arc<dyn Signer>, GatewayError> {
+        Ok(Arc::new(DeterministicTestSigner))
+    }
+}
+
+pub struct DeterministicTestSigner;
+
+#[async_trait]
+impl Signer for DeterministicTestSigner {
+    async fn sign_order(&self, order: &PlanOrder) -> Result<SignedOrderEnvelope, GatewayError> {
+        let _ = order;
+        Err(GatewayError::SigningUnavailable)
+    }
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v07_source_landings()
+        self.assertIn("gateway signer provider", str(ctx.exception))
+
     def test_v08_requires_dependabot_weekly_root_updates(self) -> None:
         original_read_text = Path.read_text
 
