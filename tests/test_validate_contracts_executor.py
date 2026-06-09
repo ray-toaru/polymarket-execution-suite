@@ -1937,6 +1937,36 @@ pub fn sign_only_lifecycle_has_remote_side_effect(record: &SignOnlyLifecycleReco
                 module.validate_v08_dependency_and_sdk_policy()
         self.assertIn("executor rust toolchain", str(ctx.exception))
 
+    def test_v08_requires_sdk_spike_manifest_feature_wiring(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("adapters/pmx-official-sdk-spike/Cargo.toml"):
+                return """
+[package]
+name = "pmx-official-sdk-spike"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.88"
+
+[features]
+default = []
+sdk-typecheck = ["dep:polymarket_client_sdk_v2"]
+live-submit = []
+
+[dependencies]
+polymarket_client_sdk_v2 = { version = "=0.6.0-canary.1", optional = true }
+
+[workspace]
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v08_dependency_and_sdk_policy()
+        self.assertIn("official SDK spike Cargo must keep live-submit gated by sdk-typecheck", str(ctx.exception))
+
     def test_v08_requires_dependabot_weekly_root_updates(self) -> None:
         original_read_text = Path.read_text
 
