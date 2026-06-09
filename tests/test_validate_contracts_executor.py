@@ -2100,6 +2100,35 @@ async fn fingerprint_mismatch_is_conflict() {
                 module.validate_v04_source_landings()
         self.assertIn("postgres idempotency tests", str(ctx.exception))
 
+    def test_v04_requires_idempotency_begin_path_body(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/postgres_idempotency/begin.rs"):
+                return """
+use crate::postgres::PostgresStore;
+use crate::postgres_support::map_db_error;
+use crate::{IdempotencyAction, StoreError, advisory_lock_key};
+
+pub(super) async fn begin_submit_attempt(
+    store: &PostgresStore,
+    account_id: &str,
+    execution_id: &str,
+    idempotency_key: &str,
+    request_fingerprint: &str,
+) -> Result<IdempotencyAction, StoreError> {
+    let _ = (store, account_id, execution_id, idempotency_key, request_fingerprint);
+    Ok(IdempotencyAction::Conflict)
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v04_source_landings()
+        self.assertIn("postgres idempotency begin path", str(ctx.exception))
+
     def test_v07_requires_gateway_traits_file_tokens(self) -> None:
         original_read_text = Path.read_text
 
