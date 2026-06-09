@@ -2060,6 +2060,46 @@ async fn reservation_double_spend_is_prevented_concurrently() {
                 module.validate_v04_source_landings()
         self.assertIn("postgres receipt/reservation tests", str(ctx.exception))
 
+    def test_v04_requires_idempotency_replay_test_body(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/postgres_tests/idempotency.rs"):
+                return """
+use super::*;
+
+#[tokio::test]
+async fn same_request_replay_is_persisted() {
+    assert!(true);
+}
+
+#[tokio::test]
+async fn fingerprint_mismatch_is_conflict() {
+    let Some(store) = test_store().await else {
+        return;
+    };
+    let account = unique("acct");
+    let execution = unique("exec");
+    seed_execution_plan(&store, &account, &execution).await;
+    store
+        .begin_submit_attempt(&account, &execution, "idem-1", "req-1")
+        .await
+        .expect("begin idempotency");
+    let conflict = store
+        .begin_submit_attempt(&account, &execution, "idem-1", "req-2")
+        .await
+        .expect("conflict result");
+    assert_eq!(conflict, IdempotencyAction::Conflict);
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v04_source_landings()
+        self.assertIn("postgres idempotency tests", str(ctx.exception))
+
     def test_v07_requires_gateway_traits_file_tokens(self) -> None:
         original_read_text = Path.read_text
 
