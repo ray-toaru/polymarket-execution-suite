@@ -3299,6 +3299,115 @@ pub enum ServiceBackend {
                 module.validate_v12_service_layer(spec)
         self.assertIn("ServiceBackend variants", str(ctx.exception))
 
+    def test_v12_requires_blocked_submit_body(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        spec["paths"]["/v1/submissions"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/SubmitRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/SubmitReceipt"}}}}},
+            }
+        }
+        spec["paths"]["/v1/admin/cancel-order"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CancelOrderRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CancelReceipt"}}}}},
+            }
+        }
+        spec["paths"]["/v1/admin/reconcile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReconcileRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReconcileReport"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-service/src/submit/blocked.rs"):
+                return """
+use super::*;
+
+pub struct BlockedSubmitRequest<'a> {
+    pub plan: &'a pmx_core::ExecutionPlanSummary,
+}
+
+pub async fn blocked_submit_outcome<S>(
+    store: &S,
+    req: BlockedSubmitRequest<'_>,
+) -> Result<SubmitOutcome, ServiceError>
+where
+    S: ExecutionStore + IdempotencyStore + ExecutionLifecycleStore + Send + Sync,
+{
+    let _ = (store, req);
+    Err(ServiceError::Conflict("nope".into()))
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v12_service_layer(spec)
+        self.assertIn("blocked submit path", str(ctx.exception))
+
+    def test_v12_requires_flow_test_bodies(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/plans/compile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CompilePlanRequest"}}}},
+                "responses": {"200": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExecutionPlanSummary"}}}}},
+            }
+        }
+        spec["paths"]["/v1/submissions"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/SubmitRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/SubmitReceipt"}}}}},
+            }
+        }
+        spec["paths"]["/v1/admin/cancel-order"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CancelOrderRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/CancelReceipt"}}}}},
+            }
+        }
+        spec["paths"]["/v1/admin/reconcile"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReconcileRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReconcileReport"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-service/src/service_tests/flow.rs"):
+                return """
+use super::*;
+
+#[tokio::test]
+async fn service_flow_persists_and_blocks_submit() { assert!(true); }
+
+#[tokio::test]
+async fn service_id_bound_flow_persists_and_blocks_submit() { assert!(true); }
+
+#[tokio::test]
+async fn service_rejects_object_graph_mismatch() { assert!(true); }
+
+#[tokio::test]
+async fn service_rejects_tampered_approval_hash() { assert!(true); }
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v12_service_layer(spec)
+        self.assertIn("service flow tests", str(ctx.exception))
+
     def test_v09_requires_feature_gated_adapter_tests(self) -> None:
         original_read_text = Path.read_text
 
