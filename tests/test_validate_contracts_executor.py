@@ -2044,6 +2044,44 @@ Official SDK version: =0.6.0-canary.1
                 module.validate_v08_dependency_and_sdk_policy()
         self.assertIn("dependency policy doc", str(ctx.exception))
 
+    def test_v08_requires_sdk_plan_tokens_under_expected_sections(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("polymarket-execution-engine/docs/SDK_FIRST_ADAPTER_PLAN.md"):
+                return """
+# Official SDK-first Adapter Plan
+
+## Current state
+
+```text
+v0.7: official SDK spike + read-only smoke evidence
+```
+
+## Promotion sequence
+
+```text
+1. SDK spike typecheck/read-only smoke: done
+2. official adapter crate fmt/check/clippy/test: done
+```
+
+## Notes
+
+```text
+8. live-submit denied-path tests
+9. manual live-submit readiness review
+- no SDK dependency in core/policy/store
+- no live submit without feature + env + config + runtime gates
+```
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v08_dependency_and_sdk_policy()
+        self.assertIn("SDK first adapter plan doc", str(ctx.exception))
+
     def test_v07_requires_scaffold_admin_paths_body(self) -> None:
         original_read_text = Path.read_text
 
