@@ -3961,6 +3961,130 @@ async fn http_postgres_admin_routes_record_audit_events() {
                 module.validate_v15_admin_audit_and_runtime_provider(spec)
         self.assertIn("PostgreSQL API audit E2E", str(ctx.exception))
 
+    def test_v15_requires_service_audit_bridge_bodies(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/admin/audit-events"]["get"]["parameters"] = [
+            {"name": "before_audit_id"},
+            {"name": "operation"},
+            {"name": "principal_subject"},
+            {"name": "result"},
+            {"name": "correlation_id"},
+        ]
+        spec["paths"]["/v1/admin/audit-events"]["get"]["responses"] = {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "schema": {"type": "array", "items": {"$ref": "#/components/schemas/AdminAuditEvent"}}
+                    }
+                }
+            }
+        }
+        spec["paths"]["/v1/admin/kill-switch"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/KillSwitchRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/KillSwitchReceipt"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-service/src/service/audit.rs"):
+                return """
+use super::ExecutorService;
+
+impl<S, R> ExecutorService<S, R> {
+    pub async fn record_admin_audit_event(
+        &self,
+        event: AdminAuditEvent,
+    ) -> Result<(), ServiceError> {
+        let _ = event;
+        Ok(())
+    }
+
+    pub async fn list_admin_audit_events(
+        &self,
+        query: AdminAuditQuery,
+    ) -> Result<Vec<AdminAuditEvent>, ServiceError> {
+        let _ = query;
+        Ok(Vec::new())
+    }
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v15_admin_audit_and_runtime_provider(spec)
+        self.assertIn("service admin audit bridge", str(ctx.exception))
+
+    def test_v15_requires_audit_route_and_support_bodies(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["paths"]["/v1/admin/audit-events"]["get"]["parameters"] = [
+            {"name": "before_audit_id"},
+            {"name": "operation"},
+            {"name": "principal_subject"},
+            {"name": "result"},
+            {"name": "correlation_id"},
+        ]
+        spec["paths"]["/v1/admin/audit-events"]["get"]["responses"] = {
+            "200": {
+                "content": {
+                    "application/json": {
+                        "schema": {"type": "array", "items": {"$ref": "#/components/schemas/AdminAuditEvent"}}
+                    }
+                }
+            }
+        }
+        spec["paths"]["/v1/admin/kill-switch"] = {
+            "post": {
+                "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/KillSwitchRequest"}}}},
+                "responses": {"202": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/KillSwitchReceipt"}}}}},
+            }
+        }
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/src/routes/admin/audit.rs"):
+                return """
+use super::*;
+
+pub(crate) async fn list_admin_audit_events(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<AuditQuery>,
+) -> ApiResult<Vec<AdminAuditEvent>> {
+    let _ = (state, headers, query);
+    Ok((StatusCode::OK, Json(Vec::new())))
+}
+"""
+            if path.endswith("crates/pmx-api/src/support/audit.rs"):
+                return """
+use axum::{Json, http::StatusCode};
+
+pub(crate) async fn record_admin_audit(
+    state: &AppState,
+    principal: &Principal,
+    operation: &'static str,
+    request_fingerprint: Option<String>,
+    correlation_id: Option<String>,
+    result: impl Into<String>,
+) -> Result<(), (StatusCode, Json<serde_json::Value>)> {
+    let _ = (state, principal, operation, request_fingerprint, correlation_id, result);
+    Ok(())
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v15_admin_audit_and_runtime_provider(spec)
+        message = str(ctx.exception)
+        self.assertTrue(
+            "API admin audit routes" in message or "API admin audit support" in message
+        )
+
     def test_v16_requires_store_backed_runtime_provider_tokens(self) -> None:
         spec = self._minimal_v23_spec()
         original_read_text = Path.read_text
