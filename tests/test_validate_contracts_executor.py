@@ -2149,6 +2149,79 @@ async fn full_scaffold_path_compile_submit_cancel_and_reconcile() {
                 module.validate_v07_source_landings()
         self.assertIn("HTTP scaffold E2E", str(ctx.exception))
 
+    def test_v07_requires_sdk_spike_read_only_smoke_body(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("adapters/pmx-official-sdk-spike/src/lib.rs"):
+                return """
+use serde::{Deserialize, Serialize};
+
+pub const OFFICIAL_SDK_REPOSITORY: &str = "https://github.com/Polymarket/rs-clob-client-v2";
+pub const OFFICIAL_SDK_CRATE: &str = "polymarket_client_sdk_v2";
+pub const PINNED_OFFICIAL_SDK_VERSION: &str = "=0.6.0-canary.1";
+pub const LIVE_SUBMIT_FEATURE_NAME: &str = "live-submit";
+pub const CLOB_PRODUCTION_HOST: &str = "https://clob.polymarket.com";
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OfficialSdkAdapterConfig {
+    pub clob_host: String,
+    pub use_ws: bool,
+    pub use_heartbeats: bool,
+    pub allow_live_submit: bool,
+    pub require_explicit_runtime_kill_switch_open: bool,
+}
+
+impl Default for OfficialSdkAdapterConfig {
+    fn default() -> Self {
+        Self {
+            clob_host: CLOB_PRODUCTION_HOST.to_string(),
+            use_ws: true,
+            use_heartbeats: true,
+            allow_live_submit: false,
+            require_explicit_runtime_kill_switch_open: true,
+        }
+    }
+}
+
+#[cfg(feature = "sdk-typecheck")]
+pub fn sdk_client_type_marker() -> &'static str {
+    std::any::type_name::<polymarket_client_sdk_v2::clob::Client>()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[cfg(feature = "sdk-typecheck")]
+    use polymarket_client_sdk_v2::Result as SdkResult;
+    #[cfg(feature = "sdk-typecheck")]
+    use std::time::Duration;
+    #[cfg(feature = "sdk-typecheck")]
+    use tokio::time;
+
+    #[cfg(feature = "sdk-typecheck")]
+    fn default_read_only_client() -> SdkResult<polymarket_client_sdk_v2::clob::Client> {
+        polymarket_client_sdk_v2::clob::Client::new(
+            CLOB_PRODUCTION_HOST,
+            polymarket_client_sdk_v2::clob::Config::default(),
+        )
+    }
+
+    #[cfg(feature = "sdk-typecheck")]
+    #[tokio::test]
+    async fn read_only_ok_smoke() -> anyhow::Result<()> {
+        Ok(())
+    }
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v07_source_landings()
+        self.assertIn("official SDK spike", str(ctx.exception))
+
     def test_v16_requires_runtime_worker_schema_ref(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/runtime/workers"]["get"]["responses"]["200"]["content"]["application/json"]["schema"]["$ref"] = "#/components/schemas/Wrong"
