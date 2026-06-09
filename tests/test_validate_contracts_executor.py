@@ -2617,6 +2617,27 @@ jobs:
                 module.validate_v04_source_landings()
         self.assertIn("remote_unknown_is_persisted_conservatively", str(ctx.exception))
 
+    def test_v04_requires_http_auth_fake_e2e_smoke_body(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-api/tests/http_and_fake_e2e/smoke.rs"):
+                return """
+use super::*;
+
+#[tokio::test]
+async fn http_auth_and_fake_e2e_smoke() {
+    assert!(true);
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v04_source_landings()
+        self.assertIn("HTTP/auth fake E2E smoke", str(ctx.exception))
+
     def test_v04_requires_remote_unknown_receipt_test_body(self) -> None:
         original_read_text = Path.read_text
 
@@ -2817,6 +2838,47 @@ pub(super) async fn begin_submit_attempt(
             with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v04_source_landings()
         self.assertIn("postgres idempotency begin path", str(ctx.exception))
+
+    def test_v04_requires_idempotency_impl_method_bodies(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/postgres_idempotency.rs"):
+                return """
+use async_trait::async_trait;
+
+use crate::postgres::PostgresStore;
+use crate::{FinishSubmitAttempt, IdempotencyAction, IdempotencyStore, StoreError};
+
+#[async_trait]
+impl IdempotencyStore for PostgresStore {
+    async fn begin_submit_attempt(
+        &self,
+        account_id: &str,
+        execution_id: &str,
+        idempotency_key: &str,
+        request_fingerprint: &str,
+    ) -> Result<IdempotencyAction, StoreError> {
+        let _ = (self, account_id, execution_id, idempotency_key, request_fingerprint);
+        Ok(IdempotencyAction::Conflict)
+    }
+
+    async fn finish_submit_attempt(
+        &self,
+        attempt: FinishSubmitAttempt<'_>,
+    ) -> Result<(), StoreError> {
+        let _ = (self, attempt);
+        Ok(())
+    }
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v04_source_landings()
+        self.assertIn("postgres idempotency adapter", str(ctx.exception))
 
     def test_v07_requires_gateway_traits_file_tokens(self) -> None:
         original_read_text = Path.read_text
