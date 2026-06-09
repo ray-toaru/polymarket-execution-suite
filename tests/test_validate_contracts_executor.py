@@ -2131,6 +2131,35 @@ Official SDK version: =0.6.0-canary.1
                 module.validate_v08_dependency_and_sdk_policy()
         self.assertIn("dependency policy doc", str(ctx.exception))
 
+    def test_v08_requires_dependency_policy_bullet_lines(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("DEPENDENCY_POLICY.md"):
+                return """
+# Dependency and environment policy — v0.28
+
+## Current baseline
+
+```text
+Official SDK crate: polymarket_client_sdk_v2
+Official SDK version: =0.6.0-canary.1
+```
+
+## Policy
+
+Official SDK dependencies stay isolated in adapter crates.
+Core, policy, store, service, and public API crates must not depend directly on the official SDK.
+The official SDK remains exactly pinned until a newer version is separately reviewed and validated.
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v08_dependency_and_sdk_policy()
+        self.assertIn("missing policy line", str(ctx.exception))
+
     def test_v08_requires_root_cargo_workspace_version_alignment(self) -> None:
         original_read_text = Path.read_text
 
