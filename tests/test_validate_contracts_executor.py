@@ -2060,6 +2060,82 @@ async fn reservation_double_spend_is_prevented_concurrently() {
                 module.validate_v04_source_landings()
         self.assertIn("postgres receipt/reservation tests", str(ctx.exception))
 
+    def test_v04_requires_advisory_lock_key_body(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/model/advisory.rs"):
+                return """
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct AdvisoryLockKey(pub i64);
+
+pub fn advisory_lock_key(namespace: &str, account_id: &str, resource_key: &str) -> AdvisoryLockKey {
+    let _ = (namespace, account_id, resource_key);
+    AdvisoryLockKey(0)
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v04_source_landings()
+        self.assertIn("pmx-store advisory lock model", str(ctx.exception))
+
+    def test_v04_requires_postgres_connect_and_client_bodies(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("crates/pmx-store/src/postgres.rs"):
+                return """
+use crate::StoreError;
+use tokio_postgres::{Client, NoTls};
+
+#[derive(Debug, Clone)]
+pub struct PostgresStore {
+    database_url: String,
+}
+
+impl PostgresStore {
+    pub fn new(database_url: impl Into<String>) -> Self {
+        Self {
+            database_url: database_url.into(),
+        }
+    }
+
+    pub async fn connect(database_url: impl Into<String>) -> Result<Self, StoreError> {
+        let store = Self::new(database_url);
+        Ok(store)
+    }
+
+    pub async fn apply_schema(&self) -> Result<(), StoreError> {
+        let _ = self;
+        Ok(())
+    }
+
+    pub async fn applied_schema_migrations(&self) -> Result<Vec<(String, String)>, StoreError> {
+        let _ = self;
+        Ok(Vec::new())
+    }
+
+    pub(crate) async fn client(&self) -> Result<Client, StoreError> {
+        let _ = (&self.database_url, NoTls);
+        unimplemented!()
+    }
+
+    pub(crate) async fn rollback(client: &Client) {
+        let _ = client;
+    }
+}
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v04_source_landings()
+        self.assertIn("pmx-store postgres adapter", str(ctx.exception))
+
     def test_v04_requires_idempotency_replay_test_body(self) -> None:
         original_read_text = Path.read_text
 
