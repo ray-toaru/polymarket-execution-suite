@@ -98,6 +98,7 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
     def approval_request(self, artifact_sha: str, candidate_sha: str, runtime_sha: str) -> dict:
         return {
             "schema_version": 1,
+            "release_posture": "non_live_hardened",
             "status": "operator_approval_request_not_authorization",
             "approval_id": "approval-request-1",
             "approval_hash": "d" * 64,
@@ -170,6 +171,7 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
     def dual_control_review(self, request: dict, approval_request_sha: str, **overrides) -> dict:
         data = {
             "schema_version": 1,
+            "release_posture": "non_live_hardened",
             "status": "approved",
             "scope": "REAL_FUNDS_CANARY",
             "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
