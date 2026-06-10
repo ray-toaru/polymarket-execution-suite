@@ -76,7 +76,11 @@ class CanaryJsonSchemaTests(unittest.TestCase):
             credentialed_sdk_run_id="local",
             valid_for_minutes=15,
         )
+        self.assertEqual(request["release_posture"], "non_live_hardened")
         jsonschema.validate(request, schema)
+        request["release_posture"] = "production_ready"
+        with self.assertRaises(jsonschema.ValidationError):
+            jsonschema.validate(request, schema)
 
     def test_dual_control_review_schema_validates_template_output(self):
         request = {
@@ -106,14 +110,23 @@ class CanaryJsonSchemaTests(unittest.TestCase):
         module = load_module(ROOT / "scripts" / "prepare_dual_control_review_template.py", "prepare_dual_control_review_template")
         schema = load_json(ENGINE_CONFIG / "controlled-canary.dual-control-review.schema.json")
         template = module.build_template(request, approval_request_sha256="9" * 64)
+        self.assertEqual(template["release_posture"], "non_live_hardened")
         jsonschema.validate(template, schema)
+        template["release_posture"] = "production_ready"
+        with self.assertRaises(jsonschema.ValidationError):
+            jsonschema.validate(template, schema)
 
     def test_release_decision_schema_validates_template_and_example(self):
         schema = load_json(ENGINE_CONFIG / "controlled-canary.release-decision.schema.json")
         template = load_json(ENGINE_CONFIG / "controlled-canary.release-decision.template.json")
         example = load_json(ENGINE_CONFIG / "controlled-canary.release-decision.example.json")
+        self.assertEqual(template["release_posture"], "non_live_hardened")
+        self.assertEqual(example["release_posture"], "non_live_hardened")
         jsonschema.validate(template, schema)
         jsonschema.validate(example, schema)
+        template["release_posture"] = "production_ready"
+        with self.assertRaises(jsonschema.ValidationError):
+            jsonschema.validate(template, schema)
 
 
 if __name__ == "__main__":

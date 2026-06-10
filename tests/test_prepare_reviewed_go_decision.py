@@ -23,6 +23,7 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
     def approval_request(self, **overrides):
         data = {
             "schema_version": 1,
+            "release_posture": "non_live_hardened",
             "status": "operator_approval_request_not_authorization",
             "approval_id": "approval-request-1",
             "approval_hash": "a" * 64,
@@ -131,6 +132,7 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
         request = self.approval_request()
         data = {
             "schema_version": 1,
+            "release_posture": "non_live_hardened",
             "status": "approved",
             "scope": "REAL_FUNDS_CANARY",
             "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
@@ -175,6 +177,24 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
                 decision_id="decision-1",
                 decision_reason="test",
                 dual_control_review=self.dual_control_review(status="draft"),
+            )
+
+    def test_rejects_non_non_live_release_posture(self):
+        with self.assertRaisesRegex(SystemExit, "release_posture"):
+            self.module.build_decision(
+                self.approval_request(release_posture="production_ready"),
+                self.external_references(),
+                decision_id="decision-posture",
+                decision_reason="test",
+                dual_control_review=self.dual_control_review(),
+            )
+        with self.assertRaisesRegex(SystemExit, "release_posture"):
+            self.module.build_decision(
+                self.approval_request(),
+                self.external_references(),
+                decision_id="decision-review-posture",
+                decision_reason="test",
+                dual_control_review=self.dual_control_review(release_posture="live_ready"),
             )
 
     def test_rejects_expired_approval_request(self):

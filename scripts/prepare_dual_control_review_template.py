@@ -65,6 +65,7 @@ def build_template(request: dict[str, Any], *, approval_request_sha256: str) -> 
         raise SystemExit("approval request risk_limits must be an object")
     return {
         "schema_version": 1,
+        "release_posture": "non_live_hardened",
         "status": "draft_requires_independent_reviewer",
         "scope": "REAL_FUNDS_CANARY",
         "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
