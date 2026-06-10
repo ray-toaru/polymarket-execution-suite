@@ -83,14 +83,6 @@ defaults:
     shell: bash --noprofile --norc -euo pipefail {0}
 
 jobs:
-  adapter-required-ci:
-    name: adapter required ci
-    uses: ray-toaru/hermes-polymarket-executor-adapter/.github/workflows/ci.yml@2ef3e8ed1d333addbd7b85ec301d4d22655cb34f
-
-  engine-required-ci:
-    name: engine required ci
-    uses: ray-toaru/polymarket-execution-engine/.github/workflows/ci.yml@d3b25deb95410fe597a68fb150590c518d8efe38
-
   engine-rust-locked:
     name: engine rust locked
     runs-on: ubuntu-latest
@@ -125,6 +117,10 @@ jobs:
         working-directory: polymarket-execution-engine
         run: cargo check --workspace --locked
 
+      - name: Run engine clippy
+        working-directory: polymarket-execution-engine
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+
       - name: Run engine workspace tests
         working-directory: polymarket-execution-engine
         run: cargo test --workspace --exclude pmx-api --locked -- --test-threads=1
@@ -132,6 +128,76 @@ jobs:
       - name: Run engine fake HTTP e2e tests
         working-directory: polymarket-execution-engine
         run: cargo test -p pmx-api --test http_and_fake_e2e --locked -- --test-threads=1
+
+      - name: Run official SDK spike tests
+        working-directory: polymarket-execution-engine
+        run: |
+          cargo test --manifest-path adapters/pmx-official-sdk-spike/Cargo.toml --locked
+          cargo test --manifest-path adapters/pmx-official-sdk-spike/Cargo.toml --features sdk-typecheck --locked
+
+      - name: Run official SDK adapter tests
+        working-directory: polymarket-execution-engine
+        run: |
+          cargo test --manifest-path adapters/pmx-official-sdk-adapter/Cargo.toml --locked
+          cargo test --manifest-path adapters/pmx-official-sdk-adapter/Cargo.toml --features sdk-typecheck --locked
+
+  engine-postgres:
+    name: engine postgres integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PMX_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
+        with:
+          token: ${{ secrets.CI_SUBMODULE_TOKEN }}
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+        with:
+          toolchain: 1.88.0
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@bc2d2e71bd35c5549942babaa51a89c586b981d1
+        with:
+          workspaces: polymarket-execution-engine
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Apply engine migrations
+        working-directory: polymarket-execution-engine
+        run: |
+          for migration in migrations/[0-9]*.sql; do
+            psql "$PMX_TEST_DATABASE_URL" -f "$migration"
+          done
+
+      - name: Run engine store PostgreSQL tests
+        working-directory: polymarket-execution-engine
+        run: cargo test -p pmx-store postgres::postgres_tests --locked -- --nocapture --test-threads=1
+
+      - name: Run engine API PostgreSQL e2e tests
+        working-directory: polymarket-execution-engine
+        run: cargo test -p pmx-api --test http_postgres_e2e --locked -- --nocapture --test-threads=1
+
+      - name: Run engine migration drift dry-run
+        working-directory: polymarket-execution-engine
+        run: python validation/run_migration_drift_dry_run.py
 
   integration-python-compat:
     name: integration python compat
@@ -179,7 +245,7 @@ jobs:
             polymarket-execution-engine/validation
 
   integration-static:
-    name: integration static checks
+    name: integration release evidence
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -222,6 +288,12 @@ jobs:
         env:
           HERMES_AGENT_ROOT: ${{ github.workspace }}/hermes-agent
         run: PYTHONPATH=hermes-polymarket-executor-adapter/src python -m pytest -q hermes-polymarket-executor-adapter/tests
+
+      - name: Run adapter quality and security checks
+        run: |
+          ruff check hermes-polymarket-executor-adapter/src hermes-polymarket-executor-adapter/tests
+          PYTHONPATH=hermes-polymarket-executor-adapter/src mypy hermes-polymarket-executor-adapter/src
+          bandit -q -r hermes-polymarket-executor-adapter/src
 
       - name: Compile integration Python sources
         run: |

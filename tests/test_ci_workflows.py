@@ -107,18 +107,35 @@ class CiWorkflowTests(unittest.TestCase):
         self.assertIn("python -m mypy src", text)
         self.assertIn("python -m bandit -q -r src", text)
 
-    def test_root_ci_references_current_submodule_workflows(self):
+    def test_root_ci_runs_pinned_submodule_gates_locally(self):
         data = load_yaml(ROOT_CI)
-        adapter_sha = git_head(ROOT / "hermes-polymarket-executor-adapter")
-        engine_sha = git_head(ROOT / "polymarket-execution-engine")
-        self.assertEqual(
-            data["jobs"]["adapter-required-ci"]["uses"],
-            f"ray-toaru/hermes-polymarket-executor-adapter/.github/workflows/ci.yml@{adapter_sha}",
+        self.assertNotIn("adapter-required-ci", data["jobs"])
+        self.assertNotIn("engine-required-ci", data["jobs"])
+
+        rust_steps = data["jobs"]["engine-rust-locked"]["steps"]
+        rust_commands = "\n".join(
+            str(step.get("run", "")) for step in rust_steps
         )
-        self.assertEqual(
-            data["jobs"]["engine-required-ci"]["uses"],
-            f"ray-toaru/polymarket-execution-engine/.github/workflows/ci.yml@{engine_sha}",
+        self.assertIn("cargo clippy --workspace --all-targets --all-features", rust_commands)
+        self.assertIn("pmx-official-sdk-spike/Cargo.toml", rust_commands)
+        self.assertIn("pmx-official-sdk-adapter/Cargo.toml", rust_commands)
+
+        postgres = data["jobs"]["engine-postgres"]
+        self.assertEqual(postgres["services"]["postgres"]["image"], "postgres:16")
+        postgres_commands = "\n".join(
+            str(step.get("run", "")) for step in postgres["steps"]
         )
+        self.assertIn("migrations/[0-9]*.sql", postgres_commands)
+        self.assertIn("http_postgres_e2e", postgres_commands)
+        self.assertIn("run_migration_drift_dry_run.py", postgres_commands)
+
+        static_commands = "\n".join(
+            str(step.get("run", ""))
+            for step in data["jobs"]["integration-static"]["steps"]
+        )
+        self.assertIn("ruff check hermes-polymarket-executor-adapter", static_commands)
+        self.assertIn("mypy hermes-polymarket-executor-adapter/src", static_commands)
+        self.assertIn("bandit -q -r hermes-polymarket-executor-adapter/src", static_commands)
 
     def test_root_static_ci_provides_pinned_hermes_dependency(self):
         data = load_yaml(ROOT_CI)
