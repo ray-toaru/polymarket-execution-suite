@@ -48,6 +48,10 @@ class CiWorkflowTests(unittest.TestCase):
     def test_root_ci_pins_actions_and_uploads_proof_artifacts(self):
         text = ROOT_CI.read_text()
         data = load_yaml(ROOT_CI)
+        triggers = workflow_on(data)
+        self.assertIn("pull_request", triggers)
+        self.assertIn("push", triggers)
+        self.assertEqual(triggers["push"]["tags"], ["v*"])
         self.assertEqual(data["permissions"]["contents"], "read")
         self.assertEqual(data["permissions"]["actions"], "write")
 

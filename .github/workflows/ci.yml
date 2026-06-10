@@ -3,6 +3,8 @@ name: ci
 on:
   workflow_dispatch:
   push:
+    tags:
+      - "v*"
     paths:
       - ".github/**"
       - ".gitmodules"
