@@ -306,7 +306,9 @@ jobs:
             polymarket-execution-engine/validation
 
       - name: Check docs and evidence governance
-        run: python polymarket-execution-engine/validation/check_docs_evidence_governance.py
+        run: |
+          python scripts/check_docs_links.py
+          python polymarket-execution-engine/validation/check_docs_evidence_governance.py
 
       - name: Clean local artifacts
         run: python scripts/clean_local_artifacts.py
@@ -319,6 +321,12 @@ jobs:
         run: |
           artifact="$(python scripts/package_release.py | tail -n 1)"
           python scripts/check_release_artifact.py "$artifact" "$(cat VERSION)"
+          cp "$artifact" /tmp/first-release.zip
+          first_sha="$(sha256sum "$artifact" | cut -d ' ' -f 1)"
+          artifact="$(python scripts/package_release.py | tail -n 1)"
+          second_sha="$(sha256sum "$artifact" | cut -d ' ' -f 1)"
+          test "$first_sha" = "$second_sha"
+          cmp /tmp/first-release.zip "$artifact"
           echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
 
       - name: Upload validation proof artifacts
