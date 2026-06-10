@@ -68,7 +68,10 @@ class BlockedRehearsalPackageTests(unittest.TestCase):
                 return Completed(
                     returncode=1,
                     stdout="",
-                    stderr="real-funds canary not allowed by release decision",
+                    stderr=(
+                        "reviewed-go decision invalid: decision must be go; "
+                        "status must be reviewed_go"
+                    ),
                 )
 
             args = type(
