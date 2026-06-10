@@ -47,9 +47,35 @@ def sha256(path: Path) -> str | None:
     return digest.hexdigest()
 
 
-def git_info(path: Path) -> dict[str, object]:
+def status_path(line: str) -> str:
+    value = line[3:] if len(line) > 3 else ""
+    return value.split(" -> ", 1)[-1]
+
+
+def git_info(
+    path: Path,
+    *,
+    ignored_path_prefixes: tuple[str, ...] = (),
+    ignored_submodule_worktree: str | None = None,
+) -> dict[str, object]:
     status = run(["git", "status", "--short"], cwd=path).get("stdout")
     status_lines = [line for line in str(status).splitlines() if line.strip()]
+    status_lines = [
+        line
+        for line in status_lines
+        if not (
+            any(
+                status_path(line) == prefix
+                or status_path(line).startswith(f"{prefix}/")
+                for prefix in ignored_path_prefixes
+            )
+            or (
+                ignored_submodule_worktree is not None
+                and line.startswith(" m ")
+                and status_path(line) == ignored_submodule_worktree
+            )
+        )
+    ]
     return {
         "path": str(path.relative_to(ROOT)) if path != ROOT else ".",
         "branch": run(["git", "branch", "--show-current"], cwd=path).get("stdout"),
@@ -61,6 +87,18 @@ def git_info(path: Path) -> dict[str, object]:
 
 def main() -> int:
     executor = ROOT / "polymarket-execution-engine"
+    execution_info = git_info(
+        executor,
+        ignored_path_prefixes=("evidence/current",),
+    )
+    integration_info = git_info(
+        ROOT,
+        ignored_submodule_worktree=(
+            "polymarket-execution-engine"
+            if execution_info["status_clean"]
+            else None
+        ),
+    )
     locks = [
         executor / "Cargo.lock",
         executor / "adapters" / "pmx-official-sdk-adapter" / "Cargo.lock",
@@ -94,9 +132,9 @@ def main() -> int:
             "pip_freeze": run([sys.executable, "-m", "pip", "freeze", "--all"]),
         },
         "git": {
-            "integration": git_info(ROOT),
+            "integration": integration_info,
             "hermes": git_info(ROOT / "hermes-polymarket-executor-adapter"),
-            "execution": git_info(executor),
+            "execution": execution_info,
             "submodules": run(["git", "submodule", "status"]).get("stdout"),
         },
         "dependency_locks": {
