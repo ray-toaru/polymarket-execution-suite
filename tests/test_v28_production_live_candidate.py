@@ -1,5 +1,7 @@
 import importlib.util
 import json
+import contextlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -142,6 +144,26 @@ class V028ProductionLiveCandidateTests(unittest.TestCase):
         blockers = "\n".join(report["blockers"])
         self.assertIn("operator approval", blockers)
         self.assertIn("runtime state healthy", blockers)
+
+    def test_audit_only_not_ready_report_is_not_release_pass(self):
+        report = self.module.evaluate(self.root)
+        self.assertEqual(report["status"], "not_ready")
+
+        original_root = self.module.ROOT
+        self.module.ROOT = self.root
+        self.addCleanup(lambda: setattr(self.module, "ROOT", original_root))
+
+        audit_stdout = io.StringIO()
+        with contextlib.redirect_stdout(audit_stdout):
+            audit_rc = self.module.main([])
+        self.assertEqual(audit_rc, 0)
+        self.assertEqual(json.loads(audit_stdout.getvalue())["status"], "not_ready")
+
+        require_stdout = io.StringIO()
+        with contextlib.redirect_stdout(require_stdout):
+            require_rc = self.module.main(["--require-ready"])
+        self.assertEqual(require_rc, 1)
+        self.assertEqual(json.loads(require_stdout.getvalue())["status"], "not_ready")
 
 
 if __name__ == "__main__":
