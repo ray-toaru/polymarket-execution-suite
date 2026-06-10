@@ -115,6 +115,28 @@ class CiWorkflowTests(unittest.TestCase):
             f"ray-toaru/polymarket-execution-engine/.github/workflows/ci.yml@{engine_sha}",
         )
 
+    def test_root_static_ci_provides_pinned_hermes_dependency(self):
+        data = load_yaml(ROOT_CI)
+        steps = data["jobs"]["integration-static"]["steps"]
+        hermes_checkout = next(
+            step for step in steps if step["name"] == "Checkout pinned Hermes Agent test dependency"
+        )
+        self.assertRegex(hermes_checkout["uses"], FULL_SHA_USES)
+        self.assertEqual(hermes_checkout["with"]["repository"], "NousResearch/hermes-agent")
+        self.assertRegex(hermes_checkout["with"]["ref"], r"^[0-9a-f]{40}$")
+        self.assertEqual(hermes_checkout["with"]["path"], "hermes-agent")
+
+        adapter_tests = next(step for step in steps if step["name"] == "Run adapter tests")
+        self.assertEqual(adapter_tests["env"]["HERMES_AGENT_ROOT"], "${{ github.workspace }}/hermes-agent")
+
+        compile_step = next(
+            step for step in steps if step["name"] == "Compile integration Python sources"
+        )
+        self.assertEqual(
+            compile_step["run"].count("polymarket-execution-engine/validation"),
+            1,
+        )
+
     def test_engine_ci_supports_workflow_call(self):
         data = load_yaml(ENGINE_CI)
         self.assertIn("workflow_call", workflow_on(data))
