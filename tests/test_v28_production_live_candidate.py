@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import contextlib
+import hashlib
 import io
 import tempfile
 import unittest
@@ -80,6 +81,8 @@ class V028ProductionLiveCandidateTests(unittest.TestCase):
                 }
             ),
         )
+        artifact_body = "zip"
+        artifact_sha = hashlib.sha256(artifact_body.encode()).hexdigest()
         self.write(
             "dist/INDEX.json",
             json.dumps(
@@ -87,6 +90,7 @@ class V028ProductionLiveCandidateTests(unittest.TestCase):
                     "version": "0.28.0",
                     "current_release_artifact": {
                         "artifact_class": "production_live_candidate_non_live_by_default",
+                        "sha256": artifact_sha,
                         "validated_release": False,
                         "production_ready": False,
                         "live_trading_ready": False,
@@ -95,14 +99,14 @@ class V028ProductionLiveCandidateTests(unittest.TestCase):
             ),
         )
         for suffix, body in [
-            ("", "zip"),
-            (".sha256", "a" * 64 + "  polymarket-execution-suite-v0.28.0.zip\n"),
+            ("", artifact_body),
+            (".sha256", artifact_sha + "  polymarket-execution-suite-v0.28.0.zip\n"),
             (
                 ".evidence.json",
                 json.dumps(
                     {
                         "source": {"version": "0.28.0"},
-                        "artifact": {"sha256": "a" * 64},
+                        "artifact": {"sha256": artifact_sha},
                         "canonical_evidence": {
                             "workspace_manifest_snapshot_path": "polymarket-execution-suite-v0.28.0.workspace-manifest.json"
                         },
@@ -120,6 +124,14 @@ class V028ProductionLiveCandidateTests(unittest.TestCase):
         self.assertEqual(report["blockers"], [])
         self.assertEqual(report["external_evidence"]["status"], "not_locally_verifiable")
         self.assertEqual(len(report["external_evidence"]["required"]), 4)
+        self.assertTrue(report["warnings"])
+
+    def test_artifact_content_must_match_all_recorded_hashes(self):
+        self.write_ready_tree()
+        self.write("dist/polymarket-execution-suite-v0.28.0.zip", "tampered")
+        report = self.module.evaluate(self.root)
+        self.assertEqual(report["status"], "not_ready")
+        self.assertIn("actual artifact SHA-256", "\n".join(report["blockers"]))
 
     def test_live_ready_claim_blocks_candidate(self):
         self.write_ready_tree()

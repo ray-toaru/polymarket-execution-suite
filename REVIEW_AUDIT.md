@@ -1,5 +1,19 @@
 # Review audit — v0.28 production-live-candidate
 
+## 2026-06-10 disposition
+
+All ledger entries have been reclassified against current source and tests:
+locally closed items carry direct code/test evidence, non-live controls remain
+intentionally blocked, and external identity/platform requirements are not
+represented as local passes. The current release posture is
+`non_live_hardened`, not production or live-ready.
+
+The remaining external boundary includes independent reviewer identity and
+signature evidence, an executor admin-token capability probe, CI token scope,
+branch protection unavailable on the current private-repository plan, and a
+future formal live release decision. None of these is required to claim this
+non-live hardening result.
+
 ## Confirmed source-level improvements
 
 - Current docs now have a documented canonical set and archive boundary.

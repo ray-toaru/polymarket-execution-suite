@@ -72,6 +72,24 @@ The three repositories may evolve independently after the current shared release
             ),
         )
         self.write(".github/workflows/ci.yml", "name: suite\n")
+        release_branch = ".".join(suite_version.split(".")[:2])
+        self.write(
+            ".gitmodules",
+            (
+                "[submodule \"hermes-polymarket-executor-adapter\"]\n"
+                "\tpath = hermes-polymarket-executor-adapter\n"
+                "\turl = https://example.invalid/adapter.git\n"
+                f"\tbranch = v{release_branch}-production-live-candidate\n"
+                "[submodule \"polymarket-execution-engine\"]\n"
+                "\tpath = polymarket-execution-engine\n"
+                "\turl = https://example.invalid/engine.git\n"
+                f"\tbranch = v{release_branch}-production-live-candidate\n"
+            ),
+        )
+        self.write(
+            "RELEASE_DECISION.md",
+            f"v{suite_version}\nThe current governance freeze point is git tag `v{suite_version}`.\n",
+        )
         self.write(
             "polymarket-execution-engine/.github/workflows/ci.yml",
             "name: engine\nrun: ./validation/run_current_gates.sh\n",
@@ -111,6 +129,27 @@ The three repositories may evolve independently after the current shared release
         (self.root / missing).unlink()
         failures = self.module.validate_versions(self.root)
         self.assertIn(f"active docs missing from workspace: {missing}", "\n".join(failures))
+
+    def test_submodule_branch_metadata_must_match_release_line(self):
+        self.write_minimal_tree()
+        self.write(
+            ".gitmodules",
+            (self.root / ".gitmodules").read_text().replace(
+                "v0.27-production-live-candidate",
+                "v0.26-development",
+            ),
+        )
+        failures = self.module.validate_versions(self.root)
+        self.assertIn("submodule branch metadata", "\n".join(failures))
+
+    def test_release_freeze_tag_must_match_suite_version(self):
+        self.write_minimal_tree()
+        self.write(
+            "RELEASE_DECISION.md",
+            "v0.27.3\nThe current governance freeze point is git tag `v0.27.4`.\n",
+        )
+        failures = self.module.validate_versions(self.root)
+        self.assertIn("release decision freeze tag", "\n".join(failures))
 
 
 if __name__ == "__main__":

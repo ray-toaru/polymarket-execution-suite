@@ -1,5 +1,23 @@
 # Implementation status — v0.28.0 production-live-candidate
 
+## 2026-06-10 hardening closeout
+
+- `validate_contracts`: `26` structured, `0` mixed, `0` failed.
+- Root CI owns pinned component Rust/PostgreSQL/Python, adapter quality,
+  governance, deterministic package, and artifact validation gates.
+- Python compatibility is verified on 3.11 and 3.13 across Ubuntu and macOS.
+- Submodule branch metadata and release freeze-tag consistency are guarded.
+- Candidate-market preparation uses bounded read-only requests, content-type
+  validation, retry/backoff, dynamic book rules, reviewed external references,
+  and hash-bound snapshots.
+- Approval and runtime evidence bind commit/run references, artifact and
+  manifest hashes, operator/reviewer identity references, and runtime truth
+  without storing raw secrets or signatures.
+- `SECURITY_MODEL.md` records threat, misuse, and evidence-retention controls.
+
+Release posture remains `non_live_hardened`; production deployment and live
+submit/cancel remain blocked by the formal release decision.
+
 ## Implemented source-level items
 
 - Two-plane pre-live boundary: Python executor adapter + Rust execution plane.

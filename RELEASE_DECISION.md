@@ -29,9 +29,9 @@ that contains this file. The release package is the source archive
 `polymarket-execution-suite-v0.28.0.zip` plus its detached `.sha256` and
 `.zip.evidence.json` sidecars.
 
-The current governance freeze point for this decision is git tag `v0.28.1`.
-That tag captures post-closeout governance and identity-contract clarifications
-without changing the underlying source artifact version string.
+The current governance freeze point for this decision is git tag `v0.28.0`.
+That tag must identify the exact source artifact version reviewed by this
+decision.
 
 The package advances controlled canary preparation, v0.28 release-governance
 hardening, and records one completed controlled canary closeout:

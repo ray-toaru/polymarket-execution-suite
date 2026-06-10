@@ -8,6 +8,7 @@ all been refreshed together for the exact v0.28 source.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -85,9 +86,19 @@ def require_false(blockers: list[str], data: dict[str, Any], key: str, label: st
         blockers.append(f"{label}.{key} must remain false for v0.28 production-live-candidate")
 
 
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def evaluate(root: Path = ROOT, target_version: str = TARGET_VERSION) -> dict[str, Any]:
     blockers: list[str] = []
-    warnings: list[str] = []
+    warnings: list[str] = [
+        "External CI, reviewer identity, and operator approval references require independent verification."
+    ]
     external_requirements = [
         "GitHub CI run bound to the reviewed commit and artifact digest",
         "Independent approved dual-control review with reviewer identity provenance",
@@ -140,12 +151,23 @@ def evaluate(root: Path = ROOT, target_version: str = TARGET_VERSION) -> dict[st
         blockers.append("release artifact sha256 sidecar missing")
     if not evidence_sidecar.exists():
         blockers.append("release artifact evidence sidecar missing")
+    actual_artifact_sha = sha256(artifact) if artifact.is_file() else None
+    if sha_sidecar.is_file() and actual_artifact_sha is not None:
+        sha_parts = sha_sidecar.read_text().strip().split()
+        if (
+            len(sha_parts) < 2
+            or sha_parts[0] != actual_artifact_sha
+            or sha_parts[1] != artifact.name
+        ):
+            blockers.append("sha256 sidecar must match the actual artifact SHA-256 and filename")
     sidecar = load_json(evidence_sidecar)
     if sidecar and sidecar.get("source", {}).get("version") != target_version:
         blockers.append("release artifact evidence sidecar source.version must match v0.28 target")
     sidecar_artifact_sha = sidecar.get("artifact", {}).get("sha256") if sidecar else None
     if sidecar and (not isinstance(sidecar_artifact_sha, str) or not HEX64.match(sidecar_artifact_sha)):
         blockers.append("release artifact evidence sidecar must bind artifact.sha256")
+    elif actual_artifact_sha is not None and sidecar_artifact_sha != actual_artifact_sha:
+        blockers.append("release artifact evidence sidecar must match the actual artifact SHA-256")
     canonical = sidecar.get("canonical_evidence", {}) if sidecar else {}
     workspace_snapshot_path = canonical.get("workspace_manifest_snapshot_path") if isinstance(canonical, dict) else None
     if sidecar and (not isinstance(workspace_snapshot_path, str) or not workspace_snapshot_path):
@@ -162,6 +184,8 @@ def evaluate(root: Path = ROOT, target_version: str = TARGET_VERSION) -> dict[st
             blockers.append("dist INDEX.json artifact_class must be production_live_candidate_non_live_by_default")
         for key in ["validated_release", "production_ready", "live_trading_ready"]:
             require_false(blockers, indexed_artifact, key, "dist INDEX current_release_artifact")
+        if actual_artifact_sha is not None and indexed_artifact.get("sha256") != actual_artifact_sha:
+            blockers.append("dist INDEX current_release_artifact.sha256 must match the actual artifact SHA-256")
     elif dist_index:
         blockers.append("dist INDEX.json current_release_artifact must be an object")
 

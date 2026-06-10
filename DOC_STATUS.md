@@ -1,5 +1,12 @@
 # Documentation and evidence status — v0.28.0 production-live-candidate
 
+## 2026-06-10 status
+
+Current documents describe a `non_live_hardened` source candidate. Historical
+canary material remains audit context only; current CI, artifact, and evidence
+references must bind exact commits and hashes. `SECURITY_MODEL.md` is the
+canonical trust-boundary, misuse, threat, and evidence-retention summary.
+
 ## Current canonical documents
 
 - `AGENTS.md` — repository-level AI agent working rules and safety guardrails.
@@ -7,6 +14,7 @@
 - `PROJECT_ARCHITECTURE.md`
 - `COMPONENT_COMPATIBILITY.md`
 - `DEPENDENCY_POLICY.md`
+- `SECURITY_MODEL.md`
 - `DESIGN_DECISION_RECORD.md`
 - `IMPLEMENTATION_STATUS.md`
 - `CONTROLLED_CANARY_CLOSEOUT.md`

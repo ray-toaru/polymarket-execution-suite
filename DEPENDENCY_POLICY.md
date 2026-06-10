@@ -5,7 +5,7 @@
 ```text
 Rust: 1.88+
 Rust edition: 2024
-Python: >=3.13
+Python: >=3.11
 Official SDK crate: polymarket_client_sdk_v2
 Official SDK version: =0.6.0-canary.1
 ```

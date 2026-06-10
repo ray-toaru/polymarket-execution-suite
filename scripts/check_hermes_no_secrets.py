@@ -28,6 +28,9 @@ ALLOWLIST = {
     Path("AGENTS.md"),
     Path("README.md"),
     Path("docs/ROADMAP.md"),
+    Path("tests/test_client.py"),
+    Path("tests/test_models.py"),
+    Path("tests/test_no_secret_boundary.py"),
 }
 
 

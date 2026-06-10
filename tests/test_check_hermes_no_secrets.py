@@ -33,6 +33,9 @@ class CheckHermesNoSecretsTests(unittest.TestCase):
             finally:
                 self.module.CONTROL = original_control
 
+    def test_current_adapter_tree_passes_with_negative_security_tests_allowlisted(self):
+        self.assertEqual(self.module.main(), 0)
+
     def test_repo_wide_scan_catches_secret_outside_src(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)

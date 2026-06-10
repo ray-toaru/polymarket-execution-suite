@@ -13,8 +13,14 @@ submodules:
 Clone or refresh with submodules:
 
 ```bash
+git clone --recurse-submodules https://github.com/ray-toaru/polymarket-execution-suite.git
+cd polymarket-execution-suite
 git submodule update --init --recursive
 ```
+
+Private submodules require a GitHub credential that can read both pinned
+component repositories. CI uses an explicit submodule token; it is never
+written into the release package.
 
 In this local workspace the submodules point at sibling repositories:
 
@@ -31,6 +37,7 @@ Use these current documents first:
 - `PROJECT_ARCHITECTURE.md` — current architecture baseline from the v0.3 design split.
 - `COMPONENT_COMPATIBILITY.md` — component ownership, compatibility matrix, and independent versioning policy.
 - `DEPENDENCY_POLICY.md` — pinned runtime/toolchain/dependency policy.
+- `SECURITY_MODEL.md` — trust boundaries, threats, operator misuse controls, and evidence retention.
 - `DESIGN_DECISION_RECORD.md` — accepted architectural decisions.
 - `IMPLEMENTATION_STATUS.md` — implemented, blocked, and intentionally disabled areas.
 - `CONTROLLED_CANARY_CLOSEOUT.md` — tracked summary for the controlled canary closeout boundary and evidence requirements.
@@ -205,7 +212,6 @@ variables before any preflight or armed command:
 python scripts/activate_pmx_profile.py \
   --profile <profile> \
   --source-env-file polymarket-execution-engine/.env.profiles \
-  --write-secrets \
   --output polymarket-execution-engine/.env.runtime
 
 python polymarket-execution-engine/validation/check_active_profile_consistency.py \
@@ -217,8 +223,9 @@ Use `polymarket-execution-engine/.env.profiles.example` for the private source
 inventory shape and `polymarket-execution-engine/.env.runtime.example` for the
 runtime-facing output shape.
 
-`activate_pmx_profile.py` writes only active identity fields by default. Use
-`--write-secrets` only when the runtime env file must carry active credentials.
+`activate_pmx_profile.py` writes only active identity fields. Supply
+secret-bearing values separately through an explicit external secrets env file;
+local secret file generation is rejected.
 
 The runtime-facing env file must expose only generic variables such as
 `POLYMARKET_PRIVATE_KEY`, `POLY_API_*`, `PMX_CLOB_FUNDER`,

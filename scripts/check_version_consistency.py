@@ -147,6 +147,26 @@ def validate_versions(root: Path = ROOT) -> list[str]:
     if "not-production" not in manifest.get("status", ""):
         failures.append("release manifest status must explicitly say not-production")
 
+    release_line = ".".join(suite_version.split(".")[:2])
+    expected_submodule_branch = f"v{release_line}-production-live-candidate"
+    gitmodules = read_from(root, ".gitmodules")
+    submodule_branches = re.findall(r"^\s*branch\s*=\s*(\S+)\s*$", gitmodules, flags=re.MULTILINE)
+    if not submodule_branches or any(branch != expected_submodule_branch for branch in submodule_branches):
+        failures.append(
+            "submodule branch metadata must use "
+            f"{expected_submodule_branch!r}: got {submodule_branches!r}"
+        )
+
+    release_decision = read_from(root, "RELEASE_DECISION.md")
+    freeze_tag = regex_extract(
+        failures,
+        "release decision freeze tag",
+        release_decision,
+        r"freeze point[^`\n]*`v([^`]+)`",
+    )
+    if freeze_tag:
+        expect_equal(failures, "release decision freeze tag", freeze_tag, suite_version)
+
     ci = read_from(root, ".github/workflows/ci.yml")
     execution_ci = read_from(root, "polymarket-execution-engine/.github/workflows/ci.yml")
     if "./validation/run_current_gates.sh" in ci:

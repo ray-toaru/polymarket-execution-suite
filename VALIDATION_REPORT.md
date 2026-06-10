@@ -1,5 +1,23 @@
 # Validation Report — v0.28.0 production-live-candidate
 
+## 2026-06-10 non-live hardening result
+
+The validated posture is `non_live_hardened`. It is not `production_ready`,
+`live_ready`, or `real_funds_authorized`.
+
+- Contract validation passes with `26` structured checks and `0` mixed checks.
+- Root tests pass on Python 3.11 and 3.13 on Ubuntu and macOS.
+- Adapter tests, Ruff, mypy, Bandit, Rust locked checks, PostgreSQL integration,
+  docs governance, release hygiene, deterministic packaging, and artifact
+  validation are mandatory CI jobs.
+- Release candidate hashes are checked against the zip bytes, detached SHA-256
+  sidecar, evidence sidecar, and `dist/INDEX.json`.
+- Runtime secret generation is disabled; only explicit external secret inputs
+  are accepted.
+
+External reviewer identity, operator approval, signature evidence, token scope,
+branch protection, and any future live decision remain external blockers.
+
 ## Current Conclusion
 
 v0.28.0 is being prepared as a production-live-candidate.
