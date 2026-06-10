@@ -11,6 +11,17 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
+REQUIRED_REVIEWER_CHECKS = [
+    "artifact_hash_reviewed",
+    "evidence_manifest_hash_reviewed",
+    "market_candidate_reviewed",
+    "runtime_truth_reviewed",
+    "risk_limits_reviewed",
+    "secret_custody_reviewed",
+    "alerting_reviewed",
+    "rollback_reviewed",
+    "reconcile_and_cancel_fallback_reviewed",
+]
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -72,6 +83,8 @@ def build_template(request: dict[str, Any], *, approval_request_sha256: str) -> 
         "review_ref": "REPLACE_WITH_DUAL_CONTROL_REVIEW_REF",
         "reviewer_identity_ref": "REPLACE_WITH_INDEPENDENT_REVIEWER_IDENTITY_REF",
         "reviewer_identity_sha256": "REPLACE_WITH_REVIEWER_IDENTITY_SHA256",
+        "review_signature_evidence_ref": "REPLACE_WITH_EXTERNAL_SIGNATURE_EVIDENCE_REFERENCE",
+        "review_signature_evidence_sha256": "REPLACE_WITH_SIGNATURE_EVIDENCE_SHA256",
         "reviewed_at": "REPLACE_WITH_RFC3339_REVIEW_TIME",
         "expires_at": request["expires_at"],
         "approval_request_sha256": approval_request_sha256,
@@ -89,21 +102,20 @@ def build_template(request: dict[str, Any], *, approval_request_sha256: str) -> 
             "candidate_limit_price": risk_limits.get("candidate_limit_price"),
             "candidate_estimated_order_notional_usd": risk_limits.get("candidate_estimated_order_notional_usd"),
         },
-        "required_reviewer_checks": {
-            "artifact_hash_reviewed": False,
-            "evidence_manifest_hash_reviewed": False,
-            "market_candidate_reviewed": False,
-            "runtime_truth_reviewed": False,
-            "risk_limits_reviewed": False,
-            "secret_custody_reviewed": False,
-            "alerting_reviewed": False,
-            "rollback_reviewed": False,
-            "reconcile_and_cancel_fallback_reviewed": False,
+        "required_reviewer_checks": {check: False for check in REQUIRED_REVIEWER_CHECKS},
+        "reviewer_check_evidence_refs": {
+            check: f"REPLACE_WITH_{check.upper()}_EVIDENCE_REF"
+            for check in REQUIRED_REVIEWER_CHECKS
+        },
+        "reviewer_check_evidence_sha256s": {
+            check: f"REPLACE_WITH_{check.upper()}_EVIDENCE_SHA256"
+            for check in REQUIRED_REVIEWER_CHECKS
         },
         "reviewer_instruction": (
             "This template is not an authorization. An independent reviewer must replace review_ref, "
-            "reviewer_identity_ref, reviewed_at, set status to approved, and set each required_reviewer_checks "
-            "entry to true only after reviewing the bound artifacts."
+            "reviewer_identity_ref, signature evidence references, reviewed_at, set status to approved, and set "
+            "each required_reviewer_checks entry to true only after reviewing the bound artifacts and adding "
+            "a matching external evidence reference plus SHA-256 digest."
         ),
         "live_submit_authorized": False,
         "live_cancel_authorized": False,

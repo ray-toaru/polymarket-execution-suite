@@ -139,6 +139,8 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
             "review_ref": "dual://review",
             "reviewer_identity_ref": "operator://second-reviewer",
             "reviewer_identity_sha256": "9644ef536b99be9273eb3a72384705f6642a461810904a1107610fe4f48e14ec",
+            "review_signature_evidence_ref": "sigstore://review/dual-control",
+            "review_signature_evidence_sha256": "9" * 64,
             "reviewed_at": datetime.now(timezone.utc).isoformat(),
             "approval_request_sha256": "8" * 64,
             "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
@@ -163,6 +165,13 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
                 "alerting_reviewed": True,
                 "rollback_reviewed": True,
                 "reconcile_and_cancel_fallback_reviewed": True,
+            },
+            "reviewer_check_evidence_refs": {
+                check: f"evidence://review/{check}"
+                for check in self.module.REQUIRED_DUAL_CONTROL_CHECKS
+            },
+            "reviewer_check_evidence_sha256s": {
+                check: "8" * 64 for check in self.module.REQUIRED_DUAL_CONTROL_CHECKS
             },
             "secrets_included": False,
         }
@@ -246,6 +255,29 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
                 dual_control_review=review,
             )
 
+    def test_rejects_missing_reviewer_check_evidence(self):
+        review = self.dual_control_review()
+        del review["reviewer_check_evidence_refs"]["runtime_truth_reviewed"]
+        with self.assertRaisesRegex(SystemExit, "reviewer_check_evidence_refs.runtime_truth_reviewed"):
+            self.module.build_decision(
+                self.approval_request(),
+                self.external_references(),
+                decision_id="decision-1",
+                decision_reason="test",
+                dual_control_review=review,
+            )
+
+    def test_rejects_missing_review_signature_evidence(self):
+        review = self.dual_control_review(review_signature_evidence_ref="REPLACE_WITH_SIGNATURE")
+        with self.assertRaisesRegex(SystemExit, "review_signature_evidence_ref"):
+            self.module.build_decision(
+                self.approval_request(),
+                self.external_references(),
+                decision_id="decision-1",
+                decision_reason="test",
+                dual_control_review=review,
+            )
+
     def test_rejects_approval_request_sha_mismatch(self):
         with self.assertRaisesRegex(SystemExit, "approval_request_sha256"):
             self.module.build_decision(
@@ -300,6 +332,12 @@ class PrepareReviewedGoDecisionTests(unittest.TestCase):
         self.assertFalse(decision["production_deployment_authorized"])
         self.assertEqual(decision["external_references"]["operator_dual_control_review_ref"], "dual://review")
         self.assertEqual(decision["external_references"]["operator_dual_control_review_sha256"], "9" * 64)
+        self.assertEqual(decision["reviewer_identity_ref"], "operator://second-reviewer")
+        self.assertEqual(decision["review_signature_evidence_ref"], "sigstore://review/dual-control")
+        self.assertEqual(
+            decision["reviewer_check_evidence_refs"]["runtime_truth_reviewed"],
+            "evidence://review/runtime_truth_reviewed",
+        )
 
 
 if __name__ == "__main__":

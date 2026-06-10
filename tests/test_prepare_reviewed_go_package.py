@@ -8,6 +8,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "prepare_reviewed_go_package.py"
+REQUIRED_REVIEWER_CHECKS = [
+    "artifact_hash_reviewed",
+    "evidence_manifest_hash_reviewed",
+    "market_candidate_reviewed",
+    "runtime_truth_reviewed",
+    "risk_limits_reviewed",
+    "secret_custody_reviewed",
+    "alerting_reviewed",
+    "rollback_reviewed",
+    "reconcile_and_cancel_fallback_reviewed",
+]
 
 
 def load_module():
@@ -178,6 +189,8 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
             "review_ref": "dual://review",
             "reviewer_identity_ref": "operator://second-reviewer",
             "reviewer_identity_sha256": "9644ef536b99be9273eb3a72384705f6642a461810904a1107610fe4f48e14ec",
+            "review_signature_evidence_ref": "sigstore://review/dual-control",
+            "review_signature_evidence_sha256": "9" * 64,
             "reviewed_at": datetime.now(timezone.utc).isoformat(),
             "approval_request_sha256": approval_request_sha,
             "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
@@ -199,6 +212,12 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
                 "alerting_reviewed": True,
                 "rollback_reviewed": True,
                 "reconcile_and_cancel_fallback_reviewed": True,
+            },
+            "reviewer_check_evidence_refs": {
+                check: f"evidence://review/{check}" for check in REQUIRED_REVIEWER_CHECKS
+            },
+            "reviewer_check_evidence_sha256s": {
+                check: "8" * 64 for check in REQUIRED_REVIEWER_CHECKS
             },
             "secrets_included": False,
         }
