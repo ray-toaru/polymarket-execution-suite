@@ -52,6 +52,7 @@ _ORIGINALS = {
     name: getattr(_ENGINE, name)
     for name in [
         "openapi_operation",
+        "git_head",
         "operation_parameter_names",
         "schema_property_names",
         "schema_required_names",
@@ -126,6 +127,7 @@ def _sync_engine_state() -> None:
         "import_module_from_path",
         "rust_file_with_modules_text",
         "rust_source_text",
+        "git_head",
     ]:
         setattr(_ENGINE, name, globals()[name])
 
@@ -133,6 +135,10 @@ def _sync_engine_state() -> None:
 def _with_engine_state(callback, *args, **kwargs):
     _sync_engine_state()
     return callback(*args, **kwargs)
+
+
+def git_head(*args, **kwargs):
+    return _with_engine_state(_ORIGINALS["git_head"], *args, **kwargs)
 
 
 def __getattr__(name: str):

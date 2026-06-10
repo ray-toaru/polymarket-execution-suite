@@ -2578,13 +2578,15 @@ updates:
         def fake_read_text(path_self: Path, *args, **kwargs) -> str:
             path = str(path_self)
             if path.endswith(".github/workflows/ci.yml"):
-                return """
+                adapter_sha = module.git_head(ROOT / "hermes-polymarket-executor-adapter")
+                engine_sha = module.git_head(ROOT / "polymarket-execution-engine")
+                return f"""
 name: ci
 jobs:
   adapter-required-ci:
-    uses: ray-toaru/hermes-polymarket-executor-adapter/.github/workflows/ci.yml@caec425b172e126365b2f521f70ac82badc60e70
+    uses: ray-toaru/hermes-polymarket-executor-adapter/.github/workflows/ci.yml@{adapter_sha}
   engine-required-ci:
-    uses: ray-toaru/polymarket-execution-engine/.github/workflows/ci.yml@edc1b62b531b84a3297f254a48b8e17e01610f84
+    uses: ray-toaru/polymarket-execution-engine/.github/workflows/ci.yml@{engine_sha}
   engine-rust-locked:
     runs-on: ubuntu-latest
   integration-python-compat:

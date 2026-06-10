@@ -23,7 +23,7 @@ class V028DocsAlignmentTests(unittest.TestCase):
         roadmap = read("hermes-polymarket-executor-adapter/docs/ROADMAP.md")
         progress = read("hermes-polymarket-executor-adapter/docs/PROGRESS.md")
         combined = "\n".join([readme, roadmap, progress])
-        self.assertIn("v0.28 development status", readme)
+        self.assertIn("Current v0.28 adapter status", readme)
         self.assertIn("Hermes executor adapter", combined)
         self.assertIn("no signing, no direct CLOB, no executor database credentials", combined)
         self.assertNotIn("## v0.2\n", roadmap)

@@ -111,6 +111,14 @@ class ValidateContractsCliTests(unittest.TestCase):
         self.assertEqual(categories, {"surface", "executor", "governance"})
         self.assertEqual(severities, {"S1", "S2"})
         self.assertTrue(any(check["id"] == "v23_lifecycle_query_and_hardening" for check in file_report["checks"]))
+        proof_modes_by_id = {check["id"]: check["proof_mode"] for check in file_report["checks"]}
+        for check_id in [
+            "controlled_canary_release_decision_governance",
+            "canary_candidate_market_prep_boundary",
+            "single_host_deployment_governance",
+            "v28_production_live_candidate_guard",
+        ]:
+            self.assertEqual(proof_modes_by_id[check_id], "structured")
 
     def test_build_report_persists_failed_check_details(self) -> None:
         module = load_module()
