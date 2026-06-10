@@ -48,7 +48,7 @@ def sha256(path: Path) -> str | None:
 
 
 def status_path(line: str) -> str:
-    value = line[3:] if len(line) > 3 else ""
+    value = line[2:].lstrip() if len(line) > 2 else ""
     return value.split(" -> ", 1)[-1]
 
 

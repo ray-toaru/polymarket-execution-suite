@@ -38,6 +38,7 @@ class CollectValidationEnvironmentTests(unittest.TestCase):
 
     def test_engine_canonical_evidence_changes_are_output_not_source_dirt(self):
         info = self.git_info(
+            "M  evidence/current/environment.json\n"
             " M evidence/current/manifest.json\n"
             " D evidence/current/logs/old.log\n"
             "?? evidence/current/logs/new.log\n",
