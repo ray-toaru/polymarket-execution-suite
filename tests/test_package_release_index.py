@@ -203,6 +203,16 @@ class PackageReleaseIndexTests(unittest.TestCase):
                 self.package_release.git_status_lines(Path("/tmp"))
         self.assertIn("fatal: not a git repository", str(ctx.exception))
 
+    def test_command_output_surfaces_stderr_on_failure(self):
+        with mock.patch.object(
+            self.package_release,
+            "require_command_output",
+            side_effect=SystemExit("command failed (128) git submodule status: fatal: bad revision"),
+        ):
+            with self.assertRaises(SystemExit) as ctx:
+                self.package_release.command_output(["git", "submodule", "status"])
+        self.assertIn("fatal: bad revision", str(ctx.exception))
+
     def test_contract_validation_report_metadata_returns_path_and_hash(self):
         report = (
             ROOT
