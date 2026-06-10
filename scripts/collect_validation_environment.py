@@ -71,7 +71,7 @@ def git_info(
             )
             or (
                 ignored_submodule_worktree is not None
-                and line.startswith(" m ")
+                and (line.startswith(" m ") or line.startswith("m "))
                 and status_path(line) == ignored_submodule_worktree
             )
         )

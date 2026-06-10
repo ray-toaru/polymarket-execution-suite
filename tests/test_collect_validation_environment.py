@@ -57,7 +57,7 @@ class CollectValidationEnvironmentTests(unittest.TestCase):
 
     def test_parent_only_ignores_submodule_worktree_marker(self):
         clean = self.git_info(
-            " m polymarket-execution-engine\n",
+            "m polymarket-execution-engine\n",
             ignored_submodule_worktree="polymarket-execution-engine",
         )
         pointer_changed = self.git_info(
