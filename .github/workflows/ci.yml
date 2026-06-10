@@ -274,6 +274,7 @@ jobs:
           python -m pip install --upgrade pip==25.3
           python -m pip install -c constraints-ci.txt -r requirements-ci.txt
           python -m pip install -c constraints-ci.txt -e "hermes-polymarket-executor-adapter[test]"
+          python -m pip install ruff==0.15.15 mypy==2.1.0 bandit==1.9.4
 
       - name: Check version consistency
         run: python scripts/check_version_consistency.py
@@ -291,9 +292,9 @@ jobs:
 
       - name: Run adapter quality and security checks
         run: |
-          ruff check hermes-polymarket-executor-adapter/src hermes-polymarket-executor-adapter/tests
-          PYTHONPATH=hermes-polymarket-executor-adapter/src mypy hermes-polymarket-executor-adapter/src
-          bandit -q -r hermes-polymarket-executor-adapter/src
+          python -m ruff check hermes-polymarket-executor-adapter/src hermes-polymarket-executor-adapter/tests
+          PYTHONPATH=hermes-polymarket-executor-adapter/src python -m mypy hermes-polymarket-executor-adapter/src
+          python -m bandit -q -r hermes-polymarket-executor-adapter/src
 
       - name: Compile integration Python sources
         run: |

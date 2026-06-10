@@ -87,10 +87,16 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
         return path
 
     def runtime_truth(self, **overrides):
+        engine_version = (
+            (ROOT / "polymarket-execution-engine" / "Cargo.toml")
+            .read_text()
+            .split('version = "')[1]
+            .split('"')[0]
+        )
         data = {
             "schema_version": 1,
             "status": "reviewed_runtime_truth_candidate",
-            "source_release": f"v{(ROOT / 'polymarket-execution-engine' / 'Cargo.toml').read_text().split('version = \"')[1].split('\"')[0]}",
+            "source_release": f"v{engine_version}",
             "scope": "REAL_FUNDS_CANARY",
             "execution_style": "GTC_LIMIT_POST_ONLY_CANCEL",
             "account_id": "acct-canary",

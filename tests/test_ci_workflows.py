@@ -133,9 +133,13 @@ class CiWorkflowTests(unittest.TestCase):
             str(step.get("run", ""))
             for step in data["jobs"]["integration-static"]["steps"]
         )
-        self.assertIn("ruff check hermes-polymarket-executor-adapter", static_commands)
-        self.assertIn("mypy hermes-polymarket-executor-adapter/src", static_commands)
-        self.assertIn("bandit -q -r hermes-polymarket-executor-adapter/src", static_commands)
+        self.assertIn(
+            "python -m pip install ruff==0.15.15 mypy==2.1.0 bandit==1.9.4",
+            static_commands,
+        )
+        self.assertIn("python -m ruff check hermes-polymarket-executor-adapter", static_commands)
+        self.assertIn("python -m mypy hermes-polymarket-executor-adapter/src", static_commands)
+        self.assertIn("python -m bandit -q -r hermes-polymarket-executor-adapter/src", static_commands)
 
     def test_root_static_ci_provides_pinned_hermes_dependency(self):
         data = load_yaml(ROOT_CI)
