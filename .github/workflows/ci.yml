@@ -87,7 +87,7 @@ jobs:
 
   engine-required-ci:
     name: engine required ci
-    uses: ray-toaru/polymarket-execution-engine/.github/workflows/ci.yml@d078462f1f5a110798a69947fc484fd040976511
+    uses: ray-toaru/polymarket-execution-engine/.github/workflows/ci.yml@a31730ba0890158a2b3c79baa2be05e22dbb8628
 
   engine-rust-locked:
     name: engine rust locked

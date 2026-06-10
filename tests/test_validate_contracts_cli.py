@@ -104,6 +104,7 @@ class ValidateContractsCliTests(unittest.TestCase):
         self.assertEqual(file_report["check_count"], len(file_report["checks"]))
         self.assertGreater(file_report["check_count"], 10)
         self.assertIn("structured", file_report["proof_mode_counts"])
+        self.assertNotIn("mixed", file_report["proof_mode_counts"])
         self.assertEqual(set(file_report["severity_counts"]), {"S1", "S2"})
         self.assertEqual(file_report["failed_severity_counts"], {})
         categories = {check["category"] for check in file_report["checks"]}
@@ -113,6 +114,12 @@ class ValidateContractsCliTests(unittest.TestCase):
         self.assertTrue(any(check["id"] == "v23_lifecycle_query_and_hardening" for check in file_report["checks"]))
         proof_modes_by_id = {check["id"]: check["proof_mode"] for check in file_report["checks"]}
         for check_id in [
+            "no_public_forbidden_tokens",
+            "v04_source_landings",
+            "v09_official_adapter_boundary",
+            "v16_postgres_runtime_provider",
+            "v20_plan_storage_and_packaging",
+            "v23_lifecycle_query_and_hardening",
             "controlled_canary_release_decision_governance",
             "canary_candidate_market_prep_boundary",
             "single_host_deployment_governance",
