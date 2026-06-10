@@ -69,6 +69,7 @@ class CiWorkflowTests(unittest.TestCase):
         self.assertIn("check_v28_production_live_candidate.py --require-ready", text)
         self.assertIn("cargo test --workspace --exclude pmx-api --locked", text)
         self.assertIn("PyYAML==6.0.3", (ROOT / "requirements-ci.txt").read_text())
+        self.assertIn("jsonschema==4.25.1", (ROOT / "requirements-ci.txt").read_text())
         self.assertEqual(
             self._compileall_targets(text),
             {
