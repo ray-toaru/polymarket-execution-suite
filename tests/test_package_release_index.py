@@ -345,6 +345,54 @@ class PackageReleaseIndexTests(unittest.TestCase):
 
         self.assertIn("clean pinned submodules", str(ctx.exception))
 
+    def test_clean_submodule_guard_allows_canonical_engine_evidence_refresh(self):
+        with mock.patch.object(
+            self.package_release,
+            "submodule_records",
+            return_value=[
+                {
+                    "path": "polymarket-execution-engine",
+                    "commit": "deadbeef",
+                    "checkout_status": "clean",
+                    "checkout_ref": "HEAD",
+                }
+            ],
+        ), mock.patch.object(
+            self.package_release,
+            "git_status_lines",
+            return_value=[
+                " M evidence/current/manifest.json",
+                " D evidence/current/logs/old.log",
+                "?? evidence/current/logs/new.log",
+            ],
+        ):
+            self.package_release.ensure_clean_release_submodules()
+
+    def test_clean_submodule_guard_rejects_non_evidence_engine_change(self):
+        with mock.patch.object(
+            self.package_release,
+            "submodule_records",
+            return_value=[
+                {
+                    "path": "polymarket-execution-engine",
+                    "commit": "deadbeef",
+                    "checkout_status": "clean",
+                    "checkout_ref": "HEAD",
+                }
+            ],
+        ), mock.patch.object(
+            self.package_release,
+            "git_status_lines",
+            return_value=[
+                " M evidence/current/manifest.json",
+                " M Cargo.toml",
+            ],
+        ):
+            with self.assertRaises(SystemExit) as ctx:
+                self.package_release.ensure_clean_release_submodules()
+
+        self.assertIn("Cargo.toml", str(ctx.exception))
+
     def test_write_dist_index_records_explicit_manifest_binding_kinds(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
