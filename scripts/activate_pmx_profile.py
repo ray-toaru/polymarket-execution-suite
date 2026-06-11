@@ -11,6 +11,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import stat
 
@@ -39,6 +40,8 @@ SECRET_KEYS = {
     "PMX_CLOB_FUNDER",
 }
 UNSUPPORTED_ENV_TOKENS = ("`", "$(", "${", "&&", "||", ";")
+ENV_KEY_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+PROFILE_NAME_PATTERN = re.compile(r"^[A-Za-z0-9_]+$")
 RUNTIME_FORBIDDEN_TEXT = (
     "PMX_PROFILE_",
     "PMX_ACCT_",
@@ -79,21 +82,27 @@ def parse_env_file(path: Path) -> dict[str, str]:
         if "=" not in raw_line:
             raise SystemExit(f"invalid env assignment in {path}: {raw_line}")
         key, value = raw_line.split("=", 1)
-        values[key.strip()] = parse_env_value(value, path=path, raw_line=raw_line)
+        key = key.strip()
+        if not ENV_KEY_PATTERN.fullmatch(key):
+            raise SystemExit(f"invalid env variable name in {path}: {key!r}")
+        if key in values:
+            raise SystemExit(f"duplicate env variable in {path}: {key}")
+        values[key] = parse_env_value(value, path=path, raw_line=raw_line)
     return values
 
 
 def load_profile_source(source_env_file: Path | None) -> dict[str, str]:
-    values = dict(os.environ)
-    if source_env_file is not None:
-        values.update(parse_env_file(source_env_file))
-    return values
+    if source_env_file is None:
+        return dict(os.environ)
+    return parse_env_file(source_env_file)
 
 
 def normalize_profile_name(profile: str) -> str:
     cleaned = profile.strip()
     if not cleaned:
         raise SystemExit("profile name must not be empty")
+    if not PROFILE_NAME_PATTERN.fullmatch(cleaned):
+        raise SystemExit("profile name may contain only letters, numbers, and underscores")
     return cleaned
 
 

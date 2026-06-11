@@ -215,6 +215,32 @@ class ActivatePmxProfileTests(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "unsupported shell-style env value"):
                 self.module.parse_env_file(env_file)
 
+    def test_parse_env_file_rejects_invalid_variable_name(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            env_file = Path(tmp_name) / ".env"
+            env_file.write_text("INVALID-NAME=value\n")
+            with self.assertRaisesRegex(SystemExit, "invalid env variable name"):
+                self.module.parse_env_file(env_file)
+
+    def test_parse_env_file_rejects_duplicate_variable(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            env_file = Path(tmp_name) / ".env"
+            env_file.write_text("KEY=first\nKEY=second\n")
+            with self.assertRaisesRegex(SystemExit, "duplicate env variable"):
+                self.module.parse_env_file(env_file)
+
+    def test_load_profile_source_does_not_mix_explicit_file_with_ambient_env(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            env_file = Path(tmp_name) / ".env"
+            env_file.write_text("FILE_ONLY=value\n")
+            with mock.patch.dict(os.environ, {"AMBIENT_ONLY": "secret"}, clear=True):
+                values = self.module.load_profile_source(env_file)
+        self.assertEqual(values, {"FILE_ONLY": "value"})
+
+    def test_normalize_profile_name_rejects_unsafe_characters(self):
+        with self.assertRaisesRegex(SystemExit, "letters, numbers, and underscores"):
+            self.module.normalize_profile_name("../acct-b")
+
     def test_main_does_not_emit_account_identity_in_json(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
