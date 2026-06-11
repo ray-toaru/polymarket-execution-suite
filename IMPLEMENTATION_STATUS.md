@@ -1,5 +1,20 @@
 # Implementation status — v0.28.0 production-live-candidate
 
+## 2026-06-11 additions
+
+- Added a read-only admin session endpoint with subject, scope, and capability
+  reporting.
+- Added adapter verification that rejects subject mismatch and missing admin
+  capabilities.
+- Added non-live release provenance generation and validation with artifact,
+  manifest, source, submodule, CI, and dependency-material hashes.
+- Regenerated current engine evidence and passed exact-commit CI in all three
+  repositories.
+
+External deployment identity proof, independent reviewer signature, GitHub
+secret scope, and branch protection remain external requirements. Live submit,
+live cancel, production deployment, and real-funds authorization remain blocked.
+
 ## 2026-06-10 hardening closeout
 
 - `validate_contracts`: `26` structured, `0` mixed, `0` failed.

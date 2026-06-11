@@ -1,5 +1,16 @@
 # Release Decision — v0.28.0 production-live-candidate
 
+## 2026-06-11 signed non-live freeze
+
+The historical `v0.28.0` tag points to an earlier commit and is not moved.
+Current evidence is published under the signed governance tag
+`v0.28.0-non-live-hardened.1`.
+
+That tag binds a `non_live_hardened` source and artifact. Its signature is
+evidence of operator provenance only. It is not an independent dual-control
+approval, production approval, live-trading approval, or real-funds
+authorization.
+
 ## Decision
 
 Current decision: `production-live-candidate`
@@ -29,9 +40,9 @@ that contains this file. The release package is the source archive
 `polymarket-execution-suite-v0.28.0.zip` plus its detached `.sha256` and
 `.zip.evidence.json` sidecars.
 
-The current governance freeze point for this decision is git tag `v0.28.0`.
-That tag must identify the exact source artifact version reviewed by this
-decision.
+The historical governance freeze point is git tag `v0.28.0`. Current non-live
+hardening evidence uses `v0.28.0-non-live-hardened.1`; neither tag authorizes
+live execution.
 
 The package advances controlled canary preparation, v0.28 release-governance
 hardening, and records one completed controlled canary closeout:

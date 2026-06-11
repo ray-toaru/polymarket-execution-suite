@@ -1,5 +1,20 @@
 # Review audit — v0.28 production-live-candidate
 
+## 2026-06-11 follow-up
+
+The source-level admin-token gap is closed by `GET /v1/admin/session` and the
+adapter's fail-closed subject/capability verification. A real deployed executor
+probe remains external because no deployment URL or token was configured.
+
+Dependency provenance and exact CI binding are now implemented. A single GPG
+operator signature can bind the non-live release statement, but it does not
+satisfy independent dual control; `B-009` and `F-100` remain open until a
+distinct reviewer identity signs or an equivalent external identity provider
+attests the review.
+
+The existing `v0.28.0` tag points to an earlier commit and will not be moved.
+The current non-live artifact uses a separate signed governance tag.
+
 ## 2026-06-10 disposition
 
 All ledger entries have been reclassified against current source and tests:

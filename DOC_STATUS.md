@@ -1,5 +1,16 @@
 # Documentation and evidence status — v0.28.0 production-live-candidate
 
+## 2026-06-11 status
+
+Canonical evidence was regenerated after the admin-session and provenance
+changes. Current release material must include the zip, SHA-256 sidecar,
+evidence sidecar, and provenance sidecar. External signature material belongs
+in the GitHub release, not in the repository.
+
+The signed governance tag for this source line is
+`v0.28.0-non-live-hardened.1`. It does not replace or move the historical
+`v0.28.0` tag and does not authorize live trading.
+
 ## 2026-06-10 status
 
 Current documents describe a `non_live_hardened` source candidate. Historical

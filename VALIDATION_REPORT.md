@@ -1,5 +1,19 @@
 # Validation Report — v0.28.0 production-live-candidate
 
+## 2026-06-11 evidence refresh
+
+- Root CI run `27326801031` passed for commit `5d7eaced32e7f24048435f52d0a9fa96415b2f63`.
+- Adapter CI run `27326769709` passed for commit `0286fa59864b6f9860835f3a29da1c395be8ea93`.
+- Engine CI run `27326785130` passed after rerunning a PostgreSQL job whose first attempt failed before checkout during a Docker image pull.
+- Engine current evidence was regenerated at commit `04114a32b5d16306a5f2c29048f2f62c949ecfde`.
+- The admin session probe verifies the authenticated subject and required admin capabilities without remote side effects.
+- Release provenance now binds the artifact, evidence manifest, source commits, dependency materials, and exact CI runs.
+
+The posture remains `non_live_hardened`. PostgreSQL and credentialed runtime
+proof omitted from the local refresh remains explicitly skipped where external
+configuration was absent; GitHub branch protection is unavailable for this
+private repository under the current plan.
+
 ## 2026-06-10 non-live hardening result
 
 The validated posture is `non_live_hardened`. It is not `production_ready`,
