@@ -110,7 +110,17 @@ class BlockedRehearsalPackageTests(unittest.TestCase):
             output_dir = Path(tmp_name)
 
             with patch.object(self.module, "run_rehearsal", return_value=([], 1)):
-                with patch.object(self.module.sys, "argv", ["blocked-rehearsal", "--output-dir", str(output_dir)]):
+                with patch.object(
+                    self.module.sys,
+                    "argv",
+                    [
+                        "blocked-rehearsal",
+                        "--output-dir",
+                        str(output_dir),
+                        "--credentialed-sdk-run-id",
+                        "fixture-sdk-run",
+                    ],
+                ):
                     with patch("builtins.print"):
                         exit_code = self.module.main()
 
