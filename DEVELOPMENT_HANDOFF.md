@@ -13,6 +13,17 @@ cd polymarket-execution-engine
 ./validation/run_current_gates.sh
 ```
 
+## Branch governance
+
+`main` is the permanent integration branch in this repository and both
+component repositories. Version-named candidate branches and release tags are
+retained for audit history; they are not permanent default branches.
+
+The integration repository pins exact component commits. Commit component
+changes in the relevant submodule first, then update the pinned submodule
+commit here as one reviewed integration change. A commit being reachable from
+`main` does not change the documented non-live release posture.
+
 ## Current canary decision-prep state
 
 The current next phase is still decision preparation, not live execution. Read

@@ -147,8 +147,7 @@ def validate_versions(root: Path = ROOT) -> list[str]:
     if "not-production" not in manifest.get("status", ""):
         failures.append("release manifest status must explicitly say not-production")
 
-    release_line = ".".join(suite_version.split(".")[:2])
-    expected_submodule_branch = f"v{release_line}-production-live-candidate"
+    expected_submodule_branch = "main"
     gitmodules = read_from(root, ".gitmodules")
     submodule_branches = re.findall(r"^\s*branch\s*=\s*(\S+)\s*$", gitmodules, flags=re.MULTILINE)
     if not submodule_branches or any(branch != expected_submodule_branch for branch in submodule_branches):

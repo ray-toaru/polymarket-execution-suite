@@ -72,18 +72,17 @@ The three repositories may evolve independently after the current shared release
             ),
         )
         self.write(".github/workflows/ci.yml", "name: suite\n")
-        release_branch = ".".join(suite_version.split(".")[:2])
         self.write(
             ".gitmodules",
             (
                 "[submodule \"hermes-polymarket-executor-adapter\"]\n"
                 "\tpath = hermes-polymarket-executor-adapter\n"
                 "\turl = https://example.invalid/adapter.git\n"
-                f"\tbranch = v{release_branch}-production-live-candidate\n"
+                "\tbranch = main\n"
                 "[submodule \"polymarket-execution-engine\"]\n"
                 "\tpath = polymarket-execution-engine\n"
                 "\turl = https://example.invalid/engine.git\n"
-                f"\tbranch = v{release_branch}-production-live-candidate\n"
+                "\tbranch = main\n"
             ),
         )
         self.write(
@@ -130,13 +129,14 @@ The three repositories may evolve independently after the current shared release
         failures = self.module.validate_versions(self.root)
         self.assertIn(f"active docs missing from workspace: {missing}", "\n".join(failures))
 
-    def test_submodule_branch_metadata_must_match_release_line(self):
+    def test_submodule_branch_metadata_must_use_main(self):
         self.write_minimal_tree()
         self.write(
             ".gitmodules",
             (self.root / ".gitmodules").read_text().replace(
-                "v0.27-production-live-candidate",
-                "v0.26-development",
+                "branch = main",
+                "branch = v0.28-production-live-candidate",
+                1,
             ),
         )
         failures = self.module.validate_versions(self.root)
