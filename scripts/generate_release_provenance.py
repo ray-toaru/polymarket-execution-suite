@@ -43,8 +43,12 @@ def current_submodules(root: Path) -> list[dict[str, str]]:
     for line in git_output(root, "submodule", "status", "--recursive").splitlines():
         if not line.strip():
             continue
-        status = line[0]
-        fields = line[1:].strip().split()
+        if line[0] in "+-U ":
+            status = line[0]
+            fields = line[1:].strip().split()
+        else:
+            status = " "
+            fields = line.split()
         records.append(
             {
                 "path": fields[1],

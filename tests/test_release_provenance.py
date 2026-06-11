@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -56,6 +57,21 @@ class ReleaseProvenanceTests(unittest.TestCase):
                 hashlib.sha256(b"release").hexdigest(),
             )
             self.assertEqual(self.module.validate_provenance(provenance, artifact), [])
+
+    def test_current_submodules_preserves_clean_status_without_leading_marker(self):
+        output = (
+            "a" * 40
+            + " engine (heads/main)\n+"
+            + "b" * 40
+            + " adapter (heads/main)"
+        )
+        with mock.patch.object(self.module, "git_output", return_value=output):
+            records = self.module.current_submodules(Path("/repo"))
+
+        self.assertEqual(records[0]["commit"], "a" * 40)
+        self.assertEqual(records[0]["path"], "engine")
+        self.assertEqual(records[0]["checkout_status"], "clean")
+        self.assertEqual(records[1]["checkout_status"], "different_commit")
 
     def test_validation_rejects_live_posture_and_artifact_tampering(self):
         with tempfile.TemporaryDirectory() as tmp_name:
