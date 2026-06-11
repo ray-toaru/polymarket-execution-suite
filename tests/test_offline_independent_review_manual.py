@@ -1,9 +1,11 @@
 import unittest
+import json
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 MANUAL = ROOT / "OFFLINE_INDEPENDENT_REVIEW_MANUAL.md"
+LEI_REGISTRY = ROOT / "external_reviews" / "reviewer-registry" / "lei.pending.json"
 
 
 class OfflineIndependentReviewManualTests(unittest.TestCase):
@@ -30,7 +32,7 @@ class OfflineIndependentReviewManualTests(unittest.TestCase):
         required_phrases = [
             "The reviewer must be a real person who is not the operator.",
             "does not change that decision or enable live execution by itself",
-            "The repository validator checks the signature-evidence reference and hash.",
+            "The repository validator now requires this cryptographic verification",
             '"independent_human_review": false',
             '"authorization_effect": "none"',
         ]
@@ -55,9 +57,17 @@ class OfflineIndependentReviewManualTests(unittest.TestCase):
 
     def test_manual_uses_existing_packet_and_reviewed_go_entrypoints(self):
         text = MANUAL.read_text()
+        self.assertIn("scripts/verify_dual_control_review_signature.py", text)
         self.assertIn("scripts/prepare_dual_control_review_template.py", text)
         self.assertIn("scripts/prepare_dual_control_review_packet.py", text)
         self.assertIn("scripts/prepare_canary_reviewed_go_bundle.py", text)
+
+    def test_lei_registry_is_pending_not_authorizing(self):
+        registry = json.loads(LEI_REGISTRY.read_text())
+        reviewer = registry["reviewers"][0]
+        self.assertEqual(reviewer["reviewer_identity_ref"], "reviewer://lei")
+        self.assertEqual(reviewer["status"], "pending_key_registration")
+        self.assertIn("REPLACE_WITH_", reviewer["allowed_signers_file"])
 
 
 if __name__ == "__main__":

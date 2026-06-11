@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "reviewers": [
+    {
+      "reviewer_identity_ref": "reviewer://lei",
+      "status": "pending_key_registration",
+      "allowed_signing_method": "ssh",
+      "ssh_principal": "lei@example.invalid",
+      "allowed_signers_file": "REPLACE_WITH_LEI_ALLOWED_SIGNERS_FILE",
+      "signing_key_attestation_file": "REPLACE_WITH_LEI_SIGNING_KEY_ATTESTATION_FILE",
+      "registered_at": "2026-06-11T00:00:00Z",
+      "registered_by": "operator://primary",
+      "notes": "Pending external reviewer registration. Do not change status to active until lei independently provides and verifies the signing public key, allowed_signers entry, and signing-key attestation over a separate channel."
+    }
+  ]
+}

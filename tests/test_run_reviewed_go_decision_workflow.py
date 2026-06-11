@@ -56,6 +56,9 @@ class RunReviewedGoDecisionWorkflowTests(unittest.TestCase):
             timeout_seconds=10.0,
             valid_for_minutes=15,
             approved_dual_control_review_file=None,
+            canonical_dual_control_review_file=None,
+            review_signature_file=None,
+            reviewer_registry_file=None,
             external_references_file=None,
             reviewed_go_output_dir=None,
             decision_id=None,
@@ -101,6 +104,9 @@ class RunReviewedGoDecisionWorkflowTests(unittest.TestCase):
             tmp = Path(tmp_name)
             args = self.args(tmp)
             args.approved_dual_control_review_file = tmp / "dual-control-review.approved.json"
+            args.canonical_dual_control_review_file = tmp / "dual-control-review.approved.canonical.json"
+            args.review_signature_file = tmp / "dual-control-review.signature"
+            args.reviewer_registry_file = tmp / "reviewer-registry.json"
             args.external_references_file = tmp / "external-references.json"
             args.reviewed_go_output_dir = tmp / "reviewed-go"
 

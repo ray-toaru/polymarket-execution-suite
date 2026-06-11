@@ -392,25 +392,30 @@ cmp /tmp/dual-control-review.rebuilt.json \
 Verify a GPG signature:
 
 ```bash
-gpg --status-fd 1 \
-  --verify dual-control-review.approved.canonical.json.asc \
-  dual-control-review.approved.canonical.json \
-  > review-signature-verification.txt 2>&1
+python scripts/verify_dual_control_review_signature.py \
+  --approved-dual-control-review-file dual-control-review.approved.json \
+  --canonical-dual-control-review-file \
+    dual-control-review.approved.canonical.json \
+  --review-signature-file dual-control-review.approved.canonical.json.asc \
+  --reviewer-registry-file <reviewer-registry.json> \
+  > review-signature-verification.txt
 ```
 
-The output must contain a valid signature from the exact registered
-fingerprint. A valid signature from an unregistered key is a rejection.
+The verifier imports only the registered reviewer public key, checks the
+registered fingerprint, confirms the signing-key attestation hash, rejects
+inactive or revoked registry entries, and verifies that the canonical JSON
+matches the approved review JSON.
 
 Verify an SSH signature:
 
 ```bash
-ssh-keygen -Y verify \
-  -f allowed_signers \
-  -I reviewer@example.invalid \
-  -n pmx-canary-review \
-  -s dual-control-review.approved.canonical.json.sig \
-  < dual-control-review.approved.canonical.json \
-  > review-signature-verification.txt 2>&1
+python scripts/verify_dual_control_review_signature.py \
+  --approved-dual-control-review-file dual-control-review.approved.json \
+  --canonical-dual-control-review-file \
+    dual-control-review.approved.canonical.json \
+  --review-signature-file dual-control-review.approved.canonical.json.sig \
+  --reviewer-registry-file <reviewer-registry.json> \
+  > review-signature-verification.txt
 ```
 
 Record the verifier command, exit status, reviewer fingerprint, canonical JSON
@@ -423,9 +428,9 @@ Confirm that the attestation hash matches
 successful verification. Retain the detached signature and verification report
 beside the attestation.
 
-The repository validator checks the signature-evidence reference and hash. This
-manual additionally requires the operator to perform and record cryptographic
-verification of the final canonical JSON.
+The repository validator now requires this cryptographic verification before a
+reviewed-go package can be created. A valid signature from an inactive,
+revoked, expired, unregistered, or identity-mismatched reviewer is a rejection.
 
 ## Step 7: Produce the reviewed-go package
 
@@ -436,6 +441,10 @@ python scripts/prepare_canary_reviewed_go_bundle.py \
   --review-packet-dir <review-packet-dir> \
   --approved-dual-control-review-file \
     <dual-control-review.approved.json> \
+  --canonical-dual-control-review-file \
+    <dual-control-review.approved.canonical.json> \
+  --review-signature-file <dual-control-review.signature> \
+  --reviewer-registry-file <reviewer-registry.json> \
   --external-references-file <external-references.json> \
   --output-dir <reviewed-go-package-dir> \
   --decision-reason "approved by offline independent reviewer"
@@ -446,6 +455,7 @@ This command rejects:
 - expired review;
 - reviewer and operator identity equality;
 - identity-hash mismatch;
+- missing, failed, inactive, revoked, expired, or wrong-identity signature;
 - unresolved placeholders;
 - missing reviewer checks or evidence hashes;
 - changed artifact, manifest, candidate, runtime-truth, approval, or risk

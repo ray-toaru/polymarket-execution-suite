@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import subprocess
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -37,6 +38,70 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
         path = directory / name
         path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
         return path
+
+    def write_review_signature_materials(self, directory: Path, review: dict) -> dict[str, Path]:
+        identity = review["reviewer_identity_ref"]
+        key = directory / "reviewer_ed25519"
+        subprocess.run(
+            ["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", str(key)],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        public_key = (directory / "reviewer_ed25519.pub").read_text().strip()
+        allowed_signers = directory / "allowed_signers"
+        allowed_signers.write_text(f"lei@example.invalid namespaces=\"pmx-canary-review\" {public_key}\n")
+        attestation = self.write_json(
+            directory,
+            "lei-signing-key-attestation.json",
+            {
+                "schema_version": 1,
+                "reviewer_identity_ref": identity,
+                "signing_method": "ssh",
+                "review_namespace": "pmx-canary-review",
+                "public_key_sha256": self.module.sha256(directory / "reviewer_ed25519.pub"),
+                "registry_ref": "reviewer-registry://lei",
+                "status": "active",
+            },
+        )
+        review["review_signature_evidence_ref"] = "reviewer-registry://lei/signing-key-attestation"
+        review["review_signature_evidence_sha256"] = self.module.sha256(attestation)
+        approved = self.write_json(directory, "dual-control-review.json", review)
+        canonical = self.write_json(directory, "dual-control-review.canonical.json", review)
+        subprocess.run(
+            ["ssh-keygen", "-Y", "sign", "-f", str(key), "-n", "pmx-canary-review", str(canonical)],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        signature = canonical.with_suffix(canonical.suffix + ".sig")
+        registry = self.write_json(
+            directory,
+            "reviewer-registry.json",
+            {
+                "schema_version": 1,
+                "reviewers": [
+                    {
+                        "reviewer_identity_ref": identity,
+                        "status": "active",
+                        "allowed_signing_method": "ssh",
+                        "allowed_signers_file": "allowed_signers",
+                        "ssh_principal": "lei@example.invalid",
+                        "signing_key_attestation_file": "lei-signing-key-attestation.json",
+                        "registered_at": datetime.now(timezone.utc).isoformat(),
+                        "expires_at": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
+                    }
+                ],
+            },
+        )
+        return {
+            "approved": approved,
+            "canonical": canonical,
+            "signature": signature,
+            "registry": registry,
+        }
 
     def release_sidecar(self, artifact_sha: str) -> dict:
         return {
@@ -239,9 +304,8 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
             approval_doc = self.approval_request(artifact_sha, candidate_sha, runtime_sha)
             approval = self.write_json(tmp, "approval-request.json", approval_doc)
             approval_sha = self.module.sha256(approval)
-            review = self.write_json(
+            signature_materials = self.write_review_signature_materials(
                 tmp,
-                "dual-control-review.json",
                 self.dual_control_review(approval_doc, approval_sha),
             )
             external = self.write_json(tmp, "external-references.json", self.external_references())
@@ -255,7 +319,10 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
                 candidate_market=candidate,
                 runtime_truth=runtime,
                 approval_request=approval,
-                dual_control_review=review,
+                dual_control_review=signature_materials["approved"],
+                canonical_dual_control_review=signature_materials["canonical"],
+                review_signature=signature_materials["signature"],
+                reviewer_registry=signature_materials["registry"],
                 external_references=external,
                 decision_id="decision-1",
                 decision_reason="approved by independent reviewer",
@@ -297,9 +364,8 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
             approval_doc = self.approval_request(artifact_sha, candidate_sha, runtime_sha)
             approval = self.write_json(tmp, "approval-request.json", approval_doc)
             approval_sha = self.module.sha256(approval)
-            review = self.write_json(
+            signature_materials = self.write_review_signature_materials(
                 tmp,
-                "dual-control-review.json",
                 self.dual_control_review(approval_doc, approval_sha),
             )
             external = self.write_json(tmp, "external-references.json", self.external_references())
@@ -313,7 +379,10 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
                     candidate_market=candidate,
                     runtime_truth=runtime,
                     approval_request=approval,
-                    dual_control_review=review,
+                    dual_control_review=signature_materials["approved"],
+                    canonical_dual_control_review=signature_materials["canonical"],
+                    review_signature=signature_materials["signature"],
+                    reviewer_registry=signature_materials["registry"],
                     external_references=external,
                     decision_id="decision-1",
                     decision_reason="approved by independent reviewer",
@@ -334,9 +403,8 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
             approval_doc = self.approval_request(artifact_sha, candidate_sha, runtime_sha)
             approval = self.write_json(tmp, "approval-request.json", approval_doc)
             approval_sha = self.module.sha256(approval)
-            review = self.write_json(
+            signature_materials = self.write_review_signature_materials(
                 tmp,
-                "dual-control-review.json",
                 self.dual_control_review(approval_doc, approval_sha, status="draft"),
             )
             external = self.write_json(tmp, "external-references.json", self.external_references())
@@ -350,7 +418,10 @@ class PrepareReviewedGoPackageTests(unittest.TestCase):
                     candidate_market=candidate,
                     runtime_truth=runtime,
                     approval_request=approval,
-                    dual_control_review=review,
+                    dual_control_review=signature_materials["approved"],
+                    canonical_dual_control_review=signature_materials["canonical"],
+                    review_signature=signature_materials["signature"],
+                    reviewer_registry=signature_materials["registry"],
                     external_references=external,
                     decision_id="decision-1",
                     decision_reason="approved by independent reviewer",
