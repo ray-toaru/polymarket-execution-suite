@@ -34,6 +34,8 @@ In this local workspace the submodules point at sibling repositories:
 Use these current documents first:
 
 - `AGENTS.md` — repository-level agent instructions, safety boundaries, and validation rules.
+- `CONTRIBUTING.md` — branch, review, validation, and release-tag policy.
+- `SECURITY.md` — private vulnerability reporting policy.
 - `PROJECT_ARCHITECTURE.md` — current architecture baseline from the v0.3 design split.
 - `COMPONENT_COMPATIBILITY.md` — component ownership, compatibility matrix, and independent versioning policy.
 - `DEPENDENCY_POLICY.md` — pinned runtime/toolchain/dependency policy.

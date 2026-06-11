@@ -19,6 +19,10 @@ cd polymarket-execution-engine
 component repositories. Version-named candidate branches and release tags are
 retained for audit history; they are not permanent default branches.
 
+Historical release branches should be deleted after their commits are retained
+by immutable tags. Temporary hardening branches remain only while an open issue
+tracks unique commits that still require classification.
+
 The integration repository pins exact component commits. Commit component
 changes in the relevant submodule first, then update the pinned submodule
 commit here as one reviewed integration change. A commit being reachable from

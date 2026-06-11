@@ -53,7 +53,7 @@ class CiWorkflowTests(unittest.TestCase):
         self.assertIn("push", triggers)
         self.assertEqual(triggers["push"]["tags"], ["v*"])
         self.assertEqual(data["permissions"]["contents"], "read")
-        self.assertEqual(data["permissions"]["actions"], "write")
+        self.assertNotIn("actions", data["permissions"])
 
         uses_values = []
         for job in data["jobs"].values():
@@ -87,7 +87,7 @@ class CiWorkflowTests(unittest.TestCase):
         data = load_yaml(ADAPTER_CI)
         self.assertIn("workflow_call", workflow_on(data))
         self.assertEqual(data["permissions"]["contents"], "read")
-        self.assertEqual(data["permissions"]["actions"], "write")
+        self.assertNotIn("actions", data["permissions"])
 
         uses_values = []
         for step in data["jobs"]["python"].get("steps", []):

@@ -1,0 +1,38 @@
+name: Bug report
+description: Report a reproducible defect using synthetic or redacted data.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include secrets, account identifiers, signatures, or production data.
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction and evidence
+      description: Include commit SHA and commands using synthetic or redacted inputs.
+    validations:
+      required: true
+  - type: dropdown
+    id: safety
+    attributes:
+      label: Safety impact
+      options:
+        - No funds-moving or credential impact
+        - Credential or secret-handling impact
+        - Signing or live-boundary impact
+        - Unknown
+    validations:
+      required: true
