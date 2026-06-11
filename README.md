@@ -40,6 +40,7 @@ Use these current documents first:
 - `COMPONENT_COMPATIBILITY.md` — component ownership, compatibility matrix, and independent versioning policy.
 - `DEPENDENCY_POLICY.md` — pinned runtime/toolchain/dependency policy.
 - `SECURITY_MODEL.md` — trust boundaries, threats, operator misuse controls, and evidence retention.
+- `OFFLINE_INDEPENDENT_REVIEW_MANUAL.md` — detached-signature dual-control procedure when GitHub cannot enforce reviewers.
 - `DESIGN_DECISION_RECORD.md` — accepted architectural decisions.
 - `IMPLEMENTATION_STATUS.md` — implemented, blocked, and intentionally disabled areas.
 - `CONTROLLED_CANARY_CLOSEOUT.md` — tracked summary for the controlled canary closeout boundary and evidence requirements.

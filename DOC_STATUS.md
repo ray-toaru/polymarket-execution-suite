@@ -26,6 +26,7 @@ canonical trust-boundary, misuse, threat, and evidence-retention summary.
 - `COMPONENT_COMPATIBILITY.md`
 - `DEPENDENCY_POLICY.md`
 - `SECURITY_MODEL.md`
+- `OFFLINE_INDEPENDENT_REVIEW_MANUAL.md`
 - `DESIGN_DECISION_RECORD.md`
 - `IMPLEMENTATION_STATUS.md`
 - `CONTROLLED_CANARY_CLOSEOUT.md`
