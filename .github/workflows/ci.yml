@@ -103,7 +103,7 @@ jobs:
           components: rustfmt, clippy
 
       - name: Cache cargo
-        uses: Swatinem/rust-cache@bc2d2e71bd35c5549942babaa51a89c586b981d1
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
         with:
           workspaces: |
             polymarket-execution-engine
@@ -174,7 +174,7 @@ jobs:
           toolchain: 1.88.0
 
       - name: Cache cargo
-        uses: Swatinem/rust-cache@bc2d2e71bd35c5549942babaa51a89c586b981d1
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
         with:
           workspaces: polymarket-execution-engine
 
@@ -333,7 +333,7 @@ jobs:
 
       - name: Upload validation proof artifacts
         if: success()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: integration-proof-artifacts
           if-no-files-found: error
