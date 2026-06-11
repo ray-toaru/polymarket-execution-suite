@@ -13,7 +13,9 @@ distinct reviewer identity signs or an equivalent external identity provider
 attests the review.
 
 The existing `v0.28.0` tag points to an earlier commit and will not be moved.
-The current non-live artifact uses a separate signed governance tag.
+The current non-live artifact uses a separate governance tag. Cryptographic
+signing remains pending because the available local GPG key requires an
+operator-unlocked passphrase and no SSH signing agent is configured.
 
 ## 2026-06-10 disposition
 

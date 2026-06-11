@@ -7,7 +7,7 @@ changes. Current release material must include the zip, SHA-256 sidecar,
 evidence sidecar, and provenance sidecar. External signature material belongs
 in the GitHub release, not in the repository.
 
-The signed governance tag for this source line is
+The governance tag for this source line is
 `v0.28.0-non-live-hardened.1`. It does not replace or move the historical
 `v0.28.0` tag and does not authorize live trading.
 

@@ -1,15 +1,14 @@
 # Release Decision — v0.28.0 production-live-candidate
 
-## 2026-06-11 signed non-live freeze
+## 2026-06-11 non-live freeze
 
 The historical `v0.28.0` tag points to an earlier commit and is not moved.
-Current evidence is published under the signed governance tag
+Current evidence is published under the governance tag
 `v0.28.0-non-live-hardened.1`.
 
-That tag binds a `non_live_hardened` source and artifact. Its signature is
-evidence of operator provenance only. It is not an independent dual-control
-approval, production approval, live-trading approval, or real-funds
-authorization.
+That tag binds a `non_live_hardened` source and artifact. It is not an
+independent dual-control approval, production approval, live-trading approval,
+or real-funds authorization. Cryptographic approval remains external.
 
 ## Decision
 
