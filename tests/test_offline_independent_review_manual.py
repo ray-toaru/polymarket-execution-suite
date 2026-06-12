@@ -26,14 +26,14 @@ class OfflineIndependentReviewManualTests(unittest.TestCase):
             ).read_text(),
         )
 
-    def test_manual_preserves_independent_human_and_non_live_boundaries(self):
+    def test_manual_preserves_independent_reviewer_and_non_live_boundaries(self):
         text = MANUAL.read_text()
         normalized = " ".join(text.split())
         required_phrases = [
-            "The reviewer must be a real person who is not the operator.",
+            "The reviewer must be an accountable natural person who is distinct from the operator",
             "does not change that decision or enable live execution by itself",
             "The repository validator now requires this cryptographic verification",
-            '"independent_human_review": false',
+            '"independent_registered_reviewer_approval": false',
             '"authorization_effect": "none"',
         ]
         for phrase in required_phrases:

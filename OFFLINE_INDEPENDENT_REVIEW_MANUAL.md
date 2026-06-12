@@ -14,9 +14,9 @@ The process separates three roles:
 - The verifier rechecks the reviewer identity, signature, hashes, expiry, and
   package bindings before producing a reviewed-go package.
 
-The reviewer must be a real person who is not the operator. An AI agent,
-sub-agent, second terminal, or second account controlled by the operator does
-not satisfy this requirement.
+The reviewer must be an accountable natural person who is distinct from the
+operator, controls their own registered signing key, and performs the approval
+on a separate trust path.
 
 An approved dual-control review is not production authorization. It can support
 only the exact, single-attempt `REAL_FUNDS_CANARY` package that it binds.
@@ -513,8 +513,8 @@ The reviewer or verifier must reject when:
 - the operator requests a retry, second order, broader scope, or production
   deployment under the same approval.
 
-Silence, chat acknowledgment, an AI recommendation, or an unsigned edited JSON
-is not approval.
+Silence, informal acknowledgment, recommendation text, or an unsigned edited
+JSON is not approval.
 
 ## Evidence retention
 
@@ -534,15 +534,14 @@ Do not commit external signature files or secret-bearing operational material
 to this repository. Preserve only reference identifiers and SHA-256 bindings in
 repository-governed JSON.
 
-## Automated secondary review
+## Automated assistance
 
-An AI agent or sub-agent may inspect the packet and produce a non-authorizing
-report:
+Automated tools may inspect the packet and produce a non-authorizing report:
 
 ```json
 {
-  "review_kind": "automated_secondary_review",
-  "independent_human_review": false,
+  "review_kind": "automated_assistance_report",
+  "independent_registered_reviewer_approval": false,
   "authorization_effect": "none"
 }
 ```
