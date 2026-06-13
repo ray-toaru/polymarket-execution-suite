@@ -285,6 +285,16 @@ class ValidateContractsGovernanceTests(unittest.TestCase):
             review_drill_text,
         )
         self.assertEqual(review_drill_text.count('"--credentialed-sdk-run-id"'), 3)
+        for drill_name in [
+            "run_single_host_canary_candidate_drill.py",
+            "run_single_host_go_candidate_drill.py",
+        ]:
+            drill_text = (review_drill.parent / drill_name).read_text()
+            self.assertIn(
+                'DRILL_CREDENTIALED_SDK_RUN_ID = "local-current-gates-20260523"',
+                drill_text,
+            )
+            self.assertIn('"--credentialed-sdk-run-id"', drill_text)
 
         validator_module = SimpleNamespace(
             TEMPLATE=template,
