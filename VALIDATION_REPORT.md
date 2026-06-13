@@ -1,5 +1,33 @@
 # Validation Report — v0.28.0 production-live-candidate
 
+## 2026-06-13 final package-hash review state
+
+Exact root commit, artifact hash, manifest hash, sidecar hash, and review hash
+belong in detached sidecars and external review JSON rather than this source
+document. Current tracked component pins at this documentation refresh are:
+
+- Hermes adapter submodule commit:
+  `7477c028d5c4f0f2215e7ee6c3ee4ea750331553`.
+- Execution-engine submodule commit:
+  `be6298241d28eecc3eaf3be871c8f5776a8157d0`.
+
+Integration suite CI run `27474066294`, adapter CI run `27473948617`, and
+execution-engine CI run `27473806418` passed before this documentation refresh.
+- Lei's final package-hash review approved only this exact commit and package
+  hash named in
+  `external_reviews/lei/final-commit-package-hash-review.approved.canonical.json`,
+  with non-live limits. This documentation/evidence refresh changes the source
+  state after that review and therefore requires a fresh package rebuild and
+  fresh review before it can be treated as a reviewed final state.
+
+The posture remains `production-live-candidate`, non-live by default. The
+current final manifest explicitly records `postgres_validation`,
+`credentialed_non_trading_validation`, and
+`real_funds_canary_store_truth_cli_validation` as skipped in this local
+environment. Those skipped sections are blockers for any production, live, or
+reviewed-go execution claim until refreshed for the exact source/artifact under
+review.
+
 ## 2026-06-11 evidence refresh
 
 - Root CI run `27326801031` passed for commit `5d7eaced32e7f24048435f52d0a9fa96415b2f63`.
@@ -114,11 +142,11 @@ Latest local refresh:
   `dist/pmx-canary-pipeline-next-phase-no-go-local/pipeline-report.json`
   records `status=pass`, `remote_side_effects=false`,
   `armed_live_attempted=false`, and `operator_runbook.status=blocked`;
-- result: local/Rust/SDK/static/governance/package gates passed; PostgreSQL
-  migration/store/API gates passed; the PostgreSQL-backed store-truth CLI
-  preflight passed as
-  `72-real-funds-canary-store-truth-cli-preflight.log`; credentialed
-  non-trading smoke and sign-only dry-run passed under explicit env gates.
+- result for the final package-hash reviewed state: local/Rust/SDK/static,
+  governance, package, artifact, and dist-index checks passed. PostgreSQL,
+  credentialed non-trading/sign-only, and PostgreSQL-backed store-truth CLI
+  sections are skipped in the current final manifest because the required
+  database URLs and credentialed opt-in variables were not provided.
 
 Current evidence policy:
 

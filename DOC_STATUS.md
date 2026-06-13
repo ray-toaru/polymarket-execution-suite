@@ -2,19 +2,30 @@
 
 ## 2026-06-13 status
 
-Current `main` is a non-live governance baseline with external posthoc
-independent review by `reviewer://lei`. The reviewed source state is
-integration suite commit
-`42505d90a20a7cfb11e00a7161690e50a7d64d2a` with execution-engine submodule
-commit `8006d7de0edf4a87371f2fb70751fa804da3f636`.
+Current `main` is a non-live governance baseline. Exact source commits,
+artifact hashes, manifest hashes, and review hashes are recorded in detached
+sidecars and external review JSON rather than self-embedded here, because this
+document is part of the source package.
 
-The binding CI evidence is integration suite run `27459730580` and
-execution-engine run `27459730710`, both successful for the exact reviewed
-commits. The external posthoc review archive remains outside the repository
-under `external_reviews/lei/`; the approved/canonical review SHA-256 is
-`81797dfae7a58f4c6f5a928244940657e69d7935bf8c47602814223f5da0fe47`, and the
-signature SHA-256 is
-`304b7b3db5dd4eec7d6c1c7cf53fb1f9a14a7e377edb802d631eb354d0478887`.
+Current tracked component pins at this documentation refresh are:
+
+- Hermes adapter submodule:
+  `7477c028d5c4f0f2215e7ee6c3ee4ea750331553`;
+- execution-engine submodule:
+  `be6298241d28eecc3eaf3be871c8f5776a8157d0`.
+
+Latest completed remote CI before this documentation refresh:
+
+- integration suite run `27474066294`;
+- adapter run `27473948617`;
+- execution-engine run `27473806418`.
+
+The final external review archive remains outside the repository under
+`external_reviews/lei/`. The latest completed approved/canonical review is
+`external_reviews/lei/final-commit-package-hash-review.approved.canonical.json`.
+It approves only the exact commit and package hash named in that JSON, with
+non-live limits. This documentation/evidence refresh changes the source state,
+so a fresh review is required after the next package rebuild.
 
 This status does not authorize live submit, live cancel, production deployment,
 or another canary attempt. Later code, document, evidence, release, or

@@ -1,8 +1,8 @@
 # Canary decision-prep audit — v0.28.0
 
 Status: active v0.28.0 production-live-candidate governance material. Older
-v0.25/v0.26/v0.27 references below are historical evidence pointers only and
-do not authorize live submit, live cancel, production deployment, or another
+v0.25/v0.26/v0.27 references are historical evidence pointers only and do not
+authorize live submit, live cancel, production deployment, or another
 real-funds canary.
 
 ## Current conclusion
@@ -14,30 +14,19 @@ real-funds canary fill.
 Current evidence baseline:
 
 ```text
-historical source release baseline: v0.25.0
-supplemental evidence tag: v0.25.0-evidence.20260521
-root commit: final root commit recorded in .zip.evidence.json sidecar
-hermes-polymarket-executor-adapter: bb16582e299f9e6f8da6044226e33900c4e2459d
-canonical evidence execution-engine baseline: c77d6bee6ea9d3d1397bd86c2e6f7857575b26cb
-current local execution-engine review-package guard refresh: 76fdb3ee136b0350e4718fff60a1edcee1f67d03
-latest pushed root CI baseline: 26254755001, success
-latest pushed execution-engine CI baseline: 26254745573, success
-artifact sha256: recorded in the external .zip.sha256 sidecar for the generated release zip
-current evidence manifest sha256: 80b4b7fa8ef325ffb3cff6d839176a9af1ce28ce226c4d3ebef826c6c2b981d1
+hermes-polymarket-executor-adapter: 7477c028d5c4f0f2215e7ee6c3ee4ea750331553
+polymarket-execution-engine: be6298241d28eecc3eaf3be871c8f5776a8157d0
+latest pushed root CI baseline: 27474066294, success
+latest pushed adapter CI baseline: 27473948617, success
+latest pushed execution-engine CI baseline: 27473806418, success
+artifact sha256: recorded in the detached .zip.sha256 and .zip.evidence.json sidecars
+current evidence manifest sha256: recorded in the detached .zip.evidence.json sidecar
+artifact evidence sidecar sha256: external review material, not self-embedded
 ```
 
-Historical v0.26 decision-prep source refresh:
-
-```text
-source refresh root commit: final root commit recorded in .zip.evidence.json sidecar
-hermes-polymarket-executor-adapter: bb16582e299f9e6f8da6044226e33900c4e2459d
-polymarket-execution-engine: 76fdb3ee136b0350e4718fff60a1edcee1f67d03
-latest pushed root CI baseline: 26254755001, success
-latest pushed execution-engine CI baseline: 26254745573, success
-targeted local post-CI checks: pass, 2026-05-21, no new CI run
-local full current gates: pass, 2026-05-21
-credentialed SDK evidence: local-current-gates-20260521
-```
+Historical v0.26 decision-prep source refreshes are audit context only. Their
+exact commits, CI runs, and credentialed evidence identifiers must not be used
+as current v0.28 promotion evidence.
 
 This refresh parameterizes review-package generation and the blocked rehearsal
 package so future no-go review material can be regenerated from explicit
@@ -45,12 +34,15 @@ artifact/evidence hash overrides and current CI run IDs. The final zip hash is
 kept in external release sidecars rather than self-embedded in source files.
 It does not change the live-trading boundary.
 
-Current canonical evidence records `credentialed_non_trading_validation=pass`,
-`postgres_validation=pass`, `real_funds_canary_preflight_validation=pass`,
+Current canonical evidence records `real_funds_canary_preflight_validation=pass`,
 `real_funds_canary_lifecycle_validation=pass`, and
-`real_funds_canary_review_package_validation=pass`. The release decision in the
-manifest still records `validated_release=false`, `production_ready=false`, and
-`live_trading_ready=false`.
+`real_funds_canary_review_package_validation=pass`. It records
+`credentialed_non_trading_validation=skipped`, `postgres_validation=skipped`,
+and `real_funds_canary_store_truth_cli_validation=skipped` for the final
+package-hash reviewed state because this local environment did not provide the
+required database URLs or credentialed opt-in variables. The release decision in
+the manifest still records `validated_release=false`,
+`production_ready=false`, and `live_trading_ready=false`.
 
 ## Decision package audit
 
@@ -61,7 +53,8 @@ rehearsal sample, but it is not bound to the latest supplemental evidence:
 - package `artifact_sha256`: `6bc50ff7ba942d2d001e347d045a6773da09d73a0b242589d14ce3566aca2dd9`
 - package `evidence_manifest_sha256`: `11711ef30110d30ffb2556de507b9e1d3e3b181c9eea353cbc626da721f7481a`
 - current artifact SHA-256: recorded in the external `.zip.sha256` sidecar
-- current manifest SHA-256: `80b4b7fa8ef325ffb3cff6d839176a9af1ce28ce226c4d3ebef826c6c2b981d1`
+- current manifest SHA-256: recorded in the detached sidecar for the current
+  generated package.
 
 The package correctly preserves the safety boundary:
 
@@ -86,12 +79,14 @@ so no manual JSON patching is required. Its review metadata is bound to the
 current supplemental evidence:
 
 - package `artifact_sha256`: supplied from the external `.zip.sha256` sidecar
-- package `evidence_manifest_sha256`: `80b4b7fa8ef325ffb3cff6d839176a9af1ce28ce226c4d3ebef826c6c2b981d1`
-- package `root_ci_run_id`: `26254755001`
-- package `execution_engine_ci_run_id`: `26254745573`
-- latest pushed root CI baseline after package generation: `26254755001`
-- latest pushed execution-engine CI baseline after package generation: `26254745573`
-- package `credentialed_sdk_run_id`: `local-current-gates-20260521`
+- package `evidence_manifest_sha256`: historical value; not current final-state
+  promotion evidence.
+- latest pushed root CI baseline after final package generation: `27474066294`
+- latest pushed adapter CI baseline after final package generation: `27473948617`
+- latest pushed execution-engine CI baseline after final package generation:
+  `27473806418`
+- package `credentialed_sdk_run_id`: historical local-current-gates identifier;
+  not current final-state promotion evidence.
 - `external_references_placeholders_remaining`: `[]`
 - `live_submit_allowed=false`
 - `live_cancel_allowed=false`

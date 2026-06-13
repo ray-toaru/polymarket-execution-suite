@@ -9,22 +9,23 @@ decision explicitly authorizes exactly one bounded attempt.
 This review covers the current `v0.28.0` production-live-candidate
 decision-prep state.
 It does not approve live submit, live cancel, production deployment, or a
-real-funds canary fill. v0.26.0 remains `no_go` until the current gates and a
-reviewed `go` release decision are regenerated for the final artifact.
+real-funds canary fill. Historical v0.26 material remains `no_go` audit context
+only; any future v0.28 attempt needs current gates and a reviewed `go` release
+decision regenerated for the final artifact.
 
 Current source and evidence references:
 
 ```text
-source-refresh root commit: final root commit recorded in .zip.evidence.json sidecar
-hermes-polymarket-executor-adapter: bb16582e299f9e6f8da6044226e33900c4e2459d
-polymarket-execution-engine: 76fdb3ee136b0350e4718fff60a1edcee1f67d03
-latest pushed root CI baseline: 26254755001, success
-latest pushed execution-engine CI baseline: 26254745573, success
-targeted local post-CI checks: pass, 2026-05-21, no new CI run
-local full current gates: pass, 2026-05-21
-credentialed SDK evidence: local-current-gates-20260521
-artifact sha256: recorded in the external .zip.sha256 sidecar for the generated release zip
-evidence manifest sha256: 80b4b7fa8ef325ffb3cff6d839176a9af1ce28ce226c4d3ebef826c6c2b981d1
+source-refresh root commit: recorded in .zip.evidence.json sidecar
+hermes-polymarket-executor-adapter: 7477c028d5c4f0f2215e7ee6c3ee4ea750331553
+polymarket-execution-engine: be6298241d28eecc3eaf3be871c8f5776a8157d0
+latest pushed root CI baseline: 27474066294, success
+latest pushed adapter CI baseline: 27473948617, success
+latest pushed execution-engine CI baseline: 27473806418, success
+artifact sha256: recorded in the detached .zip.sha256 and .zip.evidence.json sidecars
+evidence manifest sha256: recorded in the detached .zip.evidence.json sidecar
+credentialed SDK evidence: skipped in the current final manifest; must be
+refreshed before any go/live claim
 ```
 
 ## Decision
@@ -43,10 +44,10 @@ real funds.
 ## Confirmed ready
 
 - The current baseline remains `shadow-ready SDK sign-only candidate`.
-- The latest local v0.26 review package was regenerated under
-  `dist/pmx-canary-review-v0.26-current/`.
-- The package binds the current artifact SHA-256, evidence manifest SHA-256,
-  root CI run, execution-engine CI run, and credentialed local evidence id.
+- The final non-live package binds the current artifact SHA-256, evidence
+  manifest SHA-256, root CI run, adapter CI run, and execution-engine CI run.
+- The latest local historical v0.26 review packages are retained only as audit
+  context and are not current approval material.
 - The blocked armed rehearsal requested armed mode and local allow-config flags
   but failed at the release-decision gate before posting.
 - The rehearsal report records `posted=false`, `cancelled=false`,

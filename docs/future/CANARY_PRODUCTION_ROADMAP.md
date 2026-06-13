@@ -4,7 +4,7 @@ Current source phase: `v0.28.0` is a production-live-candidate. Live submit,
 live cancel, and production deployment remain blocked until a later reviewed
 release decision changes that boundary with current evidence.
 
-## P0: Preserve the v0.25 baseline while advancing v0.26
+## P0: Preserve historical baselines while advancing v0.28
 
 Status: current baseline.
 
@@ -25,7 +25,9 @@ Pause conditions:
 
 ## P1: canary-prep evidence
 
-Status: satisfied by the `v0.25.0` shadow-ready SDK sign-only baseline.
+Status: implemented as v0.28 production-live-candidate evidence, with the
+current final manifest still skipping PostgreSQL and credentialed external
+sections in this local environment.
 
 Goal: make the future live canary sequence auditable without enabling live side
 effects.
@@ -65,15 +67,10 @@ preflight scaffold is implemented and validated; actual remote canary fill
 remains blocked until a reviewed release decision and local approval file
 authorize the attempt.
 
-`v0.26` should prepare and verify the decision package for a possible future
-controlled canary. It should not treat the released `v0.25.0` credentialed
-non-trading/sign-only evidence as approval to place a real order.
-
-Current v0.26 audit status is recorded in `CANARY_DECISION_PREP_AUDIT.md`.
-The existing `dist/pmx-canary-review-reviewed/` package remains no-go review
-material and proves blocked rehearsal behavior, but it is not bound to the
-latest supplemental artifact and evidence manifest hashes. A regenerated
-decision package is required before any future canary review can proceed.
+Historical v0.25/v0.26 material must not be treated as approval to place a real
+order. Current v0.28 audit status is recorded in
+`CANARY_DECISION_PREP_AUDIT.md`. A regenerated decision package is required
+before any future canary review can proceed.
 
 Goal: validate a tiny real side-effect path under hard runtime, account, market,
 amount, approval, kill-switch, and reconciliation controls.
@@ -112,7 +109,7 @@ Pause conditions:
 - Cancel failure without a clear operator-required path.
 - Any evidence gap in the canary chain.
 
-## P3: v0.27 productionization
+## P3: v0.28+ productionization
 
 Status: operations-control evidence scaffold active; promotion remains blocked
 until P2 canary evidence is reviewed.

@@ -1,14 +1,29 @@
 import unittest
 import json
+import subprocess
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 MANUAL = ROOT / "OFFLINE_INDEPENDENT_REVIEW_MANUAL.md"
 LEI_REGISTRY = ROOT / "external_reviews" / "reviewer-registry" / "lei.pending.json"
+LEI_ACTIVE_REGISTRY = ROOT / "external_reviews" / "reviewer-registry" / "lei.active-registry.json"
+FINAL_REVIEW = (
+    ROOT
+    / "external_reviews"
+    / "lei"
+    / "final-commit-package-hash-review.approved.canonical.json"
+)
 REVIEW_AUDIT = ROOT / "REVIEW_AUDIT.md"
 DESIGN_DECISION_RECORD = ROOT / "DESIGN_DECISION_RECORD.md"
 DOC_STATUS = ROOT / "DOC_STATUS.md"
+VALIDATION_REPORT = ROOT / "VALIDATION_REPORT.md"
+CURRENT_STATE_DOCS = [
+    ROOT / "REVIEW_AUDIT.md",
+    ROOT / "DOC_STATUS.md",
+    ROOT / "docs" / "future" / "CANARY_DECISION_PREP_AUDIT.md",
+    ROOT / "docs" / "future" / "CANARY_GO_NO_GO_REVIEW.md",
+]
 
 
 class OfflineIndependentReviewManualTests(unittest.TestCase):
@@ -72,28 +87,76 @@ class OfflineIndependentReviewManualTests(unittest.TestCase):
         self.assertEqual(reviewer["status"], "pending_key_registration")
         self.assertIn("REPLACE_WITH_", reviewer["allowed_signers_file"])
 
-    def test_posthoc_main_review_is_documented_without_live_authorization(self):
+    def test_lei_active_registry_is_available_for_signed_reviews(self):
+        registry = json.loads(LEI_ACTIVE_REGISTRY.read_text())
+        reviewer = registry["reviewers"][0]
+        self.assertEqual(reviewer["reviewer_identity_ref"], "reviewer://lei")
+        self.assertEqual(reviewer["status"], "active")
+        self.assertEqual(reviewer["ssh_principal"], "lei@beyin.tech")
+        self.assertEqual(
+            reviewer["signing_key_fingerprint"],
+            "SHA256:D8ZJbmZfyME4gYjZSZ117E7SU/VWIwhAcIjwXLdHS8w",
+        )
+
+    def test_final_package_hash_review_is_documented_without_live_authorization(self):
+        adapter_head = subprocess.check_output(
+            ["git", "-C", str(ROOT / "hermes-polymarket-executor-adapter"), "rev-parse", "HEAD"],
+            text=True,
+        ).strip()
+        engine_head = subprocess.check_output(
+            ["git", "-C", str(ROOT / "polymarket-execution-engine"), "rev-parse", "HEAD"],
+            text=True,
+        ).strip()
         combined = "\n".join(
             [
                 REVIEW_AUDIT.read_text(),
                 DESIGN_DECISION_RECORD.read_text(),
                 DOC_STATUS.read_text(),
+                VALIDATION_REPORT.read_text(),
             ]
         )
         normalized = " ".join(combined.split())
         required = [
+            adapter_head,
+            engine_head,
+            "27474066294",
+            "27473948617",
+            "27473806418",
+            "external_reviews/lei/final-commit-package-hash-review.approved.canonical.json",
+            "does not authorize live submit, live cancel, production deployment, or another canary attempt",
+            "requires fresh CI",
+            "fresh review",
+        ]
+        for phrase in required:
+            self.assertIn(phrase, normalized)
+
+        stale = [
             "42505d90a20a7cfb11e00a7161690e50a7d64d2a",
             "8006d7de0edf4a87371f2fb70751fa804da3f636",
             "27459730580",
             "27459730710",
-            "81797dfae7a58f4c6f5a928244940657e69d7935bf8c47602814223f5da0fe47",
-            "304b7b3db5dd4eec7d6c1c7cf53fb1f9a14a7e377edb802d631eb354d0478887",
-            "external_reviews/lei/final-main-posthoc-review.approved.json",
-            "does not authorize live submit, live cancel, production deployment, or another canary attempt",
-            "requires fresh CI and fresh independent review for the changed final state",
         ]
-        for phrase in required:
-            self.assertIn(phrase, normalized)
+        for phrase in stale:
+            self.assertNotIn(phrase, normalized)
+
+    def test_current_state_docs_do_not_reuse_stale_final_state_refs(self):
+        review = json.loads(FINAL_REVIEW.read_text())
+        combined = "\n".join(path.read_text() for path in CURRENT_STATE_DOCS)
+        stale = [
+            "42505d90a20a7cfb11e00a7161690e50a7d64d2a",
+            "8006d7de0edf4a87371f2fb70751fa804da3f636",
+            "27459730580",
+            "27459730710",
+            "26254755001",
+            "26254745573",
+            "bb16582e299f9e6f8da6044226e33900c4e2459d",
+            "76fdb3ee136b0350e4718fff60a1edcee1f67d03",
+            "80b4b7fa8ef325ffb3cff6d839176a9af1ce28ce226c4d3ebef826c6c2b981d1",
+            review["reviewed_commit"],
+            review["reviewed_artifact_sha256"],
+        ]
+        for phrase in stale:
+            self.assertNotIn(phrase, combined)
 
 
 if __name__ == "__main__":

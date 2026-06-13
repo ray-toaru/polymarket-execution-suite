@@ -4,42 +4,44 @@
 
 Current `main` is closed as a non-live governance baseline after direct main
 push, CI, and an external posthoc independent review by `reviewer://lei`.
+Exact root commit and artifact hashes are intentionally kept in detached
+sidecars and external review JSON instead of self-embedded here.
 
-Reviewed source state:
+Current component pins:
 
-- Integration suite commit:
-  `42505d90a20a7cfb11e00a7161690e50a7d64d2a`.
+- Hermes adapter submodule commit:
+  `7477c028d5c4f0f2215e7ee6c3ee4ea750331553`.
 - Execution-engine submodule commit:
-  `8006d7de0edf4a87371f2fb70751fa804da3f636`.
+  `be6298241d28eecc3eaf3be871c8f5776a8157d0`.
 
-CI evidence:
+Latest completed remote CI before this documentation refresh:
 
-- Integration suite CI run `27459730580` completed with `success` for
-  `42505d90a20a7cfb11e00a7161690e50a7d64d2a`.
-- Execution-engine CI run `27459730710` completed with `success` for
-  `8006d7de0edf4a87371f2fb70751fa804da3f636`.
+- Integration suite CI run `27474066294` completed with `success` after the
+  parent governance-test alignment.
+- Adapter CI run `27473948617` completed with `success` after switching adapter
+  CI to the committed executor OpenAPI snapshot.
+- Execution-engine CI run `27473806418` completed with `success` before the
+  local evidence-refresh commit. The refreshed evidence commit still needs
+  fresh remote CI if it is to become reviewed final-state evidence.
 
 External review archive evidence:
 
-- Approved posthoc review:
-  `external_reviews/lei/final-main-posthoc-review.approved.json`.
-- Approved/canonical review SHA-256:
-  `81797dfae7a58f4c6f5a928244940657e69d7935bf8c47602814223f5da0fe47`.
-- Signature SHA-256:
-  `304b7b3db5dd4eec7d6c1c7cf53fb1f9a14a7e377edb802d631eb354d0478887`.
+- Final approved package-hash review:
+  `external_reviews/lei/final-commit-package-hash-review.approved.canonical.json`.
 - Signature verification record:
-  `external_reviews/lei/final-main-posthoc-review.signature-verification.txt`.
+  `external_reviews/lei/final-commit-package-hash-review.signature-verification.txt`.
 - Verification result: SSH signature passed for `lei@beyin.tech` in namespace
   `pmx-canary-review` with fingerprint
   `SHA256:D8ZJbmZfyME4gYjZSZ117E7SU/VWIwhAcIjwXLdHS8w`.
-- All nine posthoc review evidence files were present and their SHA-256
+- All nine final package-hash review evidence files were present and their SHA-256
   digests matched the approved review JSON.
 
-This closeout confirms the final main branch state only. It does not authorize
-live submit, live cancel, production deployment, or another canary attempt. Any
-later code, document, evidence, release, or submodule change invalidates this
-posthoc confirmation for the changed final state and requires a fresh review of
-that changed state.
+That completed review confirms only the exact state named in its JSON. It does
+not authorize live submit, live cancel, production deployment, or another
+canary attempt. This documentation/evidence refresh advances the source state,
+so the next package hash and final source commit require fresh CI as needed,
+rebuilt sidecars, and fresh independent review before they can be treated as a
+reviewed final state.
 
 ## 2026-06-11 follow-up
 
@@ -81,8 +83,10 @@ non-live hardening result.
 - Pre-live degraded worker status is treated fail-closed by policy.
 - Live submit/cancel remain blocked.
 - Runtime worker and order lifecycle governance now have full gate evidence.
-- Credentialed non-trading smoke and sign-only dry-run passed under explicit
-  opt-in gates without enabling live submit/cancel.
+- The current final manifest records credentialed non-trading smoke, sign-only
+  dry-run, PostgreSQL, and PostgreSQL-backed store-truth CLI sections as
+  skipped in this local environment. Historical passed runs remain audit
+  context only until those sections are refreshed for the exact final state.
 - Real-funds canary dry-run diagnostics are aggregate-only and do not expose
   token identifiers, raw signed material, or secrets.
 - Armed real-funds canary requires a reviewed release-decision JSON in addition
