@@ -1,5 +1,46 @@
 # Review audit — v0.28 production-live-candidate
 
+## 2026-06-13 final main governance closeout
+
+Current `main` is closed as a non-live governance baseline after direct main
+push, CI, and an external posthoc independent review by `reviewer://lei`.
+
+Reviewed source state:
+
+- Integration suite commit:
+  `42505d90a20a7cfb11e00a7161690e50a7d64d2a`.
+- Execution-engine submodule commit:
+  `8006d7de0edf4a87371f2fb70751fa804da3f636`.
+
+CI evidence:
+
+- Integration suite CI run `27459730580` completed with `success` for
+  `42505d90a20a7cfb11e00a7161690e50a7d64d2a`.
+- Execution-engine CI run `27459730710` completed with `success` for
+  `8006d7de0edf4a87371f2fb70751fa804da3f636`.
+
+External review archive evidence:
+
+- Approved posthoc review:
+  `external_reviews/lei/final-main-posthoc-review.approved.json`.
+- Approved/canonical review SHA-256:
+  `81797dfae7a58f4c6f5a928244940657e69d7935bf8c47602814223f5da0fe47`.
+- Signature SHA-256:
+  `304b7b3db5dd4eec7d6c1c7cf53fb1f9a14a7e377edb802d631eb354d0478887`.
+- Signature verification record:
+  `external_reviews/lei/final-main-posthoc-review.signature-verification.txt`.
+- Verification result: SSH signature passed for `lei@beyin.tech` in namespace
+  `pmx-canary-review` with fingerprint
+  `SHA256:D8ZJbmZfyME4gYjZSZ117E7SU/VWIwhAcIjwXLdHS8w`.
+- All nine posthoc review evidence files were present and their SHA-256
+  digests matched the approved review JSON.
+
+This closeout confirms the final main branch state only. It does not authorize
+live submit, live cancel, production deployment, or another canary attempt. Any
+later code, document, evidence, release, or submodule change invalidates this
+posthoc confirmation for the changed final state and requires a fresh review of
+that changed state.
+
 ## 2026-06-11 follow-up
 
 The source-level admin-token gap is closed by `GET /v1/admin/session` and the

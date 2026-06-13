@@ -44,3 +44,25 @@ not require permanent lockstep versions. The execution engine versions executor
 API, state machine, schema, SDK/gateway, and live-boundary changes; the Hermes
 adapter versions client/tool compatibility with executor API contracts; the
 suite versions pinned component combinations and evidence.
+
+## DDR-009: External independent review may compensate for missing platform enforcement
+
+Accepted for the current private-repository constraint. When GitHub branch
+protection or required-review enforcement is unavailable, the repository may
+use a direct-main-push exception only when all of the following are true:
+
+- the pushed state is bound to exact parent and submodule commits;
+- CI passes for those exact commits;
+- external independent review material is archived outside the repository under
+  `external_reviews/`;
+- the independent reviewer signs the reviewed final state on a separate trust
+  path;
+- the review result, signature hash, CI run IDs, and reviewed commits are
+  recorded in current governance documentation.
+
+This exception is a governance workaround, not a live-release path. External
+posthoc review can confirm a final main state after the fact, but it does not
+grant live submit, live cancel, production deployment, or repeat-canary
+authorization. Any subsequent code, document, evidence, release, or submodule
+change requires fresh CI and fresh independent review for the changed final
+state.

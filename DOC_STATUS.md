@@ -1,5 +1,26 @@
 # Documentation and evidence status — v0.28.0 production-live-candidate
 
+## 2026-06-13 status
+
+Current `main` is a non-live governance baseline with external posthoc
+independent review by `reviewer://lei`. The reviewed source state is
+integration suite commit
+`42505d90a20a7cfb11e00a7161690e50a7d64d2a` with execution-engine submodule
+commit `8006d7de0edf4a87371f2fb70751fa804da3f636`.
+
+The binding CI evidence is integration suite run `27459730580` and
+execution-engine run `27459730710`, both successful for the exact reviewed
+commits. The external posthoc review archive remains outside the repository
+under `external_reviews/lei/`; the approved/canonical review SHA-256 is
+`81797dfae7a58f4c6f5a928244940657e69d7935bf8c47602814223f5da0fe47`, and the
+signature SHA-256 is
+`304b7b3db5dd4eec7d6c1c7cf53fb1f9a14a7e377edb802d631eb354d0478887`.
+
+This status does not authorize live submit, live cancel, production deployment,
+or another canary attempt. Later code, document, evidence, release, or
+submodule changes require fresh CI and fresh independent review for the changed
+final state.
+
 ## 2026-06-11 status
 
 Canonical evidence was regenerated after the admin-session and provenance

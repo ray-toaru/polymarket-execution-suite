@@ -6,6 +6,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MANUAL = ROOT / "OFFLINE_INDEPENDENT_REVIEW_MANUAL.md"
 LEI_REGISTRY = ROOT / "external_reviews" / "reviewer-registry" / "lei.pending.json"
+REVIEW_AUDIT = ROOT / "REVIEW_AUDIT.md"
+DESIGN_DECISION_RECORD = ROOT / "DESIGN_DECISION_RECORD.md"
+DOC_STATUS = ROOT / "DOC_STATUS.md"
 
 
 class OfflineIndependentReviewManualTests(unittest.TestCase):
@@ -68,6 +71,29 @@ class OfflineIndependentReviewManualTests(unittest.TestCase):
         self.assertEqual(reviewer["reviewer_identity_ref"], "reviewer://lei")
         self.assertEqual(reviewer["status"], "pending_key_registration")
         self.assertIn("REPLACE_WITH_", reviewer["allowed_signers_file"])
+
+    def test_posthoc_main_review_is_documented_without_live_authorization(self):
+        combined = "\n".join(
+            [
+                REVIEW_AUDIT.read_text(),
+                DESIGN_DECISION_RECORD.read_text(),
+                DOC_STATUS.read_text(),
+            ]
+        )
+        normalized = " ".join(combined.split())
+        required = [
+            "42505d90a20a7cfb11e00a7161690e50a7d64d2a",
+            "8006d7de0edf4a87371f2fb70751fa804da3f636",
+            "27459730580",
+            "27459730710",
+            "81797dfae7a58f4c6f5a928244940657e69d7935bf8c47602814223f5da0fe47",
+            "304b7b3db5dd4eec7d6c1c7cf53fb1f9a14a7e377edb802d631eb354d0478887",
+            "external_reviews/lei/final-main-posthoc-review.approved.json",
+            "does not authorize live submit, live cancel, production deployment, or another canary attempt",
+            "requires fresh CI and fresh independent review for the changed final state",
+        ]
+        for phrase in required:
+            self.assertIn(phrase, normalized)
 
 
 if __name__ == "__main__":
