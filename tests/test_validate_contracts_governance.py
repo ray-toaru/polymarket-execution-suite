@@ -279,6 +279,12 @@ class ValidateContractsGovernanceTests(unittest.TestCase):
         invalid_mismatched_data = json.loads(invalid_mismatched.read_text())
         external_example_data = json.loads(external_example.read_text())
         runtime_truth_template_data = json.loads(runtime_truth_template.read_text())
+        review_drill_text = review_drill.read_text()
+        self.assertIn(
+            'DRILL_CREDENTIALED_SDK_RUN_ID = "local-current-gates-review-package-drill"',
+            review_drill_text,
+        )
+        self.assertEqual(review_drill_text.count('"--credentialed-sdk-run-id"'), 3)
 
         validator_module = SimpleNamespace(
             TEMPLATE=template,
