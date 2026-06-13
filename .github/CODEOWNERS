@@ -3,7 +3,12 @@
 /.github/ @ray-toaru
 /.gitmodules @ray-toaru
 /scripts/ @ray-toaru
+/tests/ @ray-toaru
 /polymarket-execution-engine @ray-toaru
 /hermes-polymarket-executor-adapter @ray-toaru
+/OFFLINE_INDEPENDENT_REVIEW_MANUAL.md @ray-toaru
+/DESIGN_DECISION_RECORD.md @ray-toaru
+/REVIEW_AUDIT.md @ray-toaru
+/DOC_STATUS.md @ray-toaru
 /RELEASE_DECISION.md @ray-toaru
 /SECURITY_MODEL.md @ray-toaru

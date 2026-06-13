@@ -21,3 +21,7 @@ List exact commands and results.
 
 For credential, signing, live-boundary, or release-decision changes, record the
 independent external review reference. A self-review is not independent review.
+
+- External review reference:
+- Fresh CI is required for the final reviewed state.
+- This PR does not claim live, production, or repeat-canary authorization.

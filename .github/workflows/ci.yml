@@ -310,6 +310,7 @@ jobs:
       - name: Check docs and evidence governance
         run: |
           python scripts/check_docs_links.py
+          python scripts/check_governance_controls.py
           python polymarket-execution-engine/validation/check_docs_evidence_governance.py
 
       - name: Clean local artifacts
