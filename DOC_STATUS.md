@@ -20,7 +20,7 @@ Latest completed remote CI before this documentation refresh:
 - adapter run `27473948617`;
 - execution-engine run `27473806418`.
 
-The final external review archive remains outside the repository under
+The external posthoc review archive remains outside the repository under
 `external_reviews/lei/`. The latest completed approved/canonical review is
 `external_reviews/lei/final-commit-package-hash-review.approved.canonical.json`.
 It approves only the exact commit and package hash named in that JSON, with

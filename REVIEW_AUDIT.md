@@ -41,7 +41,8 @@ not authorize live submit, live cancel, production deployment, or another
 canary attempt. This documentation/evidence refresh advances the source state,
 so the next package hash and final source commit require fresh CI as needed,
 rebuilt sidecars, and fresh independent review before they can be treated as a
-reviewed final state.
+reviewed final state. Any changed final state requires a fresh review of that
+changed state.
 
 ## 2026-06-11 follow-up
 
