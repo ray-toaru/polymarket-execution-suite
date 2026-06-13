@@ -63,7 +63,7 @@ class CiWorkflowTests(unittest.TestCase):
         for uses in uses_values:
             self.assertRegex(uses, FULL_SHA_USES)
 
-        self.assertIn("python -m pip install --upgrade pip==25.3", text)
+        self.assertIn("python -m pip install --upgrade pip==26.1.2", text)
         self.assertIn("actions/upload-artifact@", text)
         self.assertIn("integration-proof-artifacts", text)
         self.assertIn("check_v28_production_live_candidate.py --require-ready", text)
@@ -96,16 +96,31 @@ class CiWorkflowTests(unittest.TestCase):
         for uses in uses_values:
             self.assertRegex(uses, FULL_SHA_USES)
 
-        self.assertIn("python -m pip install --upgrade pip==25.3", text)
+        self.assertIn("python -m pip install --upgrade pip==26.1.2", text)
         self.assertIn('"3.12"', text)
         self.assertIn(
-            "python -m pip install ruff==0.15.15 mypy==2.1.0 bandit==1.9.4 build==1.4.0",
+            "python -m pip install -c constraints-ci.txt ruff mypy bandit build",
             text,
         )
         self.assertIn("run: python -m pytest -q tests", text)
         self.assertIn("python -m ruff check src tests", text)
         self.assertIn("python -m mypy src", text)
         self.assertIn("python -m bandit -q -r src", text)
+        self.assertIn("Checkout pinned execution-engine contract", text)
+        self.assertIn(
+            "python scripts/check_openapi_parity.py execution-engine-contract/openapi/executor.v1.yaml",
+            text,
+        )
+        engine_checkout = next(
+            step
+            for step in data["jobs"]["python"]["steps"]
+            if step["name"] == "Checkout pinned execution-engine contract"
+        )
+        self.assertRegex(engine_checkout["with"]["ref"], r"^[0-9a-f]{40}$")
+        self.assertEqual(
+            engine_checkout["with"]["repository"],
+            "ray-toaru/polymarket-execution-engine",
+        )
 
     def test_root_ci_runs_pinned_submodule_gates_locally(self):
         data = load_yaml(ROOT_CI)
@@ -134,7 +149,7 @@ class CiWorkflowTests(unittest.TestCase):
             for step in data["jobs"]["integration-static"]["steps"]
         )
         self.assertIn(
-            "python -m pip install ruff==0.15.15 mypy==2.1.0 bandit==1.9.4",
+            "python -m pip install -c constraints-ci.txt ruff mypy bandit build",
             static_commands,
         )
         self.assertIn("python -m ruff check hermes-polymarket-executor-adapter", static_commands)

@@ -99,7 +99,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
         with:
-          toolchain: 1.88.0
+          toolchain: 1.96.0
           components: rustfmt, clippy
 
       - name: Cache cargo
@@ -171,7 +171,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
         with:
-          toolchain: 1.88.0
+          toolchain: 1.96.0
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
@@ -208,7 +208,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.11", "3.13"]
+        python-version: ["3.11", "3.14"]
     steps:
       - name: Checkout repository and submodules
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
@@ -225,7 +225,7 @@ jobs:
 
       - name: Install compatibility dependencies
         run: |
-          python -m pip install --upgrade pip==25.3
+          python -m pip install --upgrade pip==26.1.2
           python -m pip install -c constraints-ci.txt -r requirements-ci.txt
           python -m pip install -c constraints-ci.txt -e "hermes-polymarket-executor-adapter[test]"
 
@@ -267,15 +267,15 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
         with:
-          python-version: "3.13"
+          python-version: "3.14"
           cache: pip
 
       - name: Install Hermes test dependencies
         run: |
-          python -m pip install --upgrade pip==25.3
+          python -m pip install --upgrade pip==26.1.2
           python -m pip install -c constraints-ci.txt -r requirements-ci.txt
           python -m pip install -c constraints-ci.txt -e "hermes-polymarket-executor-adapter[test]"
-          python -m pip install ruff==0.15.15 mypy==2.1.0 bandit==1.9.4
+          python -m pip install -c constraints-ci.txt ruff mypy bandit build
 
       - name: Check version consistency
         run: python scripts/check_version_consistency.py

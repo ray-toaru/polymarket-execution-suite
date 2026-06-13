@@ -15,6 +15,21 @@ from validate_contracts_support import ContractValidationError
 
 
 class ValidateContractsExecutorTests(unittest.TestCase):
+    def test_current_lifecycle_guard_uses_axum_08_route_syntax(self) -> None:
+        text = (
+            ROOT
+            / "polymarket-execution-engine"
+            / "validation"
+            / "check_current_lifecycle_api.py"
+        ).read_text()
+        for route in [
+            "/v1/sign-only/lifecycle-events/{execution_id}",
+            "/v1/lifecycle/executions/{execution_id}/events",
+            "/v1/lifecycle/orders/{order_id}/events",
+        ]:
+            self.assertIn(route, text)
+        self.assertNotIn("/v1/sign-only/lifecycle-events/:execution_id", text)
+
     def _minimal_v23_spec(self) -> dict:
         return {
             "paths": {
@@ -1948,7 +1963,7 @@ pub fn sign_only_lifecycle_has_remote_side_effect(record: &SignOnlyLifecycleReco
 name = "pmx-official-sdk-spike"
 version = "0.0.0"
 edition = "2024"
-rust-version = "1.88"
+rust-version = "1.96"
 
 [features]
 default = []
@@ -2175,7 +2190,7 @@ resolver = "2"
 edition = "2024"
 license = "Apache-2.0"
 version = "0.27.9"
-rust-version = "1.88"
+rust-version = "1.96"
 
 [workspace.dependencies]
 serde = { version = "1.0.228", features = ["derive"] }

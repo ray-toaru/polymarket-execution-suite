@@ -3,7 +3,7 @@
 ## Current baseline
 
 ```text
-Rust: 1.88+
+Rust: 1.96
 Rust edition: 2024
 Python: >=3.11
 Official SDK crate: polymarket_client_sdk_v2
@@ -21,6 +21,8 @@ Official SDK version: =0.6.0-canary.1
 - Python CI dependencies are resolved through `constraints-ci.txt` and the
   Hermes package constraints file; the validation environment evidence records
   resolved package versions.
+- Python compatibility CI covers 3.11 through 3.14. Rust CI and
+  `rust-toolchain.toml` use the pinned 1.96 toolchain.
 
 ## Submodule provenance
 
