@@ -541,7 +541,7 @@ Automated tools may inspect the packet and produce a non-authorizing report:
 ```json
 {
   "review_kind": "automated_assistance_report",
-  "independent_registered_reviewer_approval": false,
+  "signed_reviewer_approval": false,
   "authorization_effect": "none"
 }
 ```

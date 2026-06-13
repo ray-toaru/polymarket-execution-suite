@@ -100,6 +100,10 @@ class PrepareCanaryReviewBundleTests(unittest.TestCase):
                         "cancel_only_fallback_ready": True,
                         "balance_allowance_checked": True,
                         "gate_evidence_refs": {
+                            "live_submit_allowed": "pg://runtime/live-submit-allowed",
+                            "real_funds_canary_allowed": "pg://runtime/real-funds-canary-allowed",
+                            "preconditions_live_submit_would_pass": "pg://runtime/live-submit-preconditions",
+                            "preconditions_real_funds_canary_would_pass": "pg://runtime/real-funds-canary-preconditions",
                             "kill_switch_open": "pg://runtime/kill-switch",
                             "runtime_worker_healthy": "pg://runtime/runtime-worker",
                             "geoblock_allowed": "pg://runtime/geoblock",

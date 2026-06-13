@@ -33,7 +33,7 @@ class OfflineIndependentReviewManualTests(unittest.TestCase):
             "The reviewer must be an accountable natural person who is distinct from the operator",
             "does not change that decision or enable live execution by itself",
             "The repository validator now requires this cryptographic verification",
-            '"independent_registered_reviewer_approval": false',
+            '"signed_reviewer_approval": false',
             '"authorization_effect": "none"',
         ]
         for phrase in required_phrases:

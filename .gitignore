@@ -196,3 +196,11 @@ docs/artifacts/geoblock_raw_response_*.json
 docs/artifacts/closed_only_raw_response_*.json
 docs/artifacts/post_order_reject_shape_*.json
 !docs/artifacts/*.sanitized.json
+
+# External review archives may contain detached signatures, reviewer evidence,
+# runtime closeout material, and local operational references. Keep only
+# explicitly tracked repository-governed placeholders.
+external_reviews/**
+!external_reviews/
+!external_reviews/reviewer-registry/
+!external_reviews/reviewer-registry/lei.pending.json

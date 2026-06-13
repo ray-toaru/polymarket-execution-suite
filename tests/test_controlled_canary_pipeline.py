@@ -177,11 +177,10 @@ class ControlledCanaryPipelineTests(unittest.TestCase):
                 max_order_notional_usd=self.pipeline.Decimal("1.00"),
             )
 
-    def test_supplied_candidate_requires_outcome(self):
+    def test_supplied_candidate_allows_review_only_outcome_to_be_absent(self):
         candidate = self.candidate()
         candidate.pop("outcome")
-        with self.assertRaisesRegex(SystemExit, "candidate outcome is required"):
-            self.pipeline.validate_candidate_file(self.write_candidate(candidate))
+        self.pipeline.validate_candidate_file(self.write_candidate(candidate))
 
     def test_supplied_candidate_rejects_price_out_of_bounds(self):
         candidate = self.candidate(best_ask="1.20", limit_price="1.10", estimated_order_notional_usd="5.5")

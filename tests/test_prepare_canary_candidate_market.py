@@ -32,6 +32,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             token_id="123",
             outcome="Yes",
             market_slug="slug",
+            market_end_at="2026-06-01T00:00:00+00:00",
             active=True,
             accepting_orders=True,
             closed=False,
@@ -50,7 +51,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             exchange_rule_evidence_ref="ticket://reviewed-rule",
             exchange_rule_valid_for_minutes=5,
         )
-        self.assertEqual(candidate.to_engine_json()["outcome"], "Yes")
+        self.assertNotIn("outcome", candidate.to_engine_json())
         self.assertEqual(candidate.to_engine_json()["estimated_order_notional_usd"], "0.1")
         self.assertEqual(
             candidate.to_engine_json()["exchange_rule_snapshot"]["evidence_ref"],
@@ -81,6 +82,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             max_markets=10,
             max_clob_requests=None,
             max_spread_bps=100,
+            min_end_days=None,
             exchange_rule_valid_for_minutes=5,
             human_review_ref="ticket://review",
             exchange_rule_evidence_ref="ticket://reviewed-rule",
@@ -132,6 +134,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             max_markets=10,
             max_clob_requests=None,
             max_spread_bps=100,
+            min_end_days=None,
             exchange_rule_valid_for_minutes=5,
             human_review_ref="review",
             exchange_rule_evidence_ref="review",
@@ -149,6 +152,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             max_spread_bps=100,
             max_clob_requests=None,
             exchange_rule_valid_for_minutes=5,
+            min_end_days=None,
             market_slug="slug",
         )
         market = {
@@ -264,6 +268,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             token_id="123",
             outcome="Yes",
             market_slug="slug",
+            market_end_at="2026-06-01T00:00:00+00:00",
             active=True,
             accepting_orders=True,
             closed=False,
@@ -335,6 +340,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             max_markets=10,
             max_clob_requests=None,
             max_spread_bps=100,
+            min_end_days=None,
             exchange_rule_valid_for_minutes=5,
             human_review_ref="ticket://review",
             exchange_rule_evidence_ref="ticket://reviewed-rule",
@@ -380,6 +386,7 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
             max_markets=10,
             max_clob_requests=2,
             max_spread_bps=100,
+            min_end_days=None,
             exchange_rule_valid_for_minutes=5,
             human_review_ref="ticket://review",
             exchange_rule_evidence_ref="ticket://reviewed-rule",

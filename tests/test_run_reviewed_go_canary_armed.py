@@ -239,8 +239,8 @@ class RunReviewedGoCanaryArmedTests(unittest.TestCase):
         self.assertIn("pmx-real-funds-canary-armed", plan["command"])
         self.assertIn(f"canary-{plan['invocation_hash']}-armed", plan["command"])
         self.assertIn(f"exec-{plan['invocation_hash']}", plan["command"])
-        self.assertNotIn("--allow-live-submit-config", plan["command"])
-        self.assertNotIn("--allow-real-funds-canary-config", plan["command"])
+        self.assertIn("--allow-live-submit-config", plan["command"])
+        self.assertIn("--allow-real-funds-canary-config", plan["command"])
 
 
 if __name__ == "__main__":
