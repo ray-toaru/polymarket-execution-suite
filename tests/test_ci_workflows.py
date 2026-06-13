@@ -106,21 +106,12 @@ class CiWorkflowTests(unittest.TestCase):
         self.assertIn("python -m ruff check src tests", text)
         self.assertIn("python -m mypy src", text)
         self.assertIn("python -m bandit -q -r src", text)
-        self.assertIn("Checkout pinned execution-engine contract", text)
+        self.assertIn('"contracts/**"', text)
         self.assertIn(
-            "python scripts/check_openapi_parity.py execution-engine-contract/openapi/executor.v1.yaml",
+            "python scripts/check_openapi_parity.py contracts/executor.v1.yaml",
             text,
         )
-        engine_checkout = next(
-            step
-            for step in data["jobs"]["python"]["steps"]
-            if step["name"] == "Checkout pinned execution-engine contract"
-        )
-        self.assertRegex(engine_checkout["with"]["ref"], r"^[0-9a-f]{40}$")
-        self.assertEqual(
-            engine_checkout["with"]["repository"],
-            "ray-toaru/polymarket-execution-engine",
-        )
+        self.assertNotIn("execution-engine-contract", text)
 
     def test_root_ci_runs_pinned_submodule_gates_locally(self):
         data = load_yaml(ROOT_CI)
