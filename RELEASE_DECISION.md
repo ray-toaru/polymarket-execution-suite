@@ -77,21 +77,17 @@ polymarket-execution-engine/evidence/current/manifest.json
 
 The manifest currently records:
 
-- local/current gates: pass;
-- 2026-05-23 local refresh: Rust workspace, SDK adapter, PostgreSQL migration,
-  PostgreSQL store tests, HTTP PostgreSQL E2E, PostgreSQL-backed store-truth
-  CLI preflight, static guards, governance drills, release packaging, and
-  review-package drills passed;
-- PostgreSQL validation: pass, backed by `13-pg-migration.log`,
-  `14-pg-store-tests.log`, and `15-http-postgres-e2e.log`;
-- store-truth CLI preflight: pass, backed by
-  `72-real-funds-canary-store-truth-cli-preflight.log`, with
-  `--runtime-truth-store postgres`, no post/cancel, no remote side effects, and
-  no raw signed order exposure;
-- credentialed non-trading and sign-only dry-run sections: pass, backed by
-  `16-authenticated-smoke.log` and `17-sign-only-dry-run.log` under explicit
-  env gates;
+- `postgres_validation=skipped`
+- `credentialed_non_trading_validation=skipped`
+- `sdk_standard_sign_only_validation=pass`
+- `real_funds_canary_store_truth_cli_validation=skipped`
+- other local/static source-candidate gates: pass;
 - release decision: not validated, not production-ready, not live-ready.
+
+The skipped gates were not run for the current exact commit because the
+required database URI or explicit credentialed opt-in was absent. Historical
+2026-05-23 PostgreSQL, store-truth, credentialed non-trading, and sign-only
+passes remain useful prior evidence, but they are not current artifact proof.
 
 Current detached artifact binding:
 

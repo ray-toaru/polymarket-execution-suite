@@ -33,6 +33,19 @@ live cancel, production deployment, and real-funds authorization remain blocked.
 Release posture remains `non_live_hardened`; production deployment and live
 submit/cancel remain blocked by the formal release decision.
 
+## Phase 5 non-live foundation
+
+- Added typed non-live execution commands for place, cancel, and replace.
+  Commands do not authorize remote side effects.
+- Added typed fill, position, open-order, exposure, and risk-limit projections
+  with fail-closed kill-switch and exposure decisions.
+- Added market/book snapshots with stale and future-dated fail-closed checks.
+- Added a read-only market-data gateway port whose default implementation is
+  disabled.
+- Added an in-memory portfolio projection store contract and round-trip tests.
+- No live endpoint, production gateway wiring, PostgreSQL projection
+  persistence, or live submit/cancel authorization was added.
+
 ## Implemented source-level items
 
 - Two-plane pre-live boundary: Python executor adapter + Rust execution plane.
@@ -321,10 +334,18 @@ submit/cancel remain blocked by the formal release decision.
 
 ## Current validation evidence
 
-The current canonical evidence manifest records passing source-candidate gates
-for Rust, PostgreSQL, SDK adapter, credentialed non-trading smoke, sign-only
-dry-run, release artifact, shadow execution, observability, and governance
-checks:
+The current canonical evidence manifest records a mix of passing local gates
+and explicitly skipped environment-gated checks. Current manifest gate
+statuses are:
+
+- `postgres_validation=skipped`
+- `credentialed_non_trading_validation=skipped`
+- `sdk_standard_sign_only_validation=pass`
+- `real_funds_canary_store_truth_cli_validation=skipped`
+
+The skipped gates were not executed for the current exact commit because the
+required database URI or explicit credentialed opt-in was absent. They must not
+be inferred as current pass results from older evidence.
 
 - Latest pushed source/evidence refresh integration GitHub CI:
   `ray-toaru/polymarket-execution-suite/actions/runs/26254755001`, success.
@@ -339,9 +360,6 @@ checks:
 - The `credentialed-sdk` environment is configured only in
   `polymarket-execution-engine`; the integration repository does not own those
   secrets.
-- `postgres_validation`: pass.
-- `credentialed_non_trading_validation`: pass.
-
 - `real_funds_canary_preflight_validation`: pass.
 - `real_funds_canary_lifecycle_validation`: pass.
 - `real_funds_canary_ready_validation`: pass.
@@ -353,6 +371,12 @@ checks:
   effect.
 - `67-real-funds-canary-ready-drill.log`: pass, program ready, no actual
   execution, no post, no remote side effect.
+
+Historical evidence, not current exact-commit evidence:
+
+- 2026-05-23 PostgreSQL repository/API and store-truth checks passed.
+- The historical credentialed SDK GitHub gate
+  `ray-toaru/polymarket-execution-engine/actions/runs/26175786984` passed.
 
 ```text
 polymarket-execution-engine/evidence/current/manifest.json
