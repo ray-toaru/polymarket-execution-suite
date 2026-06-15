@@ -133,6 +133,29 @@ class CiWorkflowTests(unittest.TestCase):
         self.assertIn("python -m mypy hermes-polymarket-executor-adapter/src", static_commands)
         self.assertIn("python -m bandit -q -r hermes-polymarket-executor-adapter/src", static_commands)
 
+    def test_root_ci_uses_default_token_for_public_submodules(self):
+        text = ROOT_CI.read_text()
+        data = load_yaml(ROOT_CI)
+        self.assertNotIn("CI_SUBMODULE_TOKEN", text)
+        self.assertNotIn(
+            "CI_SUBMODULE_TOKEN",
+            "\n".join(
+                path.read_text()
+                for path in (ROOT / ".github").rglob("*")
+                if path.is_file()
+            ),
+        )
+
+        for job in data["jobs"].values():
+            checkout = next(
+                step
+                for step in job["steps"]
+                if step.get("name") == "Checkout repository and submodules"
+            )
+            self.assertEqual(checkout["with"]["submodules"], "recursive")
+            self.assertFalse(checkout["with"]["persist-credentials"])
+            self.assertNotIn("token", checkout["with"])
+
     def test_root_static_ci_provides_pinned_hermes_dependency(self):
         data = load_yaml(ROOT_CI)
         steps = data["jobs"]["integration-static"]["steps"]

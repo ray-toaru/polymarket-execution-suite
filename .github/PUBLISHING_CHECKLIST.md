@@ -1,10 +1,10 @@
 # GitHub Publishing Checklist
 
-This repository is release-sensitive because it pins independent Hermes and execution-engine submodules. Complete these checks before publishing the private GitHub repository.
+This repository is release-sensitive because it pins independent Hermes and execution-engine submodules. Complete these checks before publishing changes to GitHub.
 
 ## Repository wiring
 
-- Create or select the private GitHub repositories for:
+- Create or select the public GitHub repositories for:
   - `polymarket-execution-suite`;
   - `hermes-polymarket-executor-adapter`;
   - `polymarket-execution-engine`.
@@ -20,7 +20,8 @@ This repository is release-sensitive because it pins independent Hermes and exec
   candidates, submodule pointer updates, GitHub Environment or secret changes,
   and runner-only behavior that local validation cannot cover.
 - Keep `actions/checkout` configured with `submodules: recursive`.
-- Because the submodules are private sibling repositories, configure `CI_SUBMODULE_TOKEN` with read access to all three repositories and wire it into checkout before enabling required checks.
+- Use the default GitHub Actions token for public submodule checkout. Do not add a
+  long-lived personal access token for sibling repository access.
 - Require the integration repository `ci` workflow before merging release
   branches.
 - Require the child repository workflows on the pinned commits before promoting a
