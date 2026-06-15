@@ -42,9 +42,16 @@ submit/cancel remain blocked by the formal release decision.
 - Added market/book snapshots with stale and future-dated fail-closed checks.
 - Added a read-only market-data gateway port whose default implementation is
   disabled.
-- Added an in-memory portfolio projection store contract and round-trip tests.
-- No live endpoint, production gateway wiring, PostgreSQL projection
-  persistence, or live submit/cancel authorization was added.
+- Added in-memory and PostgreSQL portfolio projection persistence with
+  account-scoped readback, first-write-wins timestamp semantics, and migration
+  coverage.
+- Added explicit replace preparation/cancel-pending/unknown/rejected lifecycle
+  states. Non-live replace preparation persists only opaque hash references and
+  replays idempotently by correlation ID.
+- Added secret-provider, alerting, and deployment-readiness ports with a
+  fail-closed disabled adapter.
+- No live endpoint, production gateway wiring, raw secret material, or live
+  submit/cancel authorization was added.
 
 ## Implemented source-level items
 
