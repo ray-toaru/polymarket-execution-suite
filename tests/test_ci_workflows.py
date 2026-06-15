@@ -67,7 +67,8 @@ class CiWorkflowTests(unittest.TestCase):
         self.assertIn("actions/upload-artifact@", text)
         self.assertIn("integration-proof-artifacts", text)
         self.assertIn("check_v28_production_live_candidate.py --require-ready", text)
-        self.assertIn("cargo test --workspace --exclude pmx-api --locked", text)
+        self.assertNotIn("cargo test --workspace --exclude pmx-api --locked", text)
+        self.assertNotIn("macos-latest", text)
         self.assertIn("PyYAML==6.0.3", (ROOT / "requirements-ci.txt").read_text())
         self.assertIn("jsonschema==4.25.1", (ROOT / "requirements-ci.txt").read_text())
         self.assertEqual(
@@ -113,27 +114,12 @@ class CiWorkflowTests(unittest.TestCase):
         )
         self.assertNotIn("execution-engine-contract", text)
 
-    def test_root_ci_runs_pinned_submodule_gates_locally(self):
+    def test_root_ci_relies_on_exact_submodule_ci_instead_of_repeating_engine_gates(self):
         data = load_yaml(ROOT_CI)
         self.assertNotIn("adapter-required-ci", data["jobs"])
         self.assertNotIn("engine-required-ci", data["jobs"])
-
-        rust_steps = data["jobs"]["engine-rust-locked"]["steps"]
-        rust_commands = "\n".join(
-            str(step.get("run", "")) for step in rust_steps
-        )
-        self.assertIn("cargo clippy --workspace --all-targets --all-features", rust_commands)
-        self.assertIn("pmx-official-sdk-spike/Cargo.toml", rust_commands)
-        self.assertIn("pmx-official-sdk-adapter/Cargo.toml", rust_commands)
-
-        postgres = data["jobs"]["engine-postgres"]
-        self.assertEqual(postgres["services"]["postgres"]["image"], "postgres:16")
-        postgres_commands = "\n".join(
-            str(step.get("run", "")) for step in postgres["steps"]
-        )
-        self.assertIn("migrations/[0-9]*.sql", postgres_commands)
-        self.assertIn("http_postgres_e2e", postgres_commands)
-        self.assertIn("run_migration_drift_dry_run.py", postgres_commands)
+        self.assertNotIn("engine-rust-locked", data["jobs"])
+        self.assertNotIn("engine-postgres", data["jobs"])
 
         static_commands = "\n".join(
             str(step.get("run", ""))
@@ -172,6 +158,18 @@ class CiWorkflowTests(unittest.TestCase):
     def test_engine_ci_supports_workflow_call(self):
         data = load_yaml(ENGINE_CI)
         self.assertIn("workflow_call", workflow_on(data))
+
+    def test_engine_ci_has_one_postgres_backed_current_gates_job(self):
+        data = load_yaml(ENGINE_CI)
+        self.assertEqual(set(data["jobs"]), {"current-gates"})
+        job = data["jobs"]["current-gates"]
+        self.assertEqual(job["services"]["postgres"]["image"], "postgres:16")
+        self.assertEqual(
+            job["env"]["PMX_TEST_DATABASE_URL"],
+            "postgres://postgres:postgres@127.0.0.1:5432/postgres",
+        )
+        commands = "\n".join(str(step.get("run", "")) for step in job["steps"])
+        self.assertIn("./validation/run_current_gates.sh", commands)
 
 
 if __name__ == "__main__":

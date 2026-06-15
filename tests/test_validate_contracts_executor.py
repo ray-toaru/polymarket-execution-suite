@@ -2592,28 +2592,12 @@ updates:
 
         def fake_read_text(path_self: Path, *args, **kwargs) -> str:
             path = str(path_self)
-            if path.endswith(".github/workflows/ci.yml"):
+            if path.endswith(".github/workflows/ci.yml") and "polymarket-execution-engine" not in path:
                 adapter_sha = module.git_head(ROOT / "hermes-polymarket-executor-adapter")
                 engine_sha = module.git_head(ROOT / "polymarket-execution-engine")
                 return f"""
 name: ci
 jobs:
-  engine-rust-locked:
-    runs-on: ubuntu-latest
-    steps:
-      - run: cargo clippy --workspace --all-targets --all-features
-      - run: cargo test --manifest-path adapters/pmx-official-sdk-spike/Cargo.toml
-      - run: cargo test --manifest-path adapters/pmx-official-sdk-adapter/Cargo.toml
-  engine-postgres:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-    steps:
-      - run: for migration in migrations/[0-9]*.sql; do true; done
-      - run: cargo test -p pmx-store postgres::postgres_tests
-      - run: cargo test -p pmx-api --test http_postgres_e2e
-      - run: python validation/run_migration_drift_dry_run.py
   integration-python-compat:
     runs-on: ubuntu-latest
   integration-static:

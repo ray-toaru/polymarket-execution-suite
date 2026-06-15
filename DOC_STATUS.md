@@ -12,7 +12,7 @@ Current tracked component pins at this documentation refresh are:
 - Hermes adapter submodule:
   `7477c028d5c4f0f2215e7ee6c3ee4ea750331553`;
 - execution-engine submodule:
-  `be6298241d28eecc3eaf3be871c8f5776a8157d0`.
+  `f84b51107efd0626706e93c4956cb205440784fd`.
 
 Latest completed remote CI before this documentation refresh:
 

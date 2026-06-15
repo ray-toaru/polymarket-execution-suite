@@ -9,7 +9,7 @@ document. Current tracked component pins at this documentation refresh are:
 - Hermes adapter submodule commit:
   `7477c028d5c4f0f2215e7ee6c3ee4ea750331553`.
 - Execution-engine submodule commit:
-  `be6298241d28eecc3eaf3be871c8f5776a8157d0`.
+  `f84b51107efd0626706e93c4956cb205440784fd`.
 
 Integration suite CI run `27474066294`, adapter CI run `27473948617`, and
 execution-engine CI run `27473806418` passed before this documentation refresh.

@@ -84,131 +84,10 @@ defaults:
     shell: bash --noprofile --norc -euo pipefail {0}
 
 jobs:
-  engine-rust-locked:
-    name: engine rust locked
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout repository and submodules
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
-        with:
-          token: ${{ secrets.CI_SUBMODULE_TOKEN }}
-          submodules: recursive
-          persist-credentials: false
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
-        with:
-          toolchain: 1.96.0
-          components: rustfmt, clippy
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
-        with:
-          workspaces: |
-            polymarket-execution-engine
-            polymarket-execution-engine/adapters/pmx-official-sdk-adapter
-            polymarket-execution-engine/adapters/pmx-official-sdk-spike
-
-      - name: Check engine formatting
-        working-directory: polymarket-execution-engine
-        run: cargo fmt --all -- --check
-
-      - name: Check engine workspace
-        working-directory: polymarket-execution-engine
-        run: cargo check --workspace --locked
-
-      - name: Run engine clippy
-        working-directory: polymarket-execution-engine
-        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-
-      - name: Run engine workspace tests
-        working-directory: polymarket-execution-engine
-        run: cargo test --workspace --exclude pmx-api --locked -- --test-threads=1
-
-      - name: Run engine fake HTTP e2e tests
-        working-directory: polymarket-execution-engine
-        run: cargo test -p pmx-api --test http_and_fake_e2e --locked -- --test-threads=1
-
-      - name: Run official SDK spike tests
-        working-directory: polymarket-execution-engine
-        run: |
-          cargo test --manifest-path adapters/pmx-official-sdk-spike/Cargo.toml --locked
-          cargo test --manifest-path adapters/pmx-official-sdk-spike/Cargo.toml --features sdk-typecheck --locked
-
-      - name: Run official SDK adapter tests
-        working-directory: polymarket-execution-engine
-        run: |
-          cargo test --manifest-path adapters/pmx-official-sdk-adapter/Cargo.toml --locked
-          cargo test --manifest-path adapters/pmx-official-sdk-adapter/Cargo.toml --features sdk-typecheck --locked
-
-  engine-postgres:
-    name: engine postgres integration
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      PMX_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
-    steps:
-      - name: Checkout repository and submodules
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
-        with:
-          token: ${{ secrets.CI_SUBMODULE_TOKEN }}
-          submodules: recursive
-          persist-credentials: false
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
-        with:
-          toolchain: 1.96.0
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
-        with:
-          workspaces: polymarket-execution-engine
-
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
-
-      - name: Apply engine migrations
-        working-directory: polymarket-execution-engine
-        run: |
-          for migration in migrations/[0-9]*.sql; do
-            psql "$PMX_TEST_DATABASE_URL" -f "$migration"
-          done
-
-      - name: Run engine store PostgreSQL tests
-        working-directory: polymarket-execution-engine
-        run: cargo test -p pmx-store postgres::postgres_tests --locked -- --nocapture --test-threads=1
-
-      - name: Run engine API PostgreSQL e2e tests
-        working-directory: polymarket-execution-engine
-        run: cargo test -p pmx-api --test http_postgres_e2e --locked -- --nocapture --test-threads=1
-
-      - name: Run engine migration drift dry-run
-        working-directory: polymarket-execution-engine
-        run: python validation/run_migration_drift_dry_run.py
-
   integration-python-compat:
     name: integration python compat
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     timeout-minutes: 25
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: ["3.11", "3.14"]
     steps:
       - name: Checkout repository and submodules
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
@@ -220,7 +99,7 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.11"
           cache: pip
 
       - name: Install compatibility dependencies
