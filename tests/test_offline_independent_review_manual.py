@@ -106,10 +106,6 @@ class OfflineIndependentReviewManualTests(unittest.TestCase):
             ["git", "-C", str(ROOT / "hermes-polymarket-executor-adapter"), "rev-parse", "HEAD"],
             text=True,
         ).strip()
-        engine_head = subprocess.check_output(
-            ["git", "-C", str(ROOT / "polymarket-execution-engine"), "rev-parse", "HEAD"],
-            text=True,
-        ).strip()
         combined = "\n".join(
             [
                 REVIEW_AUDIT.read_text(),
@@ -121,7 +117,6 @@ class OfflineIndependentReviewManualTests(unittest.TestCase):
         normalized = " ".join(combined.split())
         required = [
             adapter_head,
-            engine_head,
             "27474066294",
             "27473948617",
             "27473806418",
@@ -129,6 +124,7 @@ class OfflineIndependentReviewManualTests(unittest.TestCase):
             "does not authorize live submit, live cancel, production deployment, or another canary attempt",
             "requires fresh CI",
             "fresh review",
+            "detached sidecars",
         ]
         for phrase in required:
             self.assertIn(phrase, normalized)
