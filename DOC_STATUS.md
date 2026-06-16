@@ -1,5 +1,24 @@
 # Documentation and evidence status — v0.28.0 production-live-candidate
 
+## 2026-06-16 status
+
+Current `main` has advanced for the Phase 5 non-live foundation merge and the
+reviewer-registry fail-closed regression expansion. Current tracked component
+pins are:
+
+- Hermes adapter submodule:
+  `7477c028d5c4f0f2215e7ee6c3ee4ea750331553`;
+- execution-engine submodule:
+  `9b383a049c9309b58c9fde2dacf8a3cf6feb5515`.
+
+The current local source package and detached sidecars were rebuilt from this
+state with `production_ready=false`, `live_trading_ready=false`, and
+`validated_release=false`. Fresh CI and fresh independent package review are
+still required before this changed state can be treated as a reviewed final
+state. Existing PR-content and merge signatures do not authorize live submit,
+live cancel, production deployment, reviewed-go execution, or another canary
+attempt.
+
 ## 2026-06-13 status
 
 Current `main` is a non-live governance baseline. Exact source commits,

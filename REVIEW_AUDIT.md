@@ -1,5 +1,25 @@
 # Review audit — v0.28 production-live-candidate
 
+## 2026-06-16 Phase 5 merged non-live evidence refresh
+
+Current `main` has advanced after the Phase 5 non-live foundation merge and
+the reviewer fail-closed regression expansion. Current component pins:
+
+- Hermes adapter submodule commit:
+  `7477c028d5c4f0f2215e7ee6c3ee4ea750331553`.
+- Execution-engine submodule commit:
+  `9b383a049c9309b58c9fde2dacf8a3cf6feb5515`.
+
+Local evidence and artifact checks were refreshed for the new source state, but
+the pushed source state still requires fresh CI and fresh review before it can
+be treated as a reviewed final package. The refreshed local artifact hash is
+recorded in detached `dist/` sidecars, not as a live or production approval.
+
+The earlier external review and merge authorization remain scope-bound. They
+do not authorize live submit, live cancel, production deployment, or another
+canary attempt. Any rebuilt package, sidecar, provenance, reviewed-go package,
+or canary packet requires fresh review.
+
 ## 2026-06-13 final main governance closeout
 
 Current `main` is closed as a non-live governance baseline after direct main

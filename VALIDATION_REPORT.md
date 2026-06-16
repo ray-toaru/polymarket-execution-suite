@@ -1,5 +1,26 @@
 # Validation Report — v0.28.0 production-live-candidate
 
+## 2026-06-16 post-merge evidence refresh
+
+Current tracked component pins after the Phase 5 non-live foundation merge and
+reviewer-registry fail-closed regression expansion:
+
+- Hermes adapter submodule commit:
+  `7477c028d5c4f0f2215e7ee6c3ee4ea750331553`.
+- Execution-engine submodule commit:
+  `9b383a049c9309b58c9fde2dacf8a3cf6feb5515`.
+
+Local validation refreshed the current gates, artifact, detached sidecars,
+workspace manifest snapshot, dist index, current evidence manifest, docs
+governance, and release hygiene for this changed state. PostgreSQL,
+credentialed non-trading smoke, sign-only dry-run, and PostgreSQL-backed
+store-truth remain skipped unless their explicit environment prerequisites are
+provided.
+
+This changed state still requires fresh CI and fresh independent review before
+it can be treated as a reviewed final package. It does not authorize live
+submit, live cancel, production deployment, or another canary attempt.
+
 ## 2026-06-13 final package-hash review state
 
 Exact root commit, artifact hash, manifest hash, sidecar hash, and review hash
