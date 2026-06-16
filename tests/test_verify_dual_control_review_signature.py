@@ -28,7 +28,15 @@ class VerifyDualControlReviewSignatureTests(unittest.TestCase):
         path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
         return path
 
-    def fixture(self, tmp: Path, *, status: str = "active", method: str = "gpg") -> dict[str, Path]:
+    def fixture(
+        self,
+        tmp: Path,
+        *,
+        status: str = "active",
+        method: str = "gpg",
+        expires_at: datetime | None = None,
+        revoked_at: datetime | None = None,
+    ) -> dict[str, Path]:
         identity = "reviewer://lei"
         attestation = self.write_json(
             tmp,
@@ -68,7 +76,10 @@ class VerifyDualControlReviewSignatureTests(unittest.TestCase):
                         "allowed_signers_file": "allowed_signers",
                         "ssh_principal": "lei@example.invalid",
                         "signing_key_attestation_file": "lei-signing-key-attestation.json",
-                        "expires_at": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
+                        "expires_at": (
+                            expires_at or datetime.now(timezone.utc) + timedelta(days=1)
+                        ).isoformat(),
+                        "revoked_at": revoked_at.isoformat() if revoked_at else None,
                     }
                 ],
             },
@@ -108,6 +119,34 @@ class VerifyDualControlReviewSignatureTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_name:
             paths = self.fixture(Path(tmp_name), status="pending_key_registration")
             with self.assertRaisesRegex(SystemExit, "status must be active"):
+                self.module.verify_review_signature(
+                    approved_review_file=paths["approved"],
+                    canonical_review_file=paths["canonical"],
+                    signature_file=paths["signature"],
+                    reviewer_registry_file=paths["registry"],
+                )
+
+    def test_rejects_expired_reviewer(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            paths = self.fixture(
+                Path(tmp_name),
+                expires_at=datetime.now(timezone.utc) - timedelta(seconds=1),
+            )
+            with self.assertRaisesRegex(SystemExit, "entry is expired"):
+                self.module.verify_review_signature(
+                    approved_review_file=paths["approved"],
+                    canonical_review_file=paths["canonical"],
+                    signature_file=paths["signature"],
+                    reviewer_registry_file=paths["registry"],
+                )
+
+    def test_rejects_revoked_reviewer(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            paths = self.fixture(
+                Path(tmp_name),
+                revoked_at=datetime.now(timezone.utc) - timedelta(seconds=1),
+            )
+            with self.assertRaisesRegex(SystemExit, "entry is revoked"):
                 self.module.verify_review_signature(
                     approved_review_file=paths["approved"],
                     canonical_review_file=paths["canonical"],
