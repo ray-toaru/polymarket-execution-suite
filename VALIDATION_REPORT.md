@@ -1,5 +1,34 @@
 # Validation Report — v0.28.0 production-live-candidate
 
+## 2026-06-18 local live-read event validation
+
+Current tracked component pins after the Phase 5 live-read event
+persistence/API continuation:
+
+- Hermes adapter submodule commit:
+  `7056980d188b466058430511a4883a97e43f0b92`.
+- Execution-engine submodule commit:
+  `4c8d8d18f83adf19eeb5bd4cca3204447a59371c`.
+- Integration root commit before this documentation sync:
+  `3fbf823ea1dd4e08a155d754ba04f89cd3a9d823`.
+
+Local validation passed:
+
+- `cargo fmt --check`;
+- `cargo check --workspace --locked`;
+- `cargo test -p pmx-store live_read --locked`;
+- `cargo test -p pmx-gateway live_read --locked`;
+- `cargo test -p pmx-api full_scaffold_path_compile_submit_cancel_and_reconcile --locked -- --test-threads=1`;
+- `PYTHONPATH=hermes-polymarket-executor-adapter/src .venv/bin/python -m pytest -q hermes-polymarket-executor-adapter/tests`;
+- `PYTHONPATH=hermes-polymarket-executor-adapter/src .venv/bin/python hermes-polymarket-executor-adapter/scripts/check_openapi_parity.py polymarket-execution-engine/openapi/executor.v1.yaml`;
+- `.venv/bin/python polymarket-execution-engine/validation/check_docs_evidence_governance.py`;
+- `.venv/bin/python scripts/validate_contracts.py --report-file /tmp/pmx-contracts-doc-sync-report.json`;
+- `.venv/bin/python -m unittest discover -s tests -p 'test_*.py'`.
+
+This validation is local only. No push, GitHub CI, tag, release, package
+refresh, production deployment, live submit/cancel enablement, or real-funds
+authorization is included.
+
 ## 2026-06-18 Phase 5 evidence refresh
 
 Current tracked component pins after the completed Phase 5 non-live foundation

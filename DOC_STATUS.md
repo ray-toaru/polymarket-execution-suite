@@ -1,5 +1,22 @@
 # Documentation and evidence status — v0.28.0 production-live-candidate
 
+## 2026-06-18 local live-read event status
+
+Current local source includes the Phase 5 live-read event persistence/API
+continuation. Current tracked component pins are:
+
+- Hermes adapter submodule:
+  `7056980d188b466058430511a4883a97e43f0b92`;
+- execution-engine submodule:
+  `4c8d8d18f83adf19eeb5bd4cca3204447a59371c`;
+- integration root before this documentation sync:
+  `3fbf823ea1dd4e08a155d754ba04f89cd3a9d823`.
+
+This state is local and unpushed. It has local validation but no GitHub CI,
+fresh package sidecars, or fresh independent package review. It remains
+`production_ready=false`, `live_trading_ready=false`, and
+`validated_release=false`.
+
 ## 2026-06-18 status
 
 Current `main` has advanced through the completed Phase 5 non-live foundation

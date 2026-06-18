@@ -1,5 +1,27 @@
 # Review audit — v0.28 production-live-candidate
 
+## 2026-06-18 local live-read event continuation
+
+Current local source has advanced after the Phase 5 live-read event
+persistence/API continuation. Current component pins are:
+
+- Hermes adapter submodule commit:
+  `7056980d188b466058430511a4883a97e43f0b92`.
+- Execution-engine submodule commit:
+  `4c8d8d18f83adf19eeb5bd4cca3204447a59371c`.
+- Integration root commit before this documentation sync:
+  `3fbf823ea1dd4e08a155d754ba04f89cd3a9d823`.
+
+This local state is not pushed and has no GitHub CI result. Local validation
+passed for the live-read store/gateway tests, Rust workspace check, API scaffold
+test, Hermes adapter tests, OpenAPI parity, contract validation, docs/evidence
+governance, and root unit tests after the current documentation sync.
+
+The earlier external review and merge authorization remain scope-bound. They
+do not authorize live submit, live cancel, production deployment, or another
+canary attempt. Any rebuilt package, sidecar, provenance, reviewed-go package,
+or canary packet requires fresh review.
+
 ## 2026-06-16 Phase 5 merged non-live evidence refresh
 
 Current `main` has advanced after the Phase 5 non-live foundation merge and

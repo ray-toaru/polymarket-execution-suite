@@ -50,6 +50,10 @@ submit/cancel remain blocked by the formal release decision.
   replays idempotently by correlation ID.
 - Added secret-provider, alerting, and deployment-readiness ports with a
   fail-closed disabled adapter.
+- Added normalized live-read event records, in-memory and PostgreSQL
+  persistence, a read-only admin query endpoint, and Hermes admin read-only
+  tooling. The event model stores only allowlisted readback fields and redacted
+  error summaries.
 - No live endpoint, production gateway wiring, raw secret material, or live
   submit/cancel authorization was added.
 
@@ -360,6 +364,14 @@ be inferred as current pass results from older evidence.
   `ray-toaru/polymarket-execution-suite/actions/runs/27751360977`, success.
 - Latest pushed Phase 5 code-state execution-engine GitHub CI:
   `ray-toaru/polymarket-execution-engine/actions/runs/27751351091`, success.
+- Current local Phase 5 live-read event persistence/API commits are not pushed
+  and have no GitHub CI result:
+  integration `3fbf823ea1dd4e08a155d754ba04f89cd3a9d823`;
+  execution-engine `4c8d8d18f83adf19eeb5bd4cca3204447a59371c`;
+  adapter `7056980d188b466058430511a4883a97e43f0b92`.
+  Local validation passed for Rust workspace check, targeted live-read store
+  and gateway tests, API scaffold test, Hermes adapter tests, OpenAPI parity,
+  contract validation, and root unit tests.
 - Historical credentialed SDK GitHub gate:
   `ray-toaru/polymarket-execution-engine/actions/runs/26175786984`, success.
 - GitHub CI ownership is split by repository: the integration repository owns
