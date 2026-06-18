@@ -76,7 +76,30 @@ class ValidateContractsExecutorTests(unittest.TestCase):
                 },
             },
             "components": {
+                "securitySchemes": {
+                    "AdminToken": {"type": "http", "scheme": "bearer"},
+                    "AdminReadToken": {"type": "http", "scheme": "bearer"},
+                    "AdminCancelToken": {"type": "http", "scheme": "bearer"},
+                    "EmergencyOperatorToken": {"type": "http", "scheme": "bearer"},
+                },
                 "schemas": {
+                    "AdminSession": {
+                        "type": "object",
+                        "properties": {
+                            "scopes": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "ADMIN",
+                                        "ADMIN_READ",
+                                        "ADMIN_CANCEL",
+                                        "EMERGENCY_OPERATOR",
+                                    ],
+                                },
+                            }
+                        },
+                    },
                     "RuntimeWorkerStatusReport": {"type": "object"},
                     "ReconcileOrderLocalRequest": {"type": "object"},
                     "ReconcileOrderLocalResponse": {"type": "object"},
@@ -3817,6 +3840,15 @@ impl Default for OfficialSdkStandardSignOnlyProfile {
             with self.assertRaises(ContractValidationError) as ctx:
                 module.validate_v15_admin_audit_and_runtime_provider(spec)
         self.assertIn("API admin audit support", str(ctx.exception))
+
+    def test_v15_requires_admin_session_split_scope_contract(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["components"]["schemas"]["AdminSession"]["properties"]["scopes"]["items"]["enum"] = [
+            "ADMIN"
+        ]
+        with self.assertRaises(ContractValidationError) as ctx:
+            module.validate_v15_admin_audit_and_runtime_provider(spec)
+        self.assertIn("AdminSession OpenAPI scopes", str(ctx.exception))
 
     def test_v15_requires_backend_audit_async_method(self) -> None:
         spec = self._minimal_v23_spec()
