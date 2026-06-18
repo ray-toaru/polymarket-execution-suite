@@ -85,6 +85,102 @@ class ValidateContractsExecutorTests(unittest.TestCase):
             },
         }
 
+    def _minimal_v28_portfolio_spec(self) -> dict:
+        return {
+            "paths": {
+                "/v1/portfolio/projections": {
+                    "post": {
+                        "requestBody": {
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/PortfolioProjection"}
+                                }
+                            }
+                        },
+                        "responses": {
+                            "202": {
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/PortfolioProjectionRecordResponse"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    }
+                },
+                "/v1/portfolio/{account_id}/projection": {
+                    "get": {
+                        "responses": {
+                            "200": {
+                                "content": {
+                                    "application/json": {
+                                        "schema": {"$ref": "#/components/schemas/PortfolioProjection"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "/v1/portfolio/{account_id}/risk-assessments": {
+                    "post": {
+                        "requestBody": {
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/RiskLimits"}
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "content": {
+                                    "application/json": {
+                                        "schema": {"$ref": "#/components/schemas/RiskDecision"}
+                                    }
+                                }
+                            }
+                        },
+                    }
+                },
+            },
+            "components": {
+                "schemas": {
+                    "PortfolioProjection": {
+                        "type": "object",
+                        "properties": {
+                            "fills": {},
+                            "positions": {},
+                            "open_orders": {},
+                            "exposure": {},
+                        },
+                    },
+                    "PortfolioProjectionRecordResponse": {
+                        "type": "object",
+                        "properties": {"no_remote_side_effect": {"const": True}},
+                    },
+                    "RiskLimits": {"type": "object"},
+                    "RiskDecision": {"oneOf": []},
+                }
+            },
+        }
+
+    def test_v28_requires_non_live_portfolio_paths(self) -> None:
+        spec = self._minimal_v28_portfolio_spec()
+        del spec["paths"]["/v1/portfolio/projections"]
+        with self.assertRaises(ContractValidationError) as ctx:
+            module.validate_v28_non_live_portfolio_foundation(spec)
+        self.assertIn("portfolio", str(ctx.exception))
+
+    def test_v28_requires_portfolio_record_response_no_remote_side_effect(self) -> None:
+        spec = self._minimal_v28_portfolio_spec()
+        spec["components"]["schemas"]["PortfolioProjectionRecordResponse"]["properties"][
+            "no_remote_side_effect"
+        ] = {"type": "boolean"}
+        with self.assertRaises(ContractValidationError) as ctx:
+            module.validate_v28_non_live_portfolio_foundation(spec)
+        self.assertIn("no_remote_side_effect", str(ctx.exception))
+
     def test_v23_requires_structural_before_audit_id(self) -> None:
         spec = self._minimal_v23_spec()
         spec["paths"]["/v1/admin/audit-events"]["get"]["parameters"] = []

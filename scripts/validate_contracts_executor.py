@@ -96,6 +96,7 @@ _ORIGINALS = {
         "validate_v21_sign_only_and_runtime_models",
         "validate_store_and_backend_structure",
         "validate_v23_lifecycle_query_and_hardening",
+        "validate_v28_non_live_portfolio_foundation",
     ]
 }
 
