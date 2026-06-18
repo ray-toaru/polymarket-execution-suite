@@ -66,3 +66,18 @@ grant live submit, live cancel, production deployment, or repeat-canary
 authorization. Any subsequent code, document, evidence, release, or submodule
 change requires fresh CI and fresh independent review for the changed final
 state.
+
+## DDR-010: Real gateway requires a separate production safety design
+
+Accepted. Future real Polymarket gateway wiring, production submit/cancel, and
+generic live readback must follow
+`polymarket-execution-engine/docs/PRODUCTION_LIVE_GATEWAY_SECURITY_DESIGN.md`
+or a reviewed successor. The design requires disabled defaults, compile-time
+and runtime live gates, external secret custody, server-authoritative
+PostgreSQL truth, no raw signed-material exposure, remote-unknown freeze,
+cancel-only/read-only recovery modes, production alerting, incident drills, and
+fresh independent review for the exact artifact and configuration.
+
+This decision records a future implementation constraint only. It does not
+enable live submit, live cancel, production deployment, or another real-funds
+canary attempt in the current release state.

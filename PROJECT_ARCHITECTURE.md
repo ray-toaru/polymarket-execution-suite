@@ -68,3 +68,8 @@ live-trading safe. Live submit/cancel remain blocked unless current gates,
 artifact/evidence binding, one-time approval consumption, human-reviewed
 BUY/GTC post-only market selection, runtime/reconcile checks,
 balance/allowance checks, and a reviewed `go` decision all pass.
+
+Future real gateway, production submit/cancel, and generic live-read
+architecture is specified in
+`polymarket-execution-engine/docs/PRODUCTION_LIVE_GATEWAY_SECURITY_DESIGN.md`.
+It is not current production wiring.

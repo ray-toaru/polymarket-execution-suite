@@ -7,6 +7,12 @@ live-ready, or authorized for real-funds trading. Live submit, live cancel, and
 production deployment remain blocked unless a separate reviewed decision binds
 the exact artifact, evidence manifest, operator approval, and runtime truth.
 
+Future real gateway, production submit/cancel, and generic live readback work
+must follow
+`polymarket-execution-engine/docs/PRODUCTION_LIVE_GATEWAY_SECURITY_DESIGN.md`.
+That document is design input only; it does not change the current non-live
+release posture.
+
 ## Trust boundaries
 
 - Hermes and the Python adapter may prepare intents, approvals, reports, and

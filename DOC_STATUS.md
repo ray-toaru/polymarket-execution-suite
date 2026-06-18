@@ -78,6 +78,7 @@ canonical trust-boundary, misuse, threat, and evidence-retention summary.
 - `COMPONENT_COMPATIBILITY.md`
 - `DEPENDENCY_POLICY.md`
 - `SECURITY_MODEL.md`
+- `polymarket-execution-engine/docs/PRODUCTION_LIVE_GATEWAY_SECURITY_DESIGN.md`
 - `OFFLINE_INDEPENDENT_REVIEW_MANUAL.md`
 - `DESIGN_DECISION_RECORD.md`
 - `IMPLEMENTATION_STATUS.md`
