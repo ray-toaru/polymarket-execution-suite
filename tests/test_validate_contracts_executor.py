@@ -53,7 +53,76 @@ class ValidateContractsExecutorTests(unittest.TestCase):
                         }
                     }
                 },
-                "/v1/admin/audit-events": {"get": {"parameters": [{"name": "before_audit_id"}]}},
+                "/v1/admin/audit-events": {
+                    "get": {
+                        "parameters": [
+                            {"name": "before_audit_id"},
+                            {"name": "operation"},
+                            {"name": "principal_subject"},
+                            {"name": "result"},
+                            {"name": "correlation_id"},
+                        ],
+                        "responses": {
+                            "200": {
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/AdminAuditEvent"
+                                            },
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    }
+                },
+                "/v1/admin/live-read-events": {
+                    "get": {
+                        "parameters": [
+                            {"name": "before_event_id"},
+                            {"name": "account_id"},
+                            {"name": "operation"},
+                            {"name": "outcome"},
+                            {"name": "remote_order_id"},
+                        ],
+                        "responses": {
+                            "200": {
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/LiveReadEventRecord"
+                                            },
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    }
+                },
+                "/v1/admin/kill-switch": {
+                    "post": {
+                        "requestBody": {
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/KillSwitchRequest"}
+                                }
+                            }
+                        },
+                        "responses": {
+                            "202": {
+                                "content": {
+                                    "application/json": {
+                                        "schema": {"$ref": "#/components/schemas/KillSwitchReceipt"}
+                                    }
+                                }
+                            }
+                        },
+                    }
+                },
                 "/v1/admin/reconcile-order-local": {
                     "post": {
                         "requestBody": {
@@ -101,12 +170,85 @@ class ValidateContractsExecutorTests(unittest.TestCase):
                         },
                     },
                     "RuntimeWorkerStatusReport": {"type": "object"},
+                    "AdminAuditEvent": {"type": "object"},
+                    "KillSwitchRequest": {"type": "object"},
+                    "KillSwitchReceipt": {"type": "object"},
+                    "LiveReadEventRecord": {
+                        "type": "object",
+                        "required": [
+                            "account_id",
+                            "operation",
+                            "outcome",
+                            "no_trading_side_effect",
+                            "redacted_fields",
+                        ],
+                        "properties": {
+                            "event_id": {},
+                            "account_id": {},
+                            "operation": {},
+                            "outcome": {},
+                            "remote_order_id": {},
+                            "remote_state": {},
+                            "error_category": {},
+                            "redacted_error_summary": {},
+                            "no_trading_side_effect": {},
+                            "redacted_fields": {},
+                            "observed_at": {},
+                        },
+                    },
+                    "LiveReadOperation": {
+                        "type": "string",
+                        "enum": [
+                            "GET_ORDER",
+                            "LIST_OPEN_ORDERS",
+                            "LIST_FILLS",
+                            "LIST_POSITIONS",
+                        ],
+                    },
+                    "LiveReadOutcome": {
+                        "type": "string",
+                        "enum": [
+                            "OBSERVED",
+                            "MISSING",
+                            "BLOCKED",
+                            "REMOTE_REJECTED",
+                            "REMOTE_UNKNOWN",
+                            "AUTHENTICATION_FAILED",
+                        ],
+                    },
+                    "LiveReadErrorCategory": {
+                        "type": "string",
+                        "enum": [
+                            "REMOTE_REJECTED",
+                            "REMOTE_UNKNOWN",
+                            "AUTHENTICATION_FAILED",
+                            "DISABLED",
+                            "SIGNING_UNAVAILABLE",
+                        ],
+                    },
                     "ReconcileOrderLocalRequest": {"type": "object"},
                     "ReconcileOrderLocalResponse": {"type": "object"},
                     "SignOnlyLifecycleRecord": {"type": "object", "properties": {"client_event_id": {"type": "string"}}},
                 }
             },
         }
+
+    def test_v15_requires_live_read_event_openapi_contract(self) -> None:
+        spec = self._minimal_v23_spec()
+        del spec["paths"]["/v1/admin/live-read-events"]
+        with self.assertRaises(ContractValidationError) as ctx:
+            module.validate_v15_admin_audit_and_runtime_provider(spec)
+        self.assertIn("/v1/admin/live-read-events", str(ctx.exception))
+
+    def test_v15_requires_live_read_enum_values_to_match_rust_contract(self) -> None:
+        spec = self._minimal_v23_spec()
+        spec["components"]["schemas"]["LiveReadOperation"]["enum"] = [
+            "GetOrder",
+            "ListOpenOrders",
+        ]
+        with self.assertRaises(ContractValidationError) as ctx:
+            module.validate_v15_admin_audit_and_runtime_provider(spec)
+        self.assertIn("LiveReadOperation schema must match Rust", str(ctx.exception))
 
     def _minimal_v28_portfolio_spec(self) -> dict:
         return {
