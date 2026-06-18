@@ -87,6 +87,34 @@ class CheckLiveSubmitGuardTests(unittest.TestCase):
                 failures = self.module.validate_service_live_submit_tokens()
         self.assertIn("pmx-service live gateway path must require explicit submit_plan_with_gateway", failures)
 
+    def test_validate_service_live_submit_tokens_requires_market_data_snapshot_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            live_file = root / "live.rs"
+            submit_file = root / "submit.rs"
+            live_file.write_text(
+                "LIVE_SUBMIT_BLOCKED_PRE_SIGN_RUNTIME\n"
+                "LIVE_SUBMIT_BLOCKED_PRE_POST_RUNTIME\n"
+                "runtime_submit_block_reason\n"
+                'raw_signed_payload_logged": false\n'
+                'raw_signed_order_exposed": false\n'
+            )
+            submit_file.write_text(
+                "LIVE submit mode is fail-closed until gateway posting is wired through the executor service\n"
+                "submit_plan_with_gateway\n"
+                "SubmitMode::Live\n"
+            )
+            with mock.patch.object(self.module, "ALLOWED_SERVICE_POST_ORDER_FILE", live_file), mock.patch.object(
+                self.module, "SERVICE_SRC", root
+            ), mock.patch.object(
+                self.module, "service_source_files", return_value=[live_file, submit_file]
+            ):
+                failures = self.module.validate_service_live_submit_tokens()
+        self.assertIn(
+            "pmx-service market-data snapshot guard missing token: capture_snapshot_with_market_data",
+            failures,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
