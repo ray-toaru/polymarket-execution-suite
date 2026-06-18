@@ -354,10 +354,12 @@ The skipped gates were not executed for the current exact commit because the
 required database URI or explicit credentialed opt-in was absent. They must not
 be inferred as current pass results from older evidence.
 
-- Latest pushed source/evidence refresh integration GitHub CI:
-  `ray-toaru/polymarket-execution-suite/actions/runs/26254755001`, success.
-- Latest pushed source/evidence refresh execution-engine GitHub CI:
-  `ray-toaru/polymarket-execution-engine/actions/runs/26254745573`, success.
+- Current execution-engine commit:
+  `85f0641db4c02262829a2e94134193d8842db7de`.
+- Latest pushed Phase 5 code-state integration GitHub CI:
+  `ray-toaru/polymarket-execution-suite/actions/runs/27751360977`, success.
+- Latest pushed Phase 5 code-state execution-engine GitHub CI:
+  `ray-toaru/polymarket-execution-engine/actions/runs/27751351091`, success.
 - Historical credentialed SDK GitHub gate:
   `ray-toaru/polymarket-execution-engine/actions/runs/26175786984`, success.
 - GitHub CI ownership is split by repository: the integration repository owns

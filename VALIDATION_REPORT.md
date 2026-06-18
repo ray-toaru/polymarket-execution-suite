@@ -1,14 +1,14 @@
 # Validation Report — v0.28.0 production-live-candidate
 
-## 2026-06-16 post-merge evidence refresh
+## 2026-06-18 Phase 5 evidence refresh
 
-Current tracked component pins after the Phase 5 non-live foundation merge and
-reviewer-registry fail-closed regression expansion:
+Current tracked component pins after the completed Phase 5 non-live foundation
+merge:
 
 - Hermes adapter submodule commit:
   `7477c028d5c4f0f2215e7ee6c3ee4ea750331553`.
 - Execution-engine submodule commit:
-  `9b383a049c9309b58c9fde2dacf8a3cf6feb5515`.
+  `85f0641db4c02262829a2e94134193d8842db7de`.
 
 Local validation refreshed the current gates, artifact, detached sidecars,
 workspace manifest snapshot, dist index, current evidence manifest, docs
@@ -17,9 +17,19 @@ credentialed non-trading smoke, sign-only dry-run, and PostgreSQL-backed
 store-truth remain skipped unless their explicit environment prerequisites are
 provided.
 
-This changed state still requires fresh CI and fresh independent review before
-it can be treated as a reviewed final package. It does not authorize live
-submit, live cancel, production deployment, or another canary attempt.
+Latest Phase 5 code-state evidence before this evidence/document refresh:
+
+- root commit: `864bf9ee710f24f5b38eb0299557280cc6a40960`;
+- root CI run: `https://github.com/ray-toaru/polymarket-execution-suite/actions/runs/27751360977`, success;
+- engine CI run: `https://github.com/ray-toaru/polymarket-execution-engine/actions/runs/27751351091`, success;
+- final artifact, evidence sidecar, provenance sidecar, and manifest hashes:
+  recorded outside the source archive in `dist/` sidecars and the external
+  progress tracker.
+
+This evidence/document refresh still requires fresh CI and fresh independent
+package review before it can be treated as reviewed final package material. It
+does not authorize live submit, live cancel, production deployment, or another
+canary attempt.
 
 ## 2026-06-13 final package-hash review state
 

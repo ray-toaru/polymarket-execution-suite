@@ -1,23 +1,24 @@
 # Documentation and evidence status — v0.28.0 production-live-candidate
 
-## 2026-06-16 status
+## 2026-06-18 status
 
-Current `main` has advanced for the Phase 5 non-live foundation merge and the
-reviewer-registry fail-closed regression expansion. Current tracked component
-pins are:
+Current `main` has advanced through the completed Phase 5 non-live foundation
+merge. Current tracked component pins are:
 
 - Hermes adapter submodule:
   `7477c028d5c4f0f2215e7ee6c3ee4ea750331553`;
 - execution-engine submodule:
-  `9b383a049c9309b58c9fde2dacf8a3cf6feb5515`.
+  `85f0641db4c02262829a2e94134193d8842db7de`.
 
 The current local source package and detached sidecars were rebuilt from this
 state with `production_ready=false`, `live_trading_ready=false`, and
-`validated_release=false`. Fresh CI and fresh independent package review are
-still required before this changed state can be treated as a reviewed final
-state. Existing PR-content and merge signatures do not authorize live submit,
-live cancel, production deployment, reviewed-go execution, or another canary
-attempt.
+`validated_release=false`. Root CI run `27751360977` and engine CI run
+`27751351091` passed for the Phase 5 code state before this evidence/document
+refresh. Fresh CI for these evidence/document commits and fresh independent
+package review are still required before this changed state can be treated as
+reviewed final package material. Existing PR-content and merge signatures do
+not authorize live submit, live cancel, production deployment, reviewed-go
+execution, or another canary attempt.
 
 ## 2026-06-13 status
 

@@ -75,6 +75,20 @@ Canonical current evidence lives only at:
 polymarket-execution-engine/evidence/current/manifest.json
 ```
 
+Current source/artifact binding for this document state is detached rather than
+self-embedded:
+
+- execution-engine commit:
+  `85f0641db4c02262829a2e94134193d8842db7de`;
+- Phase 5 code-state root CI run:
+  `https://github.com/ray-toaru/polymarket-execution-suite/actions/runs/27751360977`, success;
+- Phase 5 code-state engine CI run:
+  `https://github.com/ray-toaru/polymarket-execution-engine/actions/runs/27751351091`, success.
+
+Final artifact and sidecar hashes are detached binding material. They are
+recorded next to the generated archive in `dist/` and in the external progress
+tracker, not self-embedded in this source document.
+
 The manifest currently records:
 
 - `postgres_validation=skipped`
