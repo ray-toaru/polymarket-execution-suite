@@ -1,8 +1,10 @@
 import importlib.util
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -241,6 +243,96 @@ class RunReviewedGoCanaryArmedTests(unittest.TestCase):
         self.assertIn(f"exec-{plan['invocation_hash']}", plan["command"])
         self.assertIn("--allow-live-submit-config", plan["command"])
         self.assertIn("--allow-real-funds-canary-config", plan["command"])
+
+    def test_subprocess_env_injects_secrets_without_losing_gate_env(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            secrets_env = Path(tmp_name) / ".env.runtime.secrets"
+            secrets_env.write_text(
+                "\n".join(
+                    [
+                        "POLYMARKET_PRIVATE_KEY=0xabc123",
+                        "POLY_API_KEY=123e4567-e89b-12d3-a456-426614174000",
+                        "POLY_API_SECRET=api-secret",
+                        "POLY_API_PASSPHRASE=api-pass",
+                        "PMX_CLOB_SIGNATURE_TYPE=POLY_1271",
+                        "PMX_CLOB_FUNDER=0x00000000000000000000000000000000000000b0",
+                        "",
+                    ]
+                )
+            )
+            with patch.dict(os.environ, {"PMX_ALLOW_LIVE_SUBMIT": "1"}, clear=True):
+                env = self.module._ENGINE.subprocess_env(secrets_env)
+
+        self.assertEqual(env["PMX_ALLOW_LIVE_SUBMIT"], "1")
+        self.assertEqual(env["POLYMARKET_PRIVATE_KEY"], "0xabc123")
+        self.assertEqual(env["POLY_API_KEY"], "123e4567-e89b-12d3-a456-426614174000")
+        self.assertEqual(env["POLY_API_SECRET"], "api-secret")
+        self.assertEqual(env["POLY_API_PASSPHRASE"], "api-pass")
+        self.assertEqual(env["PMX_CLOB_SIGNATURE_TYPE"], "POLY_1271")
+        self.assertEqual(env["PMX_CLOB_FUNDER"], "0x00000000000000000000000000000000000000b0")
+
+    def test_main_passes_secrets_env_to_subprocess_environment(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            package, env_file = self.package_fixture(tmp)
+            secrets_env = tmp / ".env.runtime.secrets"
+            env_file.write_text(
+                "\n".join(
+                    [
+                        "PMX_ACTIVE_ACCOUNT_PROFILE=acct_b",
+                        "PMX_ACTIVE_ACCOUNT_ID=acct-canary",
+                        "PMX_ACTIVE_PROFILE_REF=local-profile://acct_b",
+                        "",
+                    ]
+                )
+            )
+            secrets_env.write_text(
+                "\n".join(
+                    [
+                        "POLYMARKET_PRIVATE_KEY=0xabc123",
+                        "POLY_API_KEY=123e4567-e89b-12d3-a456-426614174000",
+                        "POLY_API_SECRET=api-secret",
+                        "POLY_API_PASSPHRASE=api-pass",
+                        "PMX_CLOB_SIGNATURE_TYPE=POLY_1271",
+                        "PMX_CLOB_FUNDER=0x00000000000000000000000000000000000000b0",
+                        "",
+                    ]
+                )
+            )
+
+            class Completed:
+                returncode = 0
+
+            run_kwargs = {}
+
+            def fake_run(command, **kwargs):
+                run_kwargs.update(kwargs)
+                return Completed()
+
+            argv = [
+                "run_reviewed_go_canary_armed.py",
+                "--package-dir",
+                str(package),
+                "--env-file",
+                str(env_file),
+                "--secrets-env-file",
+                str(secrets_env),
+                "--run",
+            ]
+            with patch.object(self.module._ENGINE.subprocess, "run", side_effect=fake_run), patch.object(
+                self.module._ENGINE.sys, "argv", argv
+            ), patch.dict(os.environ, {"PMX_ALLOW_REAL_FUNDS_CANARY": "1"}, clear=True):
+                result = self.module.main()
+
+        self.assertEqual(result, 0)
+        child_env = run_kwargs["env"]
+        self.assertEqual(child_env["PMX_ALLOW_REAL_FUNDS_CANARY"], "1")
+        self.assertEqual(child_env["POLYMARKET_PRIVATE_KEY"], "0xabc123")
+        self.assertEqual(child_env["POLY_API_SECRET"], "api-secret")
+        self.assertEqual(child_env["PMX_CLOB_SIGNATURE_TYPE"], "POLY_1271")
+        self.assertEqual(run_kwargs["cwd"], self.module._ENGINE.INTEGRATION_ROOT)
+        self.assertTrue(run_kwargs["text"])
+        self.assertFalse(run_kwargs["check"])
 
 
 if __name__ == "__main__":
