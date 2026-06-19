@@ -132,6 +132,40 @@ class CheckReleaseArtifactTests(unittest.TestCase):
             self.assertTrue(any("forbidden archive members" in item for item in failures))
             self.assertTrue(any("stale root docs in archive" in item for item in failures))
 
+    def test_secret_content_scan_rejects_common_assignment_and_json_spellings(self):
+        secret_key = "api_" + "secret"
+        signature_key = "sign" + "ature"
+        signed_key = "signed_" + "payload"
+        private_key = "private_" + "key"
+        clob_key = "clob" + "Secret"
+        passphrase_key = "pass" + "phrase"
+        cases = [
+            f"{secret_key}=leaked",
+            f"{signature_key} : leaked",
+            f'"{signed_key}": "leaked"',
+            f"{private_key}: leaked",
+            f"{clob_key} = leaked",
+            f"{passphrase_key}: leaked",
+        ]
+        for content in cases:
+            with self.subTest(content=content):
+                with tempfile.TemporaryDirectory() as tmp_name:
+                    tmp = Path(tmp_name)
+                    zip_path = tmp / "artifact.zip"
+                    with zipfile.ZipFile(zip_path, "w") as zf:
+                        zf.writestr("polymarket_execution_suite_v0_28_0/VERSION", "0.28.0\n")
+                        zf.writestr("polymarket_execution_suite_v0_28_0/README.md", content)
+                    with zipfile.ZipFile(zip_path) as zf:
+                        failures = self.module.validate_archive_members(
+                            zf,
+                            expected_root="polymarket_execution_suite_v0_28_0",
+                            expected_version="0.28.0",
+                        )
+                self.assertTrue(
+                    any("forbidden secret-like content" in item for item in failures),
+                    failures,
+                )
+
     def test_validate_archive_members_rejects_historical_marker_beyond_first_line(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
