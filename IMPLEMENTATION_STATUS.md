@@ -366,9 +366,10 @@ be inferred as current pass results from older evidence.
   `ray-toaru/polymarket-execution-engine/actions/runs/27751351091`, success.
 - Current local Phase 5 live-read event persistence/API commits are not pushed
   and have no GitHub CI result:
-  integration `3fbf823ea1dd4e08a155d754ba04f89cd3a9d823`;
-  execution-engine `4c8d8d18f83adf19eeb5bd4cca3204447a59371c`;
-  adapter `7056980d188b466058430511a4883a97e43f0b92`.
+  integration root before this status sync
+  `aabdbda65a90262d01317b13aef0f08224133bae`;
+  execution-engine `eec14d8e5b126c81150e3d6cdd6147e6be43dab6`;
+  adapter `49fb4b6c209e744f57b87b255bbf92003eacb557`.
   Local validation passed for Rust workspace check, targeted live-read store
   and gateway tests, API scaffold test, Hermes adapter tests, OpenAPI parity,
   contract validation, and root unit tests.

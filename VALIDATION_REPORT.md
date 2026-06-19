@@ -6,9 +6,9 @@ Current tracked component pins after the Phase 5 live-read event
 persistence/API continuation:
 
 - Hermes adapter submodule commit:
-  `7056980d188b466058430511a4883a97e43f0b92`.
+  `49fb4b6c209e744f57b87b255bbf92003eacb557`.
 - Execution-engine submodule commit:
-  `4c8d8d18f83adf19eeb5bd4cca3204447a59371c`.
+  `eec14d8e5b126c81150e3d6cdd6147e6be43dab6`.
 - Integration root commit before this documentation sync:
   `3fbf823ea1dd4e08a155d754ba04f89cd3a9d823`.
 
@@ -23,6 +23,9 @@ Local validation passed:
 - `PYTHONPATH=hermes-polymarket-executor-adapter/src .venv/bin/python hermes-polymarket-executor-adapter/scripts/check_openapi_parity.py polymarket-execution-engine/openapi/executor.v1.yaml`;
 - `.venv/bin/python polymarket-execution-engine/validation/check_docs_evidence_governance.py`;
 - `.venv/bin/python scripts/validate_contracts.py --report-file /tmp/pmx-contracts-doc-sync-report.json`;
+- `.venv/bin/python scripts/check_release_artifact.py dist/polymarket-execution-suite-v0.28.0.zip 0.28.0`;
+- `.venv/bin/python scripts/check_dist_index.py dist 0.28.0`;
+- `.venv/bin/python polymarket-execution-engine/scripts/check_release_hygiene.py . --dev-worktree`;
 - `.venv/bin/python -m unittest discover -s tests -p 'test_*.py'`.
 
 This validation is local only. No push, GitHub CI, tag, release, package

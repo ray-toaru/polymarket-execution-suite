@@ -6,9 +6,9 @@ Current local source includes the Phase 5 live-read event persistence/API
 continuation. Current tracked component pins are:
 
 - Hermes adapter submodule:
-  `7056980d188b466058430511a4883a97e43f0b92`;
+  `49fb4b6c209e744f57b87b255bbf92003eacb557`;
 - execution-engine submodule:
-  `4c8d8d18f83adf19eeb5bd4cca3204447a59371c`;
+  `eec14d8e5b126c81150e3d6cdd6147e6be43dab6`;
 - integration root before this documentation sync:
   `3fbf823ea1dd4e08a155d754ba04f89cd3a9d823`.
 
