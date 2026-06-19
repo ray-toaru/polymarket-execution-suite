@@ -424,6 +424,44 @@ class PackageReleaseIndexTests(unittest.TestCase):
         self.assertEqual(canonical["archived_manifest_binding_kind"], "archive_normalized_current_manifest")
         self.assertEqual(canonical["workspace_manifest_binding_kind"], "post_package_workspace_snapshot")
 
+    def test_write_dist_index_does_not_classify_current_sidecars_as_local_material(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            dist = tmp / "dist"
+            dist.mkdir()
+            artifact = dist / "polymarket-execution-suite-v0.28.0.zip"
+            artifact.write_bytes(b"artifact")
+            current_sidecars = [
+                "polymarket-execution-suite-v0.28.0.zip.sha256",
+                "polymarket-execution-suite-v0.28.0.zip.evidence.json",
+                "polymarket-execution-suite-v0.28.0.zip.provenance.json",
+                "polymarket-execution-suite-v0.28.0.workspace-manifest.json",
+            ]
+            for name in current_sidecars:
+                (dist / name).write_text("{}\n")
+
+            original_dist = self.package_release.DIST
+            original_out = self.package_release.OUT
+            original_version = self.package_release.VERSION
+            try:
+                self.package_release.DIST = dist
+                self.package_release.OUT = artifact
+                self.package_release.VERSION = "0.28.0"
+                self.package_release.write_dist_index(
+                    "a" * 64,
+                    "b" * 64,
+                    "c" * 64,
+                    "polymarket-execution-suite-v0.28.0.workspace-manifest.json",
+                )
+                index = json.loads((dist / "INDEX.json").read_text())
+            finally:
+                self.package_release.DIST = original_dist
+                self.package_release.OUT = original_out
+                self.package_release.VERSION = original_version
+
+        local_paths = {item["path"] for item in index["local_material"]}
+        self.assertFalse(local_paths.intersection(current_sidecars))
+
     def test_write_dist_index_creates_dist_directory(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)

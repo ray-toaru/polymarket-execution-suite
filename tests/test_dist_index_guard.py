@@ -214,6 +214,41 @@ class DistIndexGuardTests(unittest.TestCase):
         self.assertTrue(any("archived_manifest_binding_kind is invalid" in failure for failure in failures))
         self.assertTrue(any("workspace_manifest_binding_kind is invalid" in failure for failure in failures))
 
+    def test_rejects_unindexed_release_artifact_zip(self):
+        self.write_index()
+        (self.dist / "polymarket-execution-suite-v0.25.0.zip").write_bytes(b"stale artifact")
+
+        failures = self.guard.validate(self.dist, "0.26.0")
+
+        self.assertTrue(any("unindexed release artifact" in failure for failure in failures))
+
+    def test_rejects_orphan_release_sidecar(self):
+        self.write_index()
+        (self.dist / "polymarket-execution-suite-v0.25.0.zip.sha256").write_text(
+            "0" * 64 + "  polymarket-execution-suite-v0.25.0.zip\n"
+        )
+
+        failures = self.guard.validate(self.dist, "0.26.0")
+
+        self.assertTrue(any("orphan release sidecar" in failure for failure in failures))
+
+    def test_rejects_release_sidecar_listed_as_local_material(self):
+        self.write_index(
+            local_material=[
+                {
+                    "path": "polymarket-execution-suite-v0.25.0.zip.evidence.json",
+                    "status": "local_review_material_not_release_artifact",
+                    "approval_reuse_allowed": False,
+                    "remote_side_effects_authorized": False,
+                }
+            ]
+        )
+        (self.dist / "polymarket-execution-suite-v0.25.0.zip.evidence.json").write_text("{}\n")
+
+        failures = self.guard.validate(self.dist, "0.26.0")
+
+        self.assertTrue(any("local_material must not list release artifact or sidecar" in failure for failure in failures))
+
 
 if __name__ == "__main__":
     unittest.main()

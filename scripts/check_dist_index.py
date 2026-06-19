@@ -4,8 +4,20 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
+
+
+RELEASE_ARTIFACT_RE = re.compile(r"^polymarket-execution-suite-v\d+\.\d+\.\d+\.zip$")
+RELEASE_SIDECAR_RE = re.compile(
+    r"^polymarket-execution-suite-v\d+\.\d+\.\d+(?:"
+    r"\.zip\.sha256|"
+    r"\.zip\.evidence\.json|"
+    r"\.zip\.provenance\.json|"
+    r"\.workspace-manifest\.json"
+    r")$"
+)
 
 
 def sha256(path: Path) -> str:
@@ -27,6 +39,18 @@ def is_reviewed_go_material(path: str) -> bool:
     return path.startswith("pmx-canary-reviewed-go-") or (
         path.startswith("pmx-") and "-reviewed-go-" in path
     )
+
+
+def is_release_artifact_name(name: str) -> bool:
+    return bool(RELEASE_ARTIFACT_RE.fullmatch(name))
+
+
+def is_release_sidecar_name(name: str) -> bool:
+    return bool(RELEASE_SIDECAR_RE.fullmatch(name))
+
+
+def is_release_material_name(name: str) -> bool:
+    return is_release_artifact_name(name) or is_release_sidecar_name(name)
 
 
 def infer_reviewed_go_material_status(path: Path) -> str | None:
@@ -64,9 +88,12 @@ def validate(dist: Path, expected_version: str) -> list[str]:
     if not isinstance(artifact, dict):
         failures.append("INDEX.json current_release_artifact must be an object")
         artifact = {}
+    current_release_names: set[str] = set()
     artifact_path = dist / str(artifact.get("path", ""))
     if artifact_path.name != f"polymarket-execution-suite-v{expected_version}.zip":
         failures.append("current_release_artifact.path must name the expected versioned zip")
+    else:
+        current_release_names.add(artifact_path.name)
     if not artifact_path.exists():
         failures.append(f"current release artifact missing: {artifact_path}")
         artifact_sha = None
@@ -97,6 +124,7 @@ def validate(dist: Path, expected_version: str) -> list[str]:
     if not isinstance(sidecar_name, str):
         failures.append("current_release_artifact.sha256_sidecar is required")
     else:
+        current_release_names.add(sidecar_name)
         sidecar_path = dist / sidecar_name
         if not sidecar_path.exists():
             failures.append(f"sha256 sidecar missing: {sidecar_path}")
@@ -109,6 +137,7 @@ def validate(dist: Path, expected_version: str) -> list[str]:
     if not isinstance(evidence_name, str):
         failures.append("current_release_artifact.evidence_sidecar is required")
     else:
+        current_release_names.add(evidence_name)
         evidence_path = dist / evidence_name
         if not evidence_path.exists():
             failures.append(f"evidence sidecar missing: {evidence_path}")
@@ -137,12 +166,29 @@ def validate(dist: Path, expected_version: str) -> list[str]:
                 failures.append("evidence sidecar canonical_evidence.workspace_manifest_sha256 must be a sha256 hex string")
             if not isinstance(workspace_snapshot_path, str) or not workspace_snapshot_path:
                 failures.append("evidence sidecar canonical_evidence.workspace_manifest_snapshot_path is required")
-            elif not (dist / workspace_snapshot_path).exists():
-                failures.append("evidence sidecar canonical_evidence.workspace_manifest_snapshot_path is missing from dist/")
+            else:
+                current_release_names.add(workspace_snapshot_path)
+                if not (dist / workspace_snapshot_path).exists():
+                    failures.append("evidence sidecar canonical_evidence.workspace_manifest_snapshot_path is missing from dist/")
             if canonical.get("archived_manifest_binding_kind") != "archive_normalized_current_manifest":
                 failures.append("evidence sidecar canonical_evidence.archived_manifest_binding_kind is invalid")
             if canonical.get("workspace_manifest_binding_kind") != "post_package_workspace_snapshot":
                 failures.append("evidence sidecar canonical_evidence.workspace_manifest_binding_kind is invalid")
+    canonical_index = index.get("canonical_evidence")
+    if isinstance(canonical_index, dict):
+        workspace_snapshot_path = canonical_index.get("workspace_manifest_snapshot_path")
+        if isinstance(workspace_snapshot_path, str) and workspace_snapshot_path:
+            current_release_names.add(workspace_snapshot_path)
+    current_release_names.add(f"polymarket-execution-suite-v{expected_version}.zip.provenance.json")
+
+    for path in sorted(dist.iterdir()):
+        if path.name in {"INDEX.json", "README.md"} or path.name in current_release_names:
+            continue
+        if path.is_file() and is_release_artifact_name(path.name):
+            failures.append(f"unindexed release artifact in dist/: {path.name}")
+        elif path.is_file() and is_release_sidecar_name(path.name):
+            failures.append(f"orphan release sidecar in dist/: {path.name}")
+
     local_material = index.get("local_material")
     if not isinstance(local_material, list):
         failures.append("INDEX.json local_material must be a list")
@@ -159,6 +205,8 @@ def validate(dist: Path, expected_version: str) -> list[str]:
         if not path or material_path.is_absolute() or ".." in material_path.parts:
             failures.append(f"{path or '<empty>'}: local_material.path must be a safe relative path")
             continue
+        if is_release_material_name(path):
+            failures.append(f"{path}: local_material must not list release artifact or sidecar material")
         if (dist / material_path).exists() is False:
             failures.append(f"{path}: local_material path is missing from dist/")
         inferred_status = infer_reviewed_go_material_status(dist / material_path)
