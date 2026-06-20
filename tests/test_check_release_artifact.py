@@ -169,6 +169,10 @@ class CheckReleaseArtifactTests(unittest.TestCase):
     def test_secret_content_scan_allows_registered_negative_test_fixtures(self):
         expected_root = "polymarket_execution_suite_v0_28_0"
         cases = {
+            "tests/test_check_release_artifact.py": (
+                b"class CheckReleaseArtifactTests",
+                b'{"api_secret": "should-not-ship"}',
+            ),
             "tests/test_package_release_index.py": (
                 b"class PackageReleaseIndexTests",
                 b'{"api_secret": "should-not-ship"}',
