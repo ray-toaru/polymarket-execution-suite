@@ -30,6 +30,7 @@ def load_engine_module():
 
 
 _ENGINE = load_engine_module()
+_ENGINE_EXECUTE_CONTRACT_VALIDATION = _ENGINE.execute_contract_validation
 
 argparse = _ENGINE.argparse
 ROOT = _ENGINE.INTEGRATION_ROOT
@@ -47,7 +48,7 @@ parse_args_for_reviewed_go = _ENGINE.parse_args_for_reviewed_go
 
 
 def execute_contract_validation(plan):
-    return _ENGINE.execute_contract_validation(plan)
+    return _ENGINE_EXECUTE_CONTRACT_VALIDATION(plan)
 
 
 def build_stage_plans(args):

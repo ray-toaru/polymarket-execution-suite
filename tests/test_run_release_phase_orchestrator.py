@@ -79,6 +79,26 @@ class RunReleasePhaseOrchestratorTests(unittest.TestCase):
         self.assertEqual(plan["stages"]["live_submit_promotion"]["suite"], "live_submit_promotion_evidence")
         self.assertEqual(plan["stages"]["reviewed_go_decision_chain"]["status"], "blocked")
 
+    def test_execute_contract_validation_uses_loaded_engine_function_without_self_recursion(self):
+        calls = []
+        original = self.module._ENGINE_EXECUTE_CONTRACT_VALIDATION
+        original_engine_attr = self.module._ENGINE.execute_contract_validation
+
+        def fake_engine_contract_validation(plan):
+            calls.append(plan)
+            return {"status": "pass", "suite": plan["suite"]}
+
+        try:
+            self.module._ENGINE_EXECUTE_CONTRACT_VALIDATION = fake_engine_contract_validation
+            self.module._ENGINE.execute_contract_validation = self.module.execute_contract_validation
+            result = self.module.execute_contract_validation({"suite": "contract_validation"})
+        finally:
+            self.module._ENGINE_EXECUTE_CONTRACT_VALIDATION = original
+            self.module._ENGINE.execute_contract_validation = original_engine_attr
+
+        self.assertEqual(result["status"], "pass")
+        self.assertEqual(calls, [{"suite": "contract_validation"}])
+
     def test_execute_orchestrator_runs_available_suites_and_keeps_reviewed_go_blocked(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
