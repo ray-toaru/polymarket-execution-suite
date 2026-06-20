@@ -2,11 +2,16 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+from release_validation_utils import load_json_object, sha256_file
 
 
 RELEASE_ARTIFACT_RE = re.compile(r"^polymarket-execution-suite-v\d+\.\d+\.\d+\.zip$")
@@ -21,18 +26,11 @@ RELEASE_SIDECAR_RE = re.compile(
 
 
 def sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    return sha256_file(path)
 
 
 def load_json(path: Path) -> dict[str, Any]:
-    data = json.loads(path.read_text())
-    if not isinstance(data, dict):
-        raise ValueError(f"{path} must contain a JSON object")
-    return data
+    return load_json_object(path)
 
 
 def is_reviewed_go_material(path: str) -> bool:

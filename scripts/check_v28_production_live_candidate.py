@@ -116,7 +116,7 @@ def validate_release_decision_structured_block(
     if data.get("schema_version") != 1:
         blockers.append("structured release decision schema_version must be 1")
     if data.get("version") != target_version:
-        blockers.append("structured release decision version must match v0.28 target")
+        blockers.append("structured release decision version must match target version")
     if data.get("release_posture") != "production-live-candidate":
         blockers.append("structured release decision release_posture must be production-live-candidate")
     for key in [
@@ -251,9 +251,10 @@ def evaluate(root: Path = ROOT, target_version: str = TARGET_VERSION) -> dict[st
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--target-version", default=TARGET_VERSION)
     parser.add_argument("--require-ready", action="store_true")
     args = parser.parse_args(argv)
-    report = evaluate(ROOT)
+    report = evaluate(ROOT, args.target_version)
     print(json.dumps(report, indent=2, sort_keys=True))
     if args.require_ready and report["status"] != "ready":
         return 1

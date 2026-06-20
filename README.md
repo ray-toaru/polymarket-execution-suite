@@ -66,6 +66,7 @@ Recommended local entry points:
 ```bash
 python -m pip install -c constraints-ci.txt -r requirements-ci.txt
 make check-local
+make check-shell
 make check-hermes HERMES_PROFILE=<local-profile>
 make check-package
 ```
@@ -75,6 +76,11 @@ version consistency, contracts, the v0.28 release-posture audit, integration
 unit tests, Python bytecode, and docs/evidence governance. It does not refresh
 release artifacts, run PostgreSQL-backed gates, call external services, or
 authorize live submit/cancel.
+
+`make check-shell` runs shellcheck over local shell gate scripts when
+`shellcheck` is installed. If it is not installed, the target prints a skip
+message and exits successfully. This target is local lint only; it does not run
+current gates, refresh packages, call GitHub, or authorize live actions.
 
 `make check-package` runs local cleanup and release hygiene only; it also does
 not rebuild the final release package. Use `scripts/package_release.py` only

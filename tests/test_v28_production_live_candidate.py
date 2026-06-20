@@ -201,6 +201,22 @@ class V028ProductionLiveCandidateTests(unittest.TestCase):
         self.assertEqual(require_rc, 1)
         self.assertEqual(json.loads(require_stdout.getvalue())["status"], "not_ready")
 
+    def test_main_can_audit_an_explicit_target_version_without_accepting_stale_v28_claims(self):
+        self.write_ready_tree()
+        original_root = self.module.ROOT
+        self.module.ROOT = self.root
+        self.addCleanup(lambda: setattr(self.module, "ROOT", original_root))
+
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            rc = self.module.main(["--target-version", "0.27.3", "--require-ready"])
+
+        report = json.loads(stdout.getvalue())
+        self.assertEqual(rc, 1)
+        self.assertEqual(report["target_version"], "0.27.3")
+        self.assertEqual(report["status"], "not_ready")
+        self.assertIn("VERSION must be 0.27.3", "\n".join(report["blockers"]))
+
 
 if __name__ == "__main__":
     unittest.main()

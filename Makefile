@@ -1,7 +1,7 @@
 PYTHON ?= python
 HERMES_PROFILE ?= local
 
-.PHONY: check-local check-hermes check-package check-current-gates clean-local
+.PHONY: check-local check-hermes check-package check-current-gates check-shell clean-local
 
 check-local:
 	$(PYTHON) scripts/check_version_consistency.py
@@ -21,6 +21,13 @@ check-package:
 
 check-current-gates:
 	cd polymarket-execution-engine && ./validation/run_current_gates.sh
+
+check-shell:
+	@if command -v shellcheck >/dev/null 2>&1; then \
+		find polymarket-execution-engine/validation -name "*.sh" -print0 | xargs -0 -r shellcheck; \
+	else \
+		echo "shellcheck not installed; skipping"; \
+	fi
 
 clean-local:
 	$(PYTHON) scripts/clean_local_artifacts.py
