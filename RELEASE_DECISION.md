@@ -79,7 +79,7 @@ Current source/artifact binding for this document state is detached rather than
 self-embedded:
 
 - execution-engine commit:
-  `85f0641db4c02262829a2e94134193d8842db7de`;
+  `eacd6dbb94802e0402d213361c06649caaaf6386`;
 - Phase 5 code-state root CI run:
   `https://github.com/ray-toaru/polymarket-execution-suite/actions/runs/27751360977`, success;
 - Phase 5 code-state engine CI run:
@@ -91,17 +91,18 @@ tracker, not self-embedded in this source document.
 
 The manifest currently records:
 
-- `postgres_validation=skipped`
+- `postgres_validation=pass`
 - `credentialed_non_trading_validation=skipped`
 - `sdk_standard_sign_only_validation=pass`
-- `real_funds_canary_store_truth_cli_validation=skipped`
+- `real_funds_canary_store_truth_cli_validation=pass`
 - other local/static source-candidate gates: pass;
 - release decision: not validated, not production-ready, not live-ready.
 
-The skipped gates were not run for the current exact commit because the
-required database URI or explicit credentialed opt-in was absent. Historical
-2026-05-23 PostgreSQL, store-truth, credentialed non-trading, and sign-only
-passes remain useful prior evidence, but they are not current artifact proof.
+PostgreSQL-backed gates and store-truth CLI preflight were run locally on
+2026-06-20 against an isolated PostgreSQL 16 test cluster. Credentialed
+non-trading smoke remains skipped because explicit credentialed opt-in was not
+enabled for this run. Historical 2026-05-23 credentialed non-trading evidence
+remains useful prior evidence, but it is not current artifact proof.
 
 Current detached artifact binding:
 

@@ -349,17 +349,19 @@ The current canonical evidence manifest records a mix of passing local gates
 and explicitly skipped environment-gated checks. Current manifest gate
 statuses are:
 
-- `postgres_validation=skipped`
+- `postgres_validation=pass`
 - `credentialed_non_trading_validation=skipped`
 - `sdk_standard_sign_only_validation=pass`
-- `real_funds_canary_store_truth_cli_validation=skipped`
+- `real_funds_canary_store_truth_cli_validation=pass`
 
-The skipped gates were not executed for the current exact commit because the
-required database URI or explicit credentialed opt-in was absent. They must not
-be inferred as current pass results from older evidence.
+PostgreSQL-backed gates and store-truth CLI preflight were executed locally on
+2026-06-20 against an isolated PostgreSQL 16 test cluster. Credentialed
+non-trading smoke remains skipped because explicit credentialed opt-in was not
+enabled for this run. Skipped credentialed checks must not be inferred as
+current pass results from older evidence.
 
 - Current execution-engine commit:
-  `85f0641db4c02262829a2e94134193d8842db7de`.
+  `eacd6dbb94802e0402d213361c06649caaaf6386`.
 - Latest pushed Phase 5 code-state integration GitHub CI:
   `ray-toaru/polymarket-execution-suite/actions/runs/27751360977`, success.
 - Latest pushed Phase 5 code-state execution-engine GitHub CI:
