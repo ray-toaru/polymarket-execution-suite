@@ -72,6 +72,33 @@ class RunReviewedGoCanaryCloseoutTests(unittest.TestCase):
         self.assertIn("run_reviewed_go_canary_armed.py", str(plan["steps"][1]["command"][1]))
         self.assertTrue(plan["uses_dedicated_armed_wrapper"])
 
+    def test_build_readback_closeout_plan_omits_preflight_and_armed(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            package, env_file = self.package_fixture(Path(tmp_name))
+            self.write_json(package / "post-canary-report.json", {"remote_order_id": "order-1"})
+            self.write_json(package / "approval-consumed-20260620T000000Z.json", {"consumed": True})
+
+            plan = self.module.build_workflow_plan(
+                package_dir=package,
+                env_file=env_file,
+                secrets_env_file=None,
+                release_zip=None,
+                daily_used_notional_usd="0",
+                account_address=None,
+                include_live_config_overrides=False,
+                readback_closeout_only=True,
+            )
+
+        self.assertEqual(plan["mode"], "readback_closeout_only")
+        self.assertFalse(plan["will_submit"])
+        self.assertEqual([step["name"] for step in plan["steps"]], [
+            "order_query",
+            "trade_query",
+            "account_activity_query",
+            "closeout",
+        ])
+        self.assertEqual(plan["remote_order_id"], "order-1")
+
     def test_build_workflow_plan_requires_account_address_without_funder(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             package, env_file = self.package_fixture(Path(tmp_name))
@@ -85,7 +112,30 @@ class RunReviewedGoCanaryCloseoutTests(unittest.TestCase):
                     daily_used_notional_usd="0",
                     account_address=None,
                     include_live_config_overrides=False,
+                    readback_closeout_only=False,
                 )
+
+    def test_build_workflow_plan_uses_funder_from_secrets_env_for_readback(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            package, env_file = self.package_fixture(tmp)
+            env_file.write_text(env_file.read_text().replace("PMX_CLOB_FUNDER=0x00000000000000000000000000000000000000b0\n", ""))
+            secrets_env = tmp / ".env.runtime.secrets"
+            secrets_env.write_text("PMX_CLOB_FUNDER=0x00000000000000000000000000000000000000c0\n")
+
+            plan = self.module.build_workflow_plan(
+                package_dir=package,
+                env_file=env_file,
+                secrets_env_file=secrets_env,
+                release_zip=None,
+                daily_used_notional_usd="0",
+                account_address=None,
+                include_live_config_overrides=False,
+                readback_closeout_only=False,
+            )
+
+        self.assertEqual(plan["account_address"], "0x00000000000000000000000000000000000000c0")
+        self.assertEqual(plan["secrets_env_file"], str(secrets_env))
 
     def test_build_workflow_plan_always_uses_dedicated_armed_wrapper(self):
         with tempfile.TemporaryDirectory() as tmp_name:
@@ -98,6 +148,7 @@ class RunReviewedGoCanaryCloseoutTests(unittest.TestCase):
                 daily_used_notional_usd="0",
                 account_address=None,
                 include_live_config_overrides=True,
+                readback_closeout_only=False,
             )
         self.assertIn("run_reviewed_go_canary_armed.py", str(plan["steps"][1]["command"][1]))
         self.assertNotIn("--include-live-config-overrides", plan["steps"][1]["command"])
@@ -107,7 +158,6 @@ class RunReviewedGoCanaryCloseoutTests(unittest.TestCase):
     def test_execute_workflow_substitutes_remote_order_and_writes_readback_paths(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             package, env_file = self.package_fixture(Path(tmp_name))
-            self.write_json(package / "post-canary-report.json", {"remote_order_id": "order-1"})
             plan = self.module.build_workflow_plan(
                 package_dir=package,
                 env_file=env_file,
@@ -116,6 +166,7 @@ class RunReviewedGoCanaryCloseoutTests(unittest.TestCase):
                 daily_used_notional_usd="0",
                 account_address=None,
                 include_live_config_overrides=False,
+                readback_closeout_only=False,
             )
 
             class Completed:
@@ -141,6 +192,67 @@ class RunReviewedGoCanaryCloseoutTests(unittest.TestCase):
             self.assertTrue((package / "order-status-query.json").exists())
             self.assertTrue((package / "trade-fill-query.json").exists())
             self.assertTrue((package / "account-activity-readback.json").exists())
+
+    def test_execute_full_workflow_refuses_consumed_package(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            package, env_file = self.package_fixture(Path(tmp_name))
+            self.write_json(package / "post-canary-report.json", {"remote_order_id": "order-1"})
+            self.write_json(package / "approval-consumed-20260620T000000Z.json", {"consumed": True})
+            plan = self.module.build_workflow_plan(
+                package_dir=package,
+                env_file=env_file,
+                secrets_env_file=None,
+                release_zip=None,
+                daily_used_notional_usd="0",
+                account_address=None,
+                include_live_config_overrides=False,
+                readback_closeout_only=False,
+            )
+
+            with self.assertRaisesRegex(SystemExit, "refusing to run full canary workflow"):
+                self.module.execute_workflow(plan)
+
+    def test_execute_readback_closeout_only_does_not_run_preflight_or_armed(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            package, env_file = self.package_fixture(Path(tmp_name))
+            self.write_json(package / "post-canary-report.json", {"remote_order_id": "order-1"})
+            self.write_json(package / "approval-consumed-20260620T000000Z.json", {"consumed": True})
+            plan = self.module.build_workflow_plan(
+                package_dir=package,
+                env_file=env_file,
+                secrets_env_file=None,
+                release_zip=None,
+                daily_used_notional_usd="0",
+                account_address=None,
+                include_live_config_overrides=False,
+                readback_closeout_only=True,
+            )
+
+            class Completed:
+                def __init__(self, returncode=0):
+                    self.returncode = returncode
+                    self.stdout = ""
+                    self.stderr = ""
+
+            calls = []
+
+            def fake_run(command, cwd, text, env, check=False, stdout=None):
+                calls.append(command)
+                if stdout is not None:
+                    stdout.write("{}\n")
+                return Completed(returncode=0)
+
+            with patch.object(self.module.subprocess, "run", side_effect=fake_run):
+                result = self.module.execute_workflow(plan)
+
+            self.assertEqual(result["status"], "completed")
+            self.assertEqual(result["remote_order_id"], "order-1")
+            self.assertEqual([Path(call[1]).name if call[0] == "python" else call[7] for call in calls], [
+                "pmx-query-order",
+                "pmx-query-trades",
+                "pmx-query-account-activity",
+                "prepare_canary_closeout.py",
+            ])
 
 
 if __name__ == "__main__":

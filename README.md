@@ -440,7 +440,8 @@ its invocation plan output.
 
 For the full reviewed-go single-attempt path, including local readback capture
 and `closeout.json` / `CLOSEOUT.md` generation, use the workflow wrapper below.
-It still fails closed by default and only executes with `--run`:
+It still fails closed by default and only executes with `--run`. Use this full
+workflow only before the one authorized canary attempt has been consumed:
 
 ```bash
 python scripts/run_reviewed_go_canary_closeout.py \
@@ -458,8 +459,21 @@ When `--run` is supplied, the wrapper executes:
 6. local closeout generation
 
 It does not invent account identity. Data API readback uses `--account-address`
-if supplied; otherwise it requires `PMX_CLOB_FUNDER` in the runtime env and
-fails closed when that address is unavailable.
+if supplied; otherwise it requires `PMX_CLOB_FUNDER` in the runtime env or
+`--secrets-env-file` and fails closed when that address is unavailable.
+
+After an armed attempt has already produced `post-canary-report.json` or an
+`approval-consumed-*.json` marker, do not run the full workflow again. Use the
+readback/closeout-only mode, which never invokes preflight or the armed
+post/cancel step:
+
+```bash
+python scripts/run_reviewed_go_canary_closeout.py \
+  --package-dir <reviewed-go-package-dir> \
+  --env-file polymarket-execution-engine/.env.runtime \
+  --secrets-env-file <local-runtime-secrets-env> \
+  --readback-closeout-only
+```
 
 Release packaging writes `dist/INDEX.json` and `dist/README.md`. Only the
 indexed `polymarket-execution-suite-v0.28.0.zip` plus its detached sidecars are

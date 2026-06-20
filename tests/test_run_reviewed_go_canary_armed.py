@@ -218,17 +218,18 @@ class RunReviewedGoCanaryArmedTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
             package, env_file = self.package_fixture(tmp)
-            plan = self.module.build_armed_invocation(
-                package_dir=package,
-                env_file=env_file,
-                secrets_env_file=None,
-                daily_used_notional_usd="0",
-                idempotency_key=None,
-                execution_id=None,
-                plan_hash=None,
-                report_file=None,
-                approval_consumed_marker=None,
-            )
+            with patch.dict(os.environ, {}, clear=True):
+                plan = self.module.build_armed_invocation(
+                    package_dir=package,
+                    env_file=env_file,
+                    secrets_env_file=None,
+                    daily_used_notional_usd="0",
+                    idempotency_key=None,
+                    execution_id=None,
+                    plan_hash=None,
+                    report_file=None,
+                    approval_consumed_marker=None,
+                )
 
         self.assertEqual(plan["mode"], "armed")
         self.assertTrue(plan["armed_wrapper"])
@@ -236,13 +237,41 @@ class RunReviewedGoCanaryArmedTests(unittest.TestCase):
         self.assertEqual(len(plan["invocation_hash"]), 64)
         self.assertFalse(plan["includes_live_config_overrides"])
         self.assertFalse(plan["requires_explicit_live_config_overrides"])
-        self.assertEqual(plan["required_gate_env_vars"], [])
-        self.assertEqual(plan["missing_gate_env_vars"], [])
+        self.assertEqual(plan["required_gate_env_vars"], ["PMX_ALLOW_LIVE_SUBMIT", "PMX_ALLOW_REAL_FUNDS_CANARY"])
+        self.assertEqual(plan["missing_gate_env_vars"], ["PMX_ALLOW_LIVE_SUBMIT", "PMX_ALLOW_REAL_FUNDS_CANARY"])
+        self.assertEqual(
+            plan["required_operator_env_prefix"],
+            "PMX_ALLOW_LIVE_SUBMIT=1 PMX_ALLOW_REAL_FUNDS_CANARY=1",
+        )
         self.assertIn("pmx-real-funds-canary-armed", plan["command"])
         self.assertIn(f"canary-{plan['invocation_hash']}-armed", plan["command"])
         self.assertIn(f"exec-{plan['invocation_hash']}", plan["command"])
         self.assertIn("--allow-live-submit-config", plan["command"])
         self.assertIn("--allow-real-funds-canary-config", plan["command"])
+
+    def test_build_armed_invocation_reports_present_gate_env(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            package, env_file = self.package_fixture(tmp)
+            with patch.dict(
+                os.environ,
+                {"PMX_ALLOW_LIVE_SUBMIT": "1", "PMX_ALLOW_REAL_FUNDS_CANARY": "1"},
+                clear=True,
+            ):
+                plan = self.module.build_armed_invocation(
+                    package_dir=package,
+                    env_file=env_file,
+                    secrets_env_file=None,
+                    daily_used_notional_usd="0",
+                    idempotency_key=None,
+                    execution_id=None,
+                    plan_hash=None,
+                    report_file=None,
+                    approval_consumed_marker=None,
+                )
+
+        self.assertEqual(plan["required_gate_env_vars"], ["PMX_ALLOW_LIVE_SUBMIT", "PMX_ALLOW_REAL_FUNDS_CANARY"])
+        self.assertEqual(plan["missing_gate_env_vars"], [])
 
     def test_subprocess_env_injects_secrets_without_losing_gate_env(self):
         with tempfile.TemporaryDirectory() as tmp_name:
