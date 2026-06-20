@@ -301,10 +301,19 @@ submit/cancel remain blocked by the formal release decision.
 - Real-funds canary armed stage reporting now keeps the latest handoff report
   in `--report-file` and appends every post/cancel stage to
   `<report-file>.stages.jsonl` for ordered recovery review.
+- Reviewed-go armed invocation planning now reports the required explicit
+  operator env gates `PMX_ALLOW_LIVE_SUBMIT=1` and
+  `PMX_ALLOW_REAL_FUNDS_CANARY=1` instead of implying config flags alone are
+  sufficient.
 - Controlled canary closeout now consumes that append-only stage history,
   records its SHA-256 and stage summary, and fails closed on missing history,
   mismatched remote order id, raw signed material exposure, or unresolved
   `operator_required` stages.
+- Reviewed-go closeout orchestration now has a `--readback-closeout-only` mode
+  for already consumed canary packages and refuses the full preflight/armed
+  workflow when post-canary evidence already exists. Its Data API readback
+  account resolution can use `PMX_CLOB_FUNDER` from either the runtime env or a
+  local `--secrets-env-file` without logging secret values.
 - If an `operator_required` stage exists, closeout now requires a bound
   `operator-recovery.json` with an operator review reference, exact stage
   history SHA-256, same remote order id, no-retry/no-second-order assertions,

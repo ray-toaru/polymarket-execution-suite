@@ -134,7 +134,7 @@ Two local controlled-canary closeout records now exist:
 
 - historical v0.26 controlled canary evidence retained for audit context;
 - one v0.28 reviewed-go single-attempt BUY/GTC post-only canary closed on
-  2026-05-27 UTC.
+  2026-06-20 UTC.
 
 For the v0.28 local attempt, the saved readback evidence records
 `remote_status=CANCELED`, `size_matched=0`, zero matching trades for the
@@ -186,7 +186,7 @@ polymarket-execution-engine/evidence/current/manifest.json
 
 Latest local refresh:
 
-- date: 2026-05-27 UTC for the local reviewed-go package and closeout refresh;
+- date: 2026-06-20 UTC for the local reviewed-go package and closeout refresh;
   canonical current evidence manifest freshness remains whatever is bound in the
   detached `.zip.evidence.json` sidecar after packaging;
 - gate source root commit: recorded in the detached `.zip.evidence.json`
