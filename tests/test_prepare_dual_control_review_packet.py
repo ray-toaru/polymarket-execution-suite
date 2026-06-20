@@ -231,6 +231,14 @@ class PrepareDualControlReviewPacketTests(unittest.TestCase):
             self.assertEqual(copied["path"], "dual-control-review.template.json")
             self.assertEqual(copied["sha256"], self.module.sha256(src))
 
+    def test_load_json_rejects_non_object_json(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            path = Path(tmp_name) / "array.json"
+            path.write_text("[]\n")
+
+            with self.assertRaisesRegex(ValueError, "must contain a JSON object"):
+                self.module.load_json(path)
+
     def test_build_packet_rejects_binding_mismatch(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)

@@ -1,4 +1,8 @@
 import importlib.util
+import contextlib
+import io
+import json
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -49,6 +53,33 @@ class SupplyChainPreflightTests(unittest.TestCase):
         self.assertFalse(report["remote_side_effects"])
         self.assertFalse(report["package_refresh"])
         self.assertFalse(report["release_posture_changed"])
+
+    def test_report_has_stable_schema_metadata(self):
+        module = load_module()
+        with patch.object(module.shutil, "which", return_value=None):
+            report = module.build_report()
+
+        self.assertEqual(report["schema_version"], 1)
+        self.assertEqual(report["optional_tools"], module.OPTIONAL_TOOLS)
+
+    def test_main_writes_optional_json_output(self):
+        module = load_module()
+        with tempfile.TemporaryDirectory() as tmp_name:
+            output = Path(tmp_name) / "supply-chain-preflight.json"
+            stdout = io.StringIO()
+            with patch.object(module.shutil, "which", return_value=None):
+                with contextlib.redirect_stdout(stdout):
+                    rc = module.main(["--output", str(output)])
+
+            self.assertEqual(rc, 0)
+            self.assertTrue(output.is_file())
+            written = json.loads(output.read_text())
+            printed = json.loads(stdout.getvalue())
+            self.assertEqual(written, printed)
+            self.assertEqual(written["status"], "skipped")
+            self.assertFalse(written["remote_side_effects"])
+            self.assertFalse(written["package_refresh"])
+            self.assertFalse(written["release_posture_changed"])
 
 
 if __name__ == "__main__":

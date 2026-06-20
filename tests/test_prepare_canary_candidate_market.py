@@ -182,6 +182,56 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
                     audit=audit,
                 )
 
+    def test_candidate_audit_redacts_secret_like_fetch_error_values(self):
+        args = argparse.Namespace(
+            clob_url="https://clob",
+            timeout_seconds=1.0,
+            max_spread_bps=100,
+            max_clob_requests=None,
+            exchange_rule_valid_for_minutes=5,
+            min_end_days=None,
+            market_slug="slug",
+        )
+        market = {
+            "id": "condition-1",
+            "slug": "slug",
+            "active": True,
+            "acceptingOrders": True,
+            "closed": False,
+            "archived": False,
+            "outcomes": ["Yes"],
+            "clobTokenIds": ["1"],
+        }
+        audit = {}
+        secret_error = (
+            "remote failure api_secret=lowercase-secret "
+            "Signature=mixed-signature signed_payload=raw-envelope private_key=raw-key"
+        )
+        with patch.object(self.module, "fetch_json", side_effect=ValueError(secret_error)):
+            with self.assertRaisesRegex(self.module.CandidateError, "book request failed"):
+                self.module.candidate_from_market(
+                    args,
+                    market,
+                    requested_outcome="Yes",
+                    order_cap=Decimal("1"),
+                    requested_target_size=None,
+                    snapshot_at="2026-05-23T00:00:00+00:00",
+                    human_review_ref="ticket://review",
+                    exchange_rule_evidence_ref="ticket://reviewed-rule",
+                    audit=audit,
+                )
+
+        self.assertNotIn("selected_candidate_summary", audit)
+        error = audit["fetch_errors"][0]["error"]
+        self.assertIn("api_secret=<redacted>", error)
+        self.assertIn("Signature=<redacted>", error)
+        self.assertIn("signed_payload=<redacted>", error)
+        self.assertIn("private_key=<redacted>", error)
+        self.assertNotIn("lowercase-secret", error)
+        self.assertNotIn("mixed-signature", error)
+        self.assertNotIn("raw-envelope", error)
+        self.assertNotIn("raw-key", error)
+
     def test_fetch_json_retries_before_succeeding(self):
         calls = []
 

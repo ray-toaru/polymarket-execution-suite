@@ -7,12 +7,15 @@ are available for a later explicitly requested SBOM/license scan.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import shutil
+from pathlib import Path
 from typing import Any
 
 
 OPTIONAL_TOOLS = ["syft", "cargo-deny", "cargo-about", "cyclonedx-py"]
+SCHEMA_VERSION = 1
 
 
 def build_report() -> dict[str, Any]:
@@ -25,11 +28,13 @@ def build_report() -> dict[str, Any]:
         else:
             missing.append(name)
     return {
+        "schema_version": SCHEMA_VERSION,
         "status": "available" if available else "skipped",
         "scope": "local_advisory_supply_chain_preflight",
         "remote_side_effects": False,
         "package_refresh": False,
         "release_posture_changed": False,
+        "optional_tools": list(OPTIONAL_TOOLS),
         "available_tools": available,
         "missing_optional_tools": missing,
         "next_action": (
@@ -40,8 +45,27 @@ def build_report() -> dict[str, Any]:
     }
 
 
-def main() -> int:
-    print(json.dumps(build_report(), indent=2, sort_keys=True))
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="Optional path for writing the preflight report JSON.",
+    )
+    return parser.parse_args(argv)
+
+
+def write_json(path: Path, report: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    report = build_report()
+    if args.output is not None:
+        write_json(args.output, report)
+    print(json.dumps(report, indent=2, sort_keys=True))
     return 0
 
 

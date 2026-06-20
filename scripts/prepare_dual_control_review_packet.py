@@ -3,15 +3,21 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import shutil
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from release_validation_utils import load_json_object, sha256_file
+
 PREFLIGHT_GATE_FIELDS = (
     "preconditions_live_submit_would_pass",
     "preconditions_real_funds_canary_would_pass",
@@ -37,15 +43,11 @@ PREFLIGHT_GATE_EVIDENCE_FIELDS = (
 
 
 def load_json(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text())
+    return load_json_object(path)
 
 
 def sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    return sha256_file(path)
 
 
 def require_sha256(value: object, label: str) -> str:

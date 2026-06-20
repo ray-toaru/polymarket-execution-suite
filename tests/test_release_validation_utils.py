@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "release_validation_utils.py"
 DIST_INDEX_SCRIPT = ROOT / "scripts" / "check_dist_index.py"
 V28_SCRIPT = ROOT / "scripts" / "check_v28_production_live_candidate.py"
+DUAL_CONTROL_PACKET_SCRIPT = ROOT / "scripts" / "prepare_dual_control_review_packet.py"
 
 
 def load_module(path: Path, name: str):
@@ -43,6 +44,15 @@ class ReleaseValidationUtilsTests(unittest.TestCase):
         text = V28_SCRIPT.read_text()
         self.assertIn("from release_validation_utils import sha256_file", text)
         sha256_body = text.split("def sha256(", 1)[1].split("\ndef ", 1)[0]
+        self.assertIn("return sha256_file(path)", sha256_body)
+        self.assertNotIn("hashlib.sha256()", sha256_body)
+
+    def test_dual_control_packet_reuses_shared_json_and_sha256_helpers(self):
+        text = DUAL_CONTROL_PACKET_SCRIPT.read_text()
+        self.assertIn("from release_validation_utils import load_json_object, sha256_file", text)
+        load_json_body = text.split("def load_json(", 1)[1].split("\ndef ", 1)[0]
+        sha256_body = text.split("def sha256(", 1)[1].split("\ndef ", 1)[0]
+        self.assertIn("return load_json_object(path)", load_json_body)
         self.assertIn("return sha256_file(path)", sha256_body)
         self.assertNotIn("hashlib.sha256()", sha256_body)
 
