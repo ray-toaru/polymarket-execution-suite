@@ -18,6 +18,10 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 TARGET_VERSION = "0.28.0"
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
+STRUCTURED_RELEASE_DECISION_RE = re.compile(
+    r"```json\s+release-decision\s*\n(?P<body>.*?)\n```",
+    re.DOTALL,
+)
 
 REQUIRED_CANDIDATE_TERMS = [
     "production-live-candidate",
@@ -86,6 +90,47 @@ def require_false(blockers: list[str], data: dict[str, Any], key: str, label: st
         blockers.append(f"{label}.{key} must remain false for v0.28 production-live-candidate")
 
 
+def release_decision_structured_block(text: str) -> dict[str, Any] | None:
+    match = STRUCTURED_RELEASE_DECISION_RE.search(text)
+    if match is None:
+        return None
+    try:
+        data = json.loads(match.group("body"))
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def validate_release_decision_structured_block(
+    blockers: list[str],
+    text: str,
+    target_version: str,
+) -> None:
+    data = release_decision_structured_block(text)
+    if data is None:
+        blockers.append("RELEASE_DECISION.md must include a structured release decision block")
+        return
+    if not data:
+        blockers.append("structured release decision block must be valid JSON object")
+        return
+    if data.get("schema_version") != 1:
+        blockers.append("structured release decision schema_version must be 1")
+    if data.get("version") != target_version:
+        blockers.append("structured release decision version must match v0.28 target")
+    if data.get("release_posture") != "production-live-candidate":
+        blockers.append("structured release decision release_posture must be production-live-candidate")
+    for key in [
+        "validated_release",
+        "production_ready",
+        "live_trading_ready",
+        "live_submit_allowed",
+        "live_cancel_allowed",
+        "real_funds_canary_authorized",
+    ]:
+        if data.get(key) is not False:
+            blockers.append(f"structured release decision {key} must remain false")
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -138,6 +183,7 @@ def evaluate(root: Path = ROOT, target_version: str = TARGET_VERSION) -> dict[st
     validation_report_text = read_text(root / "VALIDATION_REPORT.md")
     for token in REQUIRED_CANDIDATE_TERMS:
         require_contains(blockers, "RELEASE_DECISION.md", release_decision_text, token)
+    validate_release_decision_structured_block(blockers, release_decision_text, target_version)
     require_contains(blockers, "VALIDATION_REPORT.md", validation_report_text, f"v{target_version}")
     require_contains(blockers, "VALIDATION_REPORT.md", validation_report_text, "Full current gates")
     require_contains(blockers, "VALIDATION_REPORT.md", validation_report_text, "production-live-candidate")

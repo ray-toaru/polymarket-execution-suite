@@ -61,20 +61,35 @@ Historical root documents and previous gate notes have been moved to `docs/archi
 
 ## Validation
 
-Integration-level local/static validation entry points:
+Recommended local entry points:
 
 ```bash
 python -m pip install -c constraints-ci.txt -r requirements-ci.txt
-python scripts/check_version_consistency.py
-python scripts/validate_contracts.py
-python scripts/check_v28_production_live_candidate.py
-python -m unittest discover -s tests -p "test_*.py"
-HERMES_PROFILE=<local-profile> PYTHONPATH=hermes-polymarket-executor-adapter/src python -m pytest -q hermes-polymarket-executor-adapter/tests
-HERMES_PROFILE=<local-profile> python -m compileall -q hermes-polymarket-executor-adapter/src scripts tests polymarket-execution-engine/validation
-python scripts/check_hermes_profile_plugin.py --profile-cmd <local-profile-command>
-python polymarket-execution-engine/validation/check_docs_evidence_governance.py
-python polymarket-execution-engine/scripts/check_release_hygiene.py . --dev-worktree
+make check-local
+make check-hermes HERMES_PROFILE=<local-profile>
+make check-package
 ```
+
+`make check-local` is the default no-side-effect developer gate. It checks
+version consistency, contracts, the v0.28 release-posture audit, integration
+unit tests, Python bytecode, and docs/evidence governance. It does not refresh
+release artifacts, run PostgreSQL-backed gates, call external services, or
+authorize live submit/cancel.
+
+`make check-package` runs local cleanup and release hygiene only; it also does
+not rebuild the final release package. Use `scripts/package_release.py` only
+during a deliberate package refresh/review cycle.
+
+`make check-current-gates` runs the execution-engine full current gate wrapper:
+
+```bash
+make check-current-gates
+```
+
+That wrapper requires the Rust/PostgreSQL/SDK prerequisites for the engine
+suite and may consume local database resources. Credentialed smoke, sign-only
+checks, push, tag, release, production deployment, and real-funds actions remain
+separate authorization gates.
 
 `scripts/check_v28_production_live_candidate.py` is audit-only by default. It reports
 the remaining blockers before a v0.28 release; use `--require-ready` only for

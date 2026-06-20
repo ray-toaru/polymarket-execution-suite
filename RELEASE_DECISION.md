@@ -1,5 +1,19 @@
 # Release Decision — v0.28.0 production-live-candidate
 
+```json release-decision
+{
+  "live_cancel_allowed": false,
+  "live_submit_allowed": false,
+  "live_trading_ready": false,
+  "production_ready": false,
+  "real_funds_canary_authorized": false,
+  "release_posture": "production-live-candidate",
+  "schema_version": 1,
+  "validated_release": false,
+  "version": "0.28.0"
+}
+```
+
 ## 2026-06-11 non-live freeze
 
 The historical `v0.28.0` tag points to an earlier commit and is not moved.

@@ -214,11 +214,16 @@ def validate(dist: Path, expected_version: str) -> list[str]:
             failures.append(
                 f"{path}: local_material status {status!r} does not match reviewed-go contents ({inferred_status})"
             )
-        if (inferred_status is not None or is_reviewed_go_material(path)) and status in {"consumed_closed", "consumed_not_closed"}:
+        reviewed_go_like = (
+            inferred_status is not None
+            or is_reviewed_go_material(path)
+            or status == "reviewed_go_local_material_not_current_approval"
+        )
+        if reviewed_go_like:
             if approval_reuse_allowed is not False:
-                failures.append(f"{path}: consumed reviewed-go material must not be approval-reusable")
+                failures.append(f"{path}: reviewed-go material must not be approval-reusable")
             if remote_side_effects_authorized is not False:
-                failures.append(f"{path}: consumed reviewed-go material must not authorize remote side effects")
+                failures.append(f"{path}: reviewed-go material must not authorize remote side effects")
         if status == "current_no_go_review_material":
             if approval_reuse_allowed is not False:
                 failures.append(f"{path}: no-go material must not be approval-reusable")

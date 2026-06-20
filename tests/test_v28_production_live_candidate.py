@@ -48,6 +48,19 @@ class V028ProductionLiveCandidateTests(unittest.TestCase):
         self.write(
             "RELEASE_DECISION.md",
             "# Release Decision - v0.28.0 production-live-candidate\n"
+            "```json release-decision\n"
+            "{\n"
+            '  "schema_version": 1,\n'
+            '  "version": "0.28.0",\n'
+            '  "release_posture": "production-live-candidate",\n'
+            '  "validated_release": false,\n'
+            '  "production_ready": false,\n'
+            '  "live_trading_ready": false,\n'
+            '  "live_submit_allowed": false,\n'
+            '  "live_cancel_allowed": false,\n'
+            '  "real_funds_canary_authorized": false\n'
+            "}\n"
+            "```\n"
             "production-live-candidate\n"
             "validated_release=false\nproduction_ready=false\nlive_trading_ready=false\n"
             "live_submit_allowed=false\nlive_cancel_allowed=false\nreal_funds_canary_authorized=false\n"
@@ -156,6 +169,17 @@ class V028ProductionLiveCandidateTests(unittest.TestCase):
         blockers = "\n".join(report["blockers"])
         self.assertIn("operator approval", blockers)
         self.assertIn("runtime state healthy", blockers)
+
+    def test_release_decision_structured_block_must_match_non_live_claims(self):
+        self.write_ready_tree()
+        path = self.root / "RELEASE_DECISION.md"
+        text = path.read_text()
+        path.write_text(text.replace('"validated_release": false', '"validated_release": true'))
+
+        report = self.module.evaluate(self.root)
+
+        self.assertEqual(report["status"], "not_ready")
+        self.assertIn("structured release decision", "\n".join(report["blockers"]))
 
     def test_audit_only_not_ready_report_is_not_release_pass(self):
         report = self.module.evaluate(self.root)

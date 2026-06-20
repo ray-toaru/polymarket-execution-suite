@@ -6,11 +6,13 @@ from unittest import mock
 import json
 import contextlib
 import io
+import hashlib
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "package_release.py"
 CHECKER = ROOT / "scripts" / "check_release_artifact.py"
+DIST_INDEX_CHECKER = ROOT / "scripts" / "check_dist_index.py"
 
 
 def load_package_module():
@@ -29,10 +31,68 @@ def load_checker_module():
     return module
 
 
+def load_dist_index_checker_module():
+    spec = importlib.util.spec_from_file_location("check_dist_index", DIST_INDEX_CHECKER)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
 class PackageReleaseIndexTests(unittest.TestCase):
     def setUp(self):
         self.package_release = load_package_module()
         self.checker = load_checker_module()
+        self.dist_index_checker = load_dist_index_checker_module()
+
+    def write_minimal_dist_index(self, dist: Path, *, local_material: list[dict[str, object]]) -> None:
+        artifact = dist / "polymarket-execution-suite-v0.28.0.zip"
+        artifact.write_bytes(b"artifact")
+        artifact_sha = hashlib.sha256(artifact.read_bytes()).hexdigest()
+        sidecar = dist / "polymarket-execution-suite-v0.28.0.zip.sha256"
+        sidecar.write_text(f"{artifact_sha}  {artifact.name}\n")
+        evidence = dist / "polymarket-execution-suite-v0.28.0.zip.evidence.json"
+        evidence.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "artifact": {"name": artifact.name, "sha256": artifact_sha},
+                    "canonical_evidence": {
+                        "manifest_path": "polymarket-execution-engine/evidence/current/manifest.json",
+                        "archived_manifest_sha256": "b" * 64,
+                        "workspace_manifest_sha256": "c" * 64,
+                        "workspace_manifest_snapshot_path": "polymarket-execution-suite-v0.28.0.workspace-manifest.json",
+                        "archived_manifest_binding_kind": "archive_normalized_current_manifest",
+                        "workspace_manifest_binding_kind": "post_package_workspace_snapshot",
+                    },
+                }
+            )
+            + "\n"
+        )
+        (dist / "polymarket-execution-suite-v0.28.0.workspace-manifest.json").write_text("{}\n")
+        (dist / "INDEX.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "version": "0.28.0",
+                    "current_release_artifact": {
+                        "path": artifact.name,
+                        "sha256": artifact_sha,
+                        "sha256_sidecar": sidecar.name,
+                        "evidence_sidecar": evidence.name,
+                        "artifact_class": "production_live_candidate_non_live_by_default",
+                        "validated_release": False,
+                        "production_ready": False,
+                        "live_trading_ready": False,
+                    },
+                    "canonical_evidence": {
+                        "workspace_manifest_snapshot_path": "polymarket-execution-suite-v0.28.0.workspace-manifest.json"
+                    },
+                    "local_material": local_material,
+                }
+            )
+            + "\n"
+        )
 
     def test_dist_index_classifies_consumed_closed_go_package(self):
         entry = self.package_release.classify_dist_entry(
@@ -90,6 +150,37 @@ class PackageReleaseIndexTests(unittest.TestCase):
             )
         self.assertEqual(entry["status"], "reviewed_go_local_material_not_current_approval")
 
+    def test_dist_index_rejects_reusable_or_remote_authorized_reviewed_go_local_material(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            dist = Path(tmp_name)
+            material = dist / "opaque-local-material"
+            material.mkdir()
+            (material / "review.json").write_text(
+                json.dumps({"status": "reviewed_go_package_ready_single_attempt"}) + "\n"
+            )
+            (material / "release-decision.json").write_text(
+                json.dumps({"status": "reviewed_go"}) + "\n"
+            )
+            for name in ["approval.json", "candidate-market.json", "runtime-truth.json"]:
+                (material / name).write_text("{}\n")
+            self.write_minimal_dist_index(
+                dist,
+                local_material=[
+                    {
+                        "path": "opaque-local-material",
+                        "kind": "directory",
+                        "status": "reviewed_go_local_material_not_current_approval",
+                        "approval_reuse_allowed": True,
+                        "remote_side_effects_authorized": True,
+                    }
+                ],
+            )
+
+            failures = self.dist_index_checker.validate(dist, "0.28.0")
+
+        self.assertIn("approval-reusable", "\n".join(failures))
+        self.assertIn("remote side effects", "\n".join(failures))
+
     def test_release_policy_rejects_secret_like_local_env_and_json_files(self):
         forbidden = [
             Path(".env.local"),
@@ -97,6 +188,7 @@ class PackageReleaseIndexTests(unittest.TestCase):
             Path(".env.shadow"),
             Path("config/runtime.local.json"),
             Path("secrets/token.txt"),
+            Path("polymarket-execution-engine/config/controlled-canary.external-references.invalid-sensitive.fixture.json"),
         ]
         for path in forbidden:
             self.assertFalse(self.package_release.allowed(ROOT / path))
@@ -107,6 +199,7 @@ class PackageReleaseIndexTests(unittest.TestCase):
 
     def test_release_policy_allows_examples_and_rejects_logs(self):
         allowed = [
+            ROOT / "Makefile",
             ROOT / ".env.example",
             ROOT / "polymarket-execution-engine" / ".env.example",
         ]
@@ -182,6 +275,28 @@ class PackageReleaseIndexTests(unittest.TestCase):
 
         self.assertIn(tracked_root, files)
         self.assertIn(tracked_submodule, files)
+
+    def test_release_source_files_fails_closed_for_secret_like_tracked_content(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            root = Path(tmp_name)
+            tracked = root / "docs" / "public-config.json"
+            tracked.parent.mkdir(parents=True)
+            tracked.write_text(json.dumps({"api_secret": "should-not-ship"}) + "\n")
+
+            original_root = self.package_release.ROOT
+            try:
+                self.package_release.ROOT = root
+                with mock.patch.object(
+                    self.package_release,
+                    "tracked_git_files",
+                    return_value=[tracked],
+                ), mock.patch.object(self.package_release, "submodule_records", return_value=[]):
+                    with self.assertRaises(SystemExit) as ctx:
+                        self.package_release.release_source_files()
+            finally:
+                self.package_release.ROOT = original_root
+
+        self.assertIn("secret-like content", str(ctx.exception))
 
     def test_tracked_git_files_rejects_non_utf8_paths(self):
         with mock.patch.object(
