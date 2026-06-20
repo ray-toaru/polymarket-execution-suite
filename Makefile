@@ -1,7 +1,7 @@
 PYTHON ?= python
 HERMES_PROFILE ?= local
 
-.PHONY: check-local check-hermes check-package check-current-gates check-shell clean-local
+.PHONY: check-local check-hermes check-package check-current-gates check-shell check-supply-chain clean-local
 
 check-local:
 	$(PYTHON) scripts/check_version_consistency.py
@@ -28,6 +28,9 @@ check-shell:
 	else \
 		echo "shellcheck not installed; skipping"; \
 	fi
+
+check-supply-chain:
+	$(PYTHON) scripts/check_supply_chain_preflight.py
 
 clean-local:
 	$(PYTHON) scripts/clean_local_artifacts.py

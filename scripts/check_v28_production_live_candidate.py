@@ -8,14 +8,20 @@ all been refreshed together for the exact v0.28 source.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from release_validation_utils import sha256_file
+
 TARGET_VERSION = "0.28.0"
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 STRUCTURED_RELEASE_DECISION_RE = re.compile(
@@ -132,11 +138,7 @@ def validate_release_decision_structured_block(
 
 
 def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+    return sha256_file(path)
 
 
 def evaluate(root: Path = ROOT, target_version: str = TARGET_VERSION) -> dict[str, Any]:

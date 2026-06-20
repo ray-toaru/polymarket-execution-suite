@@ -376,6 +376,68 @@ class PrepareCanaryCandidateMarketTests(unittest.TestCase):
         self.assertEqual(len(audit["gamma_url_ref"]["sha256"]), 64)
         self.assertEqual(len(audit["clob_url_ref"]["sha256"]), 64)
 
+    def test_scan_audit_includes_redacted_candidate_readback_summary(self):
+        args = argparse.Namespace(
+            gamma_url="https://gamma",
+            clob_url="https://clob",
+            timeout_seconds=1.0,
+            max_order_notional_usd="1.00",
+            target_size="5",
+            max_markets=10,
+            max_clob_requests=None,
+            max_spread_bps=4000,
+            min_end_days=None,
+            exchange_rule_valid_for_minutes=5,
+            human_review_ref="ticket://review",
+            exchange_rule_evidence_ref="ticket://reviewed-rule",
+            market_url=None,
+            market_slug=None,
+            outcome=None,
+        )
+        markets = [
+            {
+                "id": "condition-a",
+                "slug": "slug-a",
+                "active": True,
+                "acceptingOrders": True,
+                "closed": False,
+                "archived": False,
+                "outcomes": ["Yes"],
+                "clobTokenIds": ["12345678901234567890"],
+            },
+        ]
+        book = {
+            "asks": [{"price": "0.03", "size": "10"}],
+            "bids": [{"price": "0.02", "size": "8"}],
+            "min_order_size": "5",
+            "min_tick_size": "0.01",
+        }
+        spread = {"spread": "0.01"}
+        with patch.object(self.module, "fetch_json", side_effect=[markets, book, spread]):
+            candidate, audit = self.module.scan(args)
+
+        summary = audit["selected_candidate_summary"]
+        self.assertEqual(summary["market_id"], candidate.market_id)
+        self.assertEqual(summary["outcome"], "Yes")
+        self.assertEqual(summary["token_id_tail"], "567890")
+        self.assertEqual(summary["token_id_hash"], audit["selected"]["token_id_hash"])
+        self.assertEqual(summary["book_snapshot_timestamp"], candidate.book_snapshot_timestamp)
+        self.assertEqual(
+            summary["orderability_evidence"],
+            {
+                "active": True,
+                "accepting_orders": True,
+                "closed": False,
+                "archived": False,
+                "top_ask_available": True,
+                "post_only_limit_price_available": True,
+                "spread_bps": 3334,
+                "min_order_size": "5",
+                "min_tick_size": "0.01",
+            },
+        )
+        self.assertNotIn("token_id", summary)
+
     def test_scan_stops_when_clob_request_budget_is_exhausted(self):
         args = argparse.Namespace(
             gamma_url="https://gamma",

@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "release_validation_utils.py"
 DIST_INDEX_SCRIPT = ROOT / "scripts" / "check_dist_index.py"
+V28_SCRIPT = ROOT / "scripts" / "check_v28_production_live_candidate.py"
 
 
 def load_module(path: Path, name: str):
@@ -37,6 +38,13 @@ class ReleaseValidationUtilsTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "must contain a JSON object"):
                 utils.load_json_object(path)
+
+    def test_v28_guard_reuses_shared_sha256_file_helper(self):
+        text = V28_SCRIPT.read_text()
+        self.assertIn("from release_validation_utils import sha256_file", text)
+        sha256_body = text.split("def sha256(", 1)[1].split("\ndef ", 1)[0]
+        self.assertIn("return sha256_file(path)", sha256_body)
+        self.assertNotIn("hashlib.sha256()", sha256_body)
 
 
 if __name__ == "__main__":

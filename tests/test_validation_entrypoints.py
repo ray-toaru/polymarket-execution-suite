@@ -11,7 +11,15 @@ class ValidationEntrypointTests(unittest.TestCase):
         self.assertTrue(makefile.exists())
         text = makefile.read_text()
         lines = text.splitlines()
-        for target in ["check-local", "check-hermes", "check-package", "check-current-gates", "check-shell", "clean-local"]:
+        for target in [
+            "check-local",
+            "check-hermes",
+            "check-package",
+            "check-current-gates",
+            "check-shell",
+            "check-supply-chain",
+            "clean-local",
+        ]:
             self.assertIn(f"{target}:", lines)
             self.assertIn(target, next(line for line in lines if line.startswith(".PHONY:")))
 
@@ -31,10 +39,26 @@ class ValidationEntrypointTests(unittest.TestCase):
         for token in forbidden:
             self.assertNotIn(token, target_body)
 
+    def test_supply_chain_entrypoint_is_optional_and_non_authorizing(self):
+        makefile = ROOT / "Makefile"
+        text = makefile.read_text()
+        self.assertIn("scripts/check_supply_chain_preflight.py", text)
+        target_body = text.split("check-supply-chain:", 1)[1].split("\n\n", 1)[0]
+        forbidden = [
+            "package_release.py",
+            "git push",
+            "gh release",
+            "run_current_gates.sh",
+            "run_reviewed_go_canary_armed.py",
+        ]
+        for token in forbidden:
+            self.assertNotIn(token, target_body)
+
     def test_readme_points_to_unified_validation_entrypoints(self):
         text = (ROOT / "README.md").read_text()
         self.assertIn("make check-local", text)
         self.assertIn("make check-shell", text)
+        self.assertIn("make check-supply-chain", text)
         self.assertIn("make check-package", text)
         self.assertIn("make check-current-gates", text)
         normalized = " ".join(text.split())
