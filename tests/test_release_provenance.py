@@ -73,6 +73,99 @@ class ReleaseProvenanceTests(unittest.TestCase):
         self.assertEqual(records[0]["checkout_status"], "clean")
         self.assertEqual(records[1]["checkout_status"], "different_commit")
 
+    def test_load_ci_runs_accepts_structured_ci_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            evidence = Path(tmp_name) / "release-ci-evidence.json"
+            evidence.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "release_posture": "non_live_hardened",
+                        "ci_runs": [
+                            {
+                                "workflow_name": "ci",
+                                "workflow_run_url": (
+                                    "https://github.com/example/repo/actions/runs/123"
+                                ),
+                                "commit_sha": "a" * 40,
+                                "workflow_status": "success",
+                                "timestamp": "2026-06-11T00:00:00+00:00",
+                            }
+                        ],
+                    }
+                )
+                + "\n"
+            )
+
+            runs = self.module.load_ci_runs(evidence)
+
+            self.assertEqual(len(runs), 1)
+            self.assertEqual(runs[0]["commit_sha"], "a" * 40)
+
+    def test_validation_rejects_ci_commit_mismatch_for_known_repository(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            artifact = Path(tmp_name) / "artifact.zip"
+            artifact.write_bytes(b"release")
+            digest = hashlib.sha256(b"release").hexdigest()
+            provenance = {
+                "schema_version": 1,
+                "release_posture": "non_live_hardened",
+                "version": "0.28.0",
+                "subject": {"name": artifact.name, "sha256": digest},
+                "source": {
+                    "repository": "https://github.com/ray-toaru/polymarket-execution-suite",
+                    "root_commit": "a" * 40,
+                    "submodules": [
+                        {
+                            "path": "polymarket-execution-engine",
+                            "commit": "b" * 40,
+                            "checkout_status": "clean",
+                        }
+                    ],
+                },
+                "ci_runs": [
+                    {
+                        "workflow_name": "ci",
+                        "workflow_run_url": (
+                            "https://github.com/ray-toaru/"
+                            "polymarket-execution-suite/actions/runs/123"
+                        ),
+                        "commit_sha": "d" * 40,
+                        "workflow_status": "success",
+                        "timestamp": "2026-06-11T00:00:00+00:00",
+                    },
+                    {
+                        "workflow_name": "engine-ci",
+                        "workflow_run_url": (
+                            "https://github.com/ray-toaru/"
+                            "polymarket-execution-engine/actions/runs/456"
+                        ),
+                        "commit_sha": "e" * 40,
+                        "workflow_status": "success",
+                        "timestamp": "2026-06-11T00:00:00+00:00",
+                    },
+                ],
+                "materials": [],
+                "authorization": {
+                    "production_ready": False,
+                    "live_ready": False,
+                    "real_funds_authorized": False,
+                },
+            }
+
+            failures = self.module.validate_provenance(provenance, artifact)
+
+            self.assertIn(
+                "ci_runs[0].commit_sha does not match source commit for "
+                "polymarket-execution-suite",
+                failures,
+            )
+            self.assertIn(
+                "ci_runs[1].commit_sha does not match source commit for "
+                "polymarket-execution-engine",
+                failures,
+            )
+
     def test_validation_rejects_live_posture_and_artifact_tampering(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             artifact = Path(tmp_name) / "artifact.zip"

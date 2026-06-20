@@ -15,7 +15,9 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 SHA1_RE = re.compile(r"^[0-9a-f]{40}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
-RUN_URL_RE = re.compile(r"^https://github\.com/[^/]+/[^/]+/actions/runs/[0-9]+(?:/.*)?$")
+RUN_URL_RE = re.compile(
+    r"^https://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/]+)/actions/runs/[0-9]+(?:/.*)?$"
+)
 
 
 def sha256(path: Path) -> str:
@@ -102,6 +104,31 @@ def build_provenance(
     }
 
 
+def load_ci_runs(path: Path) -> list[dict[str, Any]]:
+    data = json.loads(path.read_text())
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict) and isinstance(data.get("ci_runs"), list):
+        return data["ci_runs"]
+    raise SystemExit("--ci-evidence must contain a JSON array or an object with ci_runs")
+
+
+def source_commit_by_github_repo(source: dict[str, Any]) -> dict[str, str]:
+    commits: dict[str, str] = {}
+    root_commit = source.get("root_commit")
+    if isinstance(root_commit, str):
+        commits["polymarket-execution-suite"] = root_commit
+        commits["polymarket_dual_project"] = root_commit
+    for record in source.get("submodules", []):
+        if not isinstance(record, dict):
+            continue
+        path = record.get("path")
+        commit = record.get("commit")
+        if isinstance(path, str) and isinstance(commit, str):
+            commits[Path(path).name] = commit
+    return commits
+
+
 def validate_provenance(
     provenance: dict[str, Any],
     artifact: Path,
@@ -126,9 +153,11 @@ def validate_provenance(
             failures.append("subject.name does not match artifact")
 
     source = provenance.get("source")
+    source_commits: dict[str, str] = {}
     if not isinstance(source, dict) or not SHA1_RE.fullmatch(str(source.get("root_commit", ""))):
         failures.append("source.root_commit must be a full commit SHA")
     else:
+        source_commits = source_commit_by_github_repo(source)
         for index, record in enumerate(source.get("submodules", [])):
             if not isinstance(record, dict) or not SHA1_RE.fullmatch(str(record.get("commit", ""))):
                 failures.append(f"source.submodules[{index}].commit must be a full commit SHA")
@@ -144,12 +173,21 @@ def validate_provenance(
                 failures.append(f"ci_runs[{index}] must be an object")
                 continue
             url = str(run.get("workflow_run_url", ""))
-            if not RUN_URL_RE.fullmatch(url):
+            run_url_match = RUN_URL_RE.fullmatch(url)
+            if not run_url_match:
                 failures.append(f"ci_runs[{index}].workflow_run_url is not a concrete HTTPS URL")
             if run.get("workflow_status") != "success":
                 failures.append(f"ci_runs[{index}].workflow_status must be success")
-            if not SHA1_RE.fullmatch(str(run.get("commit_sha", ""))):
+            commit_sha = str(run.get("commit_sha", ""))
+            if not SHA1_RE.fullmatch(commit_sha):
                 failures.append(f"ci_runs[{index}].commit_sha must be a full commit SHA")
+            elif run_url_match:
+                repo = run_url_match.group("repo")
+                expected_commit = source_commits.get(repo)
+                if expected_commit is not None and commit_sha != expected_commit:
+                    failures.append(
+                        f"ci_runs[{index}].commit_sha does not match source commit for {repo}"
+                    )
             try:
                 datetime.fromisoformat(str(run.get("timestamp", "")).replace("Z", "+00:00"))
             except ValueError:
@@ -182,9 +220,7 @@ def main() -> int:
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
 
-    ci_runs = json.loads(args.ci_evidence.read_text())
-    if not isinstance(ci_runs, list):
-        raise SystemExit("--ci-evidence must contain a JSON array")
+    ci_runs = load_ci_runs(args.ci_evidence)
     material_candidates = [
         ROOT / "VERSION",
         ROOT / "requirements-ci.txt",
