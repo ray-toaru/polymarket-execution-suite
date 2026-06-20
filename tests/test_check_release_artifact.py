@@ -166,6 +166,38 @@ class CheckReleaseArtifactTests(unittest.TestCase):
                     failures,
                 )
 
+    def test_secret_content_scan_allows_registered_negative_test_fixtures(self):
+        expected_root = "polymarket_execution_suite_v0_28_0"
+        cases = {
+            "tests/test_package_release_index.py": (
+                b"class PackageReleaseIndexTests",
+                b'{"api_secret": "should-not-ship"}',
+            ),
+            "tests/test_prepare_canary_candidate_market.py": (
+                b"class PrepareCanaryCandidateMarketTests",
+                b"api_secret=lowercase-secret Signature=mixed-signature",
+            ),
+        }
+        for rel, parts in cases.items():
+            with self.subTest(rel=rel):
+                data = b"\n".join(parts)
+                with tempfile.TemporaryDirectory() as tmp_name:
+                    tmp = Path(tmp_name)
+                    zip_path = tmp / "artifact.zip"
+                    with zipfile.ZipFile(zip_path, "w") as zf:
+                        zf.writestr(f"{expected_root}/VERSION", "0.28.0\n")
+                        zf.writestr(f"{expected_root}/{rel}", data)
+                    with zipfile.ZipFile(zip_path) as zf:
+                        failures = self.module.validate_archive_members(
+                            zf,
+                            expected_root=expected_root,
+                            expected_version="0.28.0",
+                        )
+                self.assertFalse(
+                    any("forbidden secret-like content" in item for item in failures),
+                    failures,
+                )
+
     def test_validate_archive_members_rejects_historical_marker_beyond_first_line(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
