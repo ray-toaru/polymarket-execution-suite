@@ -103,7 +103,7 @@ class RunReviewedGoCanaryCloseoutTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_name:
             package, env_file = self.package_fixture(Path(tmp_name))
             env_file.write_text(env_file.read_text().replace("PMX_CLOB_FUNDER=0x00000000000000000000000000000000000000b0\n", ""))
-            with self.assertRaisesRegex(SystemExit, "account address is required"):
+            with self.assertRaisesRegex(SystemExit, "--secrets-env-file"):
                 self.module.build_workflow_plan(
                     package_dir=package,
                     env_file=env_file,

@@ -472,7 +472,8 @@ python scripts/run_reviewed_go_canary_closeout.py \
   --package-dir <reviewed-go-package-dir> \
   --env-file polymarket-execution-engine/.env.runtime \
   --secrets-env-file <local-runtime-secrets-env> \
-  --readback-closeout-only
+  --readback-closeout-only \
+  --run
 ```
 
 Release packaging writes `dist/INDEX.json` and `dist/README.md`. Only the
