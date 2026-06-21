@@ -1,5 +1,23 @@
 # Documentation and evidence status — v0.28.0 production-live-candidate
 
+## 2026-06-21 local debt closeout continuation
+
+Current local source includes non-authorizing release-orchestrator report
+fields and stricter dual-control review packet member-name validation. Current
+tracked component pins are:
+
+- Hermes adapter submodule:
+  `c3c644571ae28067ad7ed2c8ab4dd042a1d54923`;
+- execution-engine submodule:
+  `d2902fce1d78f84b2eeb37be492f3468d6df6002`;
+- integration root before this documentation sync:
+  `1a4b027da394303fa9d541bc41a7ec7a11b47779`.
+
+This state is local and unpushed. It has local validation but no GitHub CI,
+fresh package sidecars, or fresh independent package review. It remains
+`production_ready=false`, `live_trading_ready=false`, and
+`validated_release=false`.
+
 ## 2026-06-21 local env/auth and package hygiene continuation
 
 Current local source includes the engine API auth env split and stricter

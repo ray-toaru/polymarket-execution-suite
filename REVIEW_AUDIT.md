@@ -1,5 +1,30 @@
 # Review audit — v0.28 production-live-candidate
 
+## 2026-06-21 local debt closeout continuation
+
+Current local source has advanced after release-orchestrator report schema
+hardening and dual-control review packet path-safety hardening. Current
+component pins are:
+
+- Hermes adapter submodule commit:
+  `c3c644571ae28067ad7ed2c8ab4dd042a1d54923`.
+- Execution-engine submodule commit:
+  `d2902fce1d78f84b2eeb37be492f3468d6df6002`.
+- Integration root commit before this documentation sync:
+  `1a4b027da394303fa9d541bc41a7ec7a11b47779`.
+
+This local state is not pushed and has no GitHub CI result. Local validation
+has passed for the release-phase orchestrator tests, dual-control review packet
+tests, contract validation, docs/evidence governance, compile checks,
+`make check-local`, and `make check-package`.
+
+The release-phase orchestrator reports now carry explicit
+`authorization_scope=no_authorization`, `production_ready=false`, and
+`live_trading_ready=false` fields. The dual-control packet copier rejects
+non-plain target filenames to prevent packet writes outside the output
+directory. These changes do not authorize live submit, live cancel, production
+deployment, or another canary attempt.
+
 ## 2026-06-21 local env/auth and package hygiene continuation
 
 Current local source has advanced after the engine API auth environment split

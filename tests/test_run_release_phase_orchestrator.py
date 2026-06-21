@@ -72,6 +72,10 @@ class RunReleasePhaseOrchestratorTests(unittest.TestCase):
             tmp = Path(tmp_name)
             args = self.base_args(tmp)
             plan = self.module.build_stage_plans(args)
+        self.assertEqual(plan["schema_version"], 1)
+        self.assertEqual(plan["authorization_scope"], "no_authorization")
+        self.assertFalse(plan["production_ready"])
+        self.assertFalse(plan["live_trading_ready"])
         self.assertEqual(plan["workflow"], "release_phase_orchestrator")
         self.assertEqual(plan["stages"]["contract_validation"]["suite"], "contract_validation")
         self.assertEqual(plan["stages"]["production_control"]["suite"], "production_control_evidence")
@@ -147,6 +151,10 @@ class RunReleasePhaseOrchestratorTests(unittest.TestCase):
             self.module.execute_contract_validation = fake_execute_contract_validation
             result = self.module.execute_orchestrator(args)
 
+        self.assertEqual(result["schema_version"], 1)
+        self.assertEqual(result["authorization_scope"], "no_authorization")
+        self.assertFalse(result["production_ready"])
+        self.assertFalse(result["live_trading_ready"])
         self.assertEqual(result["status"], "pass")
         self.assertEqual(result["stages"]["contract_validation"]["status"], "pass")
         self.assertEqual(result["stages"]["reviewed_go_decision_chain"]["status"], "blocked")
@@ -227,6 +235,10 @@ class RunReleasePhaseOrchestratorTests(unittest.TestCase):
             self.module.execute_contract_validation = fake_execute_contract_validation
             result = self.module.execute_orchestrator(args)
 
+        self.assertEqual(result["schema_version"], 1)
+        self.assertEqual(result["authorization_scope"], "no_authorization")
+        self.assertFalse(result["production_ready"])
+        self.assertFalse(result["live_trading_ready"])
         self.assertEqual(result["status"], "pass")
         self.assertEqual(
             result["stages"]["reviewed_go_decision_chain"]["status"],
@@ -283,6 +295,10 @@ class RunReleasePhaseOrchestratorTests(unittest.TestCase):
             }
             result = self.module.execute_orchestrator(args)
 
+        self.assertEqual(result["schema_version"], 1)
+        self.assertEqual(result["authorization_scope"], "no_authorization")
+        self.assertFalse(result["production_ready"])
+        self.assertFalse(result["live_trading_ready"])
         self.assertEqual(result["status"], "fail")
         self.assertEqual(result["stages"]["contract_validation"]["status"], "fail")
         self.assertEqual(result["stages"]["production_control"]["status"], "blocked")

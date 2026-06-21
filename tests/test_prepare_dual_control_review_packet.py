@@ -231,6 +231,26 @@ class PrepareDualControlReviewPacketTests(unittest.TestCase):
             self.assertEqual(copied["path"], "dual-control-review.template.json")
             self.assertEqual(copied["sha256"], self.module.sha256(src))
 
+    def test_copy_into_packet_rejects_unsafe_target_name(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            src = tmp / "source.json"
+            src.write_text("{}\n")
+
+            unsafe_names = [
+                "../escape.json",
+                "nested/escape.json",
+                "/tmp/escape.json",
+                r"nested\escape.json",
+                "",
+                ".",
+                "..",
+            ]
+            for target_name in unsafe_names:
+                with self.subTest(target_name=target_name):
+                    with self.assertRaisesRegex(SystemExit, "plain filename"):
+                        self.module.copy_into_packet(src, tmp / "packet", target_name=target_name)
+
     def test_load_json_rejects_non_object_json(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             path = Path(tmp_name) / "array.json"

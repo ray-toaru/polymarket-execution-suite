@@ -1,5 +1,31 @@
 # Validation Report — v0.28.0 production-live-candidate
 
+## 2026-06-21 local debt closeout validation
+
+Current tracked component pins after release-orchestrator report schema
+hardening and dual-control review packet path-safety hardening:
+
+- Hermes adapter submodule commit:
+  `c3c644571ae28067ad7ed2c8ab4dd042a1d54923`.
+- Execution-engine submodule commit:
+  `d2902fce1d78f84b2eeb37be492f3468d6df6002`.
+- Integration root commit before this documentation sync:
+  `1a4b027da394303fa9d541bc41a7ec7a11b47779`.
+
+Local validation passed before this documentation sync:
+
+- `python -m unittest tests.test_prepare_dual_control_review_packet`;
+- `python -m unittest tests.test_run_release_phase_orchestrator`;
+- `python scripts/validate_contracts.py`;
+- `python polymarket-execution-engine/validation/check_docs_evidence_governance.py`;
+- `python -m compileall -q scripts tests polymarket-execution-engine/validation`;
+- `make check-local`;
+- `make check-package`.
+
+This validation is local only. No push, GitHub CI, tag, release, package
+refresh, production deployment, live submit/cancel enablement, or real-funds
+authorization is included.
+
 ## 2026-06-21 local env/auth and package hygiene validation
 
 Current tracked component pins after the engine API auth environment split and

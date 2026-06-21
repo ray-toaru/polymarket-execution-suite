@@ -168,8 +168,23 @@ def validate_dual_control_template(path: Path) -> dict[str, Any]:
     return data
 
 
+def require_packet_member_name(name: str) -> str:
+    candidate = Path(name)
+    if (
+        not name
+        or "\\" in name
+        or candidate.is_absolute()
+        or len(candidate.parts) != 1
+        or candidate.name != name
+        or name in {".", ".."}
+    ):
+        raise SystemExit("packet target_name must be a plain filename")
+    return name
+
+
 def copy_into_packet(src: Path, output_dir: Path, *, target_name: str | None = None) -> dict[str, Any]:
-    dest = output_dir / (target_name or src.name)
+    member_name = require_packet_member_name(src.name if target_name is None else target_name)
+    dest = output_dir / member_name
     if src.resolve() != dest.resolve():
         shutil.copy2(src, dest)
     return {"path": dest.name, "sha256": sha256(dest)}
