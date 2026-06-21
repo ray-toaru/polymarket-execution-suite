@@ -90,14 +90,9 @@ polymarket-execution-engine/evidence/current/manifest.json
 ```
 
 Current source/artifact binding for this document state is detached rather than
-self-embedded:
-
-- execution-engine commit:
-  `eacd6dbb94802e0402d213361c06649caaaf6386`;
-- Phase 5 code-state root CI run:
-  `https://github.com/ray-toaru/polymarket-execution-suite/actions/runs/27751360977`, success;
-- Phase 5 code-state engine CI run:
-  `https://github.com/ray-toaru/polymarket-execution-engine/actions/runs/27751351091`, success.
+self-embedded. Exact commits, artifact hashes, manifest hashes, and CI run
+bindings belong in the generated `dist/` sidecars, release provenance, and the
+external progress tracker.
 
 Final artifact and sidecar hashes are detached binding material. They are
 recorded next to the generated archive in `dist/` and in the external progress
@@ -106,7 +101,7 @@ tracker, not self-embedded in this source document.
 The manifest currently records:
 
 - `postgres_validation=pass`
-- `credentialed_non_trading_validation=skipped`
+- `credentialed_non_trading_validation=pass`
 - `sdk_standard_sign_only_validation=pass`
 - `real_funds_canary_store_truth_cli_validation=pass`
 - other local/static source-candidate gates: pass;
@@ -114,9 +109,10 @@ The manifest currently records:
 
 PostgreSQL-backed gates and store-truth CLI preflight were run locally on
 2026-06-20 against an isolated PostgreSQL 16 test cluster. Credentialed
-non-trading smoke remains skipped because explicit credentialed opt-in was not
-enabled for this run. Historical 2026-05-23 credentialed non-trading evidence
-remains useful prior evidence, but it is not current artifact proof.
+non-trading smoke and sign-only dry-run were run locally on 2026-06-21 with
+operator-provided execution-engine credentials, redacted logs, and live
+submit/cancel env gates unarmed. Historical 2026-05-23 credentialed
+non-trading evidence remains prior context only.
 
 Current detached artifact binding:
 

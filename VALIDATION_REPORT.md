@@ -1,5 +1,18 @@
 # Validation Report — v0.28.0 production-live-candidate
 
+## 2026-06-21 credentialed evidence refresh
+
+The current canonical evidence manifest now records pass evidence for
+PostgreSQL, credentialed non-trading smoke, sign-only dry-run, SDK adapter, and
+PostgreSQL-backed store-truth gates. The credentialed smoke and sign-only
+dry-run logs were produced from the execution-engine local environment with
+live submit/cancel env gates unarmed and secret-scanned before commit.
+
+This refresh keeps the release decision at `validated_release=false`,
+`production_ready=false`, and `live_trading_ready=false`. Exact final package
+hashes, manifest hashes, provenance, and CI bindings are detached from this
+source document and must be regenerated for the final package state.
+
 ## 2026-06-18 local live-read event validation
 
 Current tracked component pins after the Phase 5 live-read event
@@ -46,8 +59,7 @@ Local validation refreshed the current gates, artifact, detached sidecars,
 workspace manifest snapshot, dist index, current evidence manifest, docs
 governance, and release hygiene for this changed state. PostgreSQL,
 credentialed non-trading smoke, sign-only dry-run, and PostgreSQL-backed
-store-truth remain skipped unless their explicit environment prerequisites are
-provided.
+store-truth now have current local pass evidence for the refreshed manifest.
 
 Latest Phase 5 code-state evidence before this evidence/document refresh:
 
@@ -83,13 +95,12 @@ execution-engine CI run `27473806418` passed before this documentation refresh.
   state after that review and therefore requires a fresh package rebuild and
   fresh review before it can be treated as a reviewed final state.
 
-The posture remains `production-live-candidate`, non-live by default. The
-current final manifest explicitly records `postgres_validation`,
+The posture remains `production-live-candidate`, non-live by default. Newer
+current evidence records `postgres_validation`,
 `credentialed_non_trading_validation`, and
-`real_funds_canary_store_truth_cli_validation` as skipped in this local
-environment. Those skipped sections are blockers for any production, live, or
-reviewed-go execution claim until refreshed for the exact source/artifact under
-review.
+`real_funds_canary_store_truth_cli_validation` as pass for the local refresh,
+but this still does not authorize production, live submit/cancel, or another
+reviewed-go execution claim.
 
 ## 2026-06-11 evidence refresh
 

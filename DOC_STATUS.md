@@ -1,5 +1,23 @@
 # Documentation and evidence status — v0.28.0 production-live-candidate
 
+## 2026-06-21 credentialed evidence refresh
+
+The current local evidence refresh records:
+
+- `postgres_validation=pass`;
+- `credentialed_non_trading_validation=pass`;
+- `sdk_standard_sign_only_validation=pass`;
+- `real_funds_canary_store_truth_cli_validation=pass`.
+
+Credentialed non-trading smoke and sign-only dry-run were executed locally with
+operator-provided execution-engine credentials. The committed evidence logs are
+redacted and secret-scanned, and live submit/cancel env gates remain unarmed.
+
+Exact final source commits, artifact hashes, manifest hashes, and CI bindings
+belong in generated `dist/` sidecars, release provenance, and the external
+progress tracker after packaging. This document does not authorize production,
+live submit/cancel, or another canary attempt.
+
 ## 2026-06-18 local live-read event status
 
 Current local source includes the Phase 5 live-read event persistence/API

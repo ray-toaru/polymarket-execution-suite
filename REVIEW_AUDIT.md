@@ -128,9 +128,9 @@ non-live hardening result.
 - Live submit/cancel remain blocked.
 - Runtime worker and order lifecycle governance now have full gate evidence.
 - The current final manifest records credentialed non-trading smoke, sign-only
-  dry-run, PostgreSQL, and PostgreSQL-backed store-truth CLI sections as
-  skipped in this local environment. Historical passed runs remain audit
-  context only until those sections are refreshed for the exact final state.
+  dry-run, PostgreSQL, and PostgreSQL-backed store-truth CLI sections as pass
+  for the local refresh. This is evidence for the non-live candidate only and
+  does not authorize production, live submit/cancel, or another canary attempt.
 - Real-funds canary dry-run diagnostics are aggregate-only and do not expose
   token identifiers, raw signed material, or secrets.
 - Armed real-funds canary requires a reviewed release-decision JSON in addition

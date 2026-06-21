@@ -354,37 +354,29 @@ submit/cancel remain blocked by the formal release decision.
 
 ## Current validation evidence
 
-The current canonical evidence manifest records a mix of passing local gates
-and explicitly skipped environment-gated checks. Current manifest gate
-statuses are:
+The current canonical evidence manifest records passing local gates for the
+latest local evidence refresh. Current manifest gate statuses are:
 
 - `postgres_validation=pass`
-- `credentialed_non_trading_validation=skipped`
+- `credentialed_non_trading_validation=pass`
 - `sdk_standard_sign_only_validation=pass`
 - `real_funds_canary_store_truth_cli_validation=pass`
 
 PostgreSQL-backed gates and store-truth CLI preflight were executed locally on
 2026-06-20 against an isolated PostgreSQL 16 test cluster. Credentialed
-non-trading smoke remains skipped because explicit credentialed opt-in was not
-enabled for this run. Skipped credentialed checks must not be inferred as
-current pass results from older evidence.
+non-trading smoke and sign-only dry-run were executed locally on 2026-06-21
+with operator-provided credentials from the execution-engine local environment;
+the committed logs are redacted, secret-scanned, and do not arm live submit or
+live cancel.
 
-- Current execution-engine commit:
-  `eacd6dbb94802e0402d213361c06649caaaf6386`.
-- Latest pushed Phase 5 code-state integration GitHub CI:
-  `ray-toaru/polymarket-execution-suite/actions/runs/27751360977`, success.
-- Latest pushed Phase 5 code-state execution-engine GitHub CI:
-  `ray-toaru/polymarket-execution-engine/actions/runs/27751351091`, success.
-- Current local Phase 5 live-read event persistence/API commits are not pushed
-  and have no GitHub CI result:
-  integration root before this status sync
-  `aabdbda65a90262d01317b13aef0f08224133bae`;
-  execution-engine `eec14d8e5b126c81150e3d6cdd6147e6be43dab6`;
-  adapter `49fb4b6c209e744f57b87b255bbf92003eacb557`.
-  Local validation passed for Rust workspace check, targeted live-read store
-  and gateway tests, API scaffold test, Hermes adapter tests, OpenAPI parity,
-  contract validation, and root unit tests.
-- Historical credentialed SDK GitHub gate:
+- Latest pushed integration GitHub CI before this credentialed refresh:
+  `ray-toaru/polymarket-execution-suite/actions/runs/27893127167`, success.
+- Latest pushed execution-engine GitHub CI before this credentialed refresh:
+  `ray-toaru/polymarket-execution-engine/actions/runs/27873348824`, success.
+- Latest pushed adapter GitHub CI for the pinned adapter commit:
+  `ray-toaru/hermes-polymarket-executor-adapter/actions/runs/27857720143`,
+  success.
+- Historical credentialed SDK GitHub gate remains prior context only:
   `ray-toaru/polymarket-execution-engine/actions/runs/26175786984`, success.
 - GitHub CI ownership is split by repository: the integration repository owns
   version/contract/release-artifact checks; execution-engine owns Rust,
