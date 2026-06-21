@@ -252,6 +252,20 @@ Use `polymarket-execution-engine/.env.profiles.example` for the private source
 inventory shape and `polymarket-execution-engine/.env.runtime.example` for the
 runtime-facing output shape.
 
+Local engine configuration is split by purpose:
+
+- `polymarket-execution-engine/.env` holds execution-engine runtime/API settings such as `PMX_DATABASE_URL`, `PMX_API_SERVICE_TOKEN`, and `PMX_API_ADMIN_TOKEN`.
+- `polymarket-execution-engine/.env.validation` holds test-only settings such as `PMX_TEST_DATABASE_URL` and optional SDK gate switches.
+- `polymarket-execution-engine/.env.profiles` holds multi-account source inventory.
+- `polymarket-execution-engine/.env.runtime` holds the active account identity selected from the source inventory.
+- `polymarket-execution-engine/.env.runtime.secrets` holds the companion active-account SDK secret values when a command explicitly accepts a secrets env file.
+
+`PMX_API_SERVICE_TOKEN` and `PMX_API_ADMIN_TOKEN` are the engine server-side
+executor API auth contract. The Hermes adapter is a separate client repository
+and keeps its client-side names, `PM_EXEC_SERVICE_TOKEN` and
+`PM_EXEC_ADMIN_TOKEN`. `PMX_SERVICE_TOKEN` and `PMX_ADMIN_TOKEN` are not current
+engine config names.
+
 `activate_pmx_profile.py` writes only active identity fields. Supply
 secret-bearing values separately through an explicit external secrets env file;
 local secret file generation is rejected.

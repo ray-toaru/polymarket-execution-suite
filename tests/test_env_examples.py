@@ -10,6 +10,7 @@ ENV_EXAMPLES = [
     "polymarket-execution-engine/.env.profiles.example",
     "polymarket-execution-engine/.env.runtime.example",
     "polymarket-execution-engine/.env.runtime.secrets.example",
+    "polymarket-execution-engine/.env.validation.example",
     "polymarket-execution-engine/deploy/single-host/env/pmx-api.env.example",
     "polymarket-execution-engine/deploy/single-host/env/pmx-real-funds-canary.env.example",
 ]
@@ -37,6 +38,64 @@ class EnvExampleTests(unittest.TestCase):
         self.assertNotIn("hm-pdp-test", combined)
         self.assertNotIn("/home/vscode", combined)
         self.assertNotIn("hermes-agent/venv", combined)
+
+    def test_engine_runtime_example_separates_api_auth_from_validation_and_secret_keys(self):
+        text = (ROOT / "polymarket-execution-engine/.env.example").read_text()
+        required = [
+            "PMX_API_SERVICE_TOKEN",
+            "PMX_API_ADMIN_TOKEN",
+        ]
+        for name in required:
+            with self.subTest(name=name):
+                self.assertIn(name, text)
+        forbidden = [
+            "PMX_TEST_DATABASE_URL",
+            "PM_EXEC_SERVICE_TOKEN",
+            "PM_EXEC_ADMIN_TOKEN",
+            "PMX_SERVICE_TOKEN",
+            "PMX_ADMIN_TOKEN",
+            "PMX_GATEWAY_MODE",
+            "POLYMARKET_PRIVATE_KEY",
+            "POLY_API_SECRET",
+            "PMX_PROFILE_",
+            "PMX_ACTIVE_ACCOUNT_PROFILE",
+        ]
+        for name in forbidden:
+            with self.subTest(name=name):
+                self.assertNotIn(name, text)
+
+    def test_engine_validation_example_excludes_runtime_adapter_and_secret_keys(self):
+        text = (ROOT / "polymarket-execution-engine/.env.validation.example").read_text()
+        self.assertIn("PMX_TEST_DATABASE_URL", text)
+        forbidden = [
+            "PMX_DATABASE_URL",
+            "PM_EXEC_SERVICE_TOKEN",
+            "PM_EXEC_ADMIN_TOKEN",
+            "POLYMARKET_PRIVATE_KEY",
+            "POLY_API_SECRET",
+            "PMX_PROFILE_",
+            "PMX_ACTIVE_ACCOUNT_PROFILE",
+        ]
+        for name in forbidden:
+            with self.subTest(name=name):
+                self.assertNotIn(name, text)
+
+    def test_adapter_example_excludes_engine_database_and_sdk_secret_keys(self):
+        text = (ROOT / "hermes-polymarket-executor-adapter/.env.example").read_text()
+        required = ["PM_EXEC_SERVICE_URL", "PM_EXEC_SERVICE_TOKEN", "PM_EXEC_ADMIN_TOKEN"]
+        for name in required:
+            with self.subTest(name=name):
+                self.assertIn(name, text)
+        forbidden = [
+            "PMX_DATABASE_URL",
+            "PMX_TEST_DATABASE_URL",
+            "POLYMARKET_PRIVATE_KEY",
+            "POLY_API_SECRET",
+            "PMX_PROFILE_",
+        ]
+        for name in forbidden:
+            with self.subTest(name=name):
+                self.assertNotIn(name, text)
 
 
 if __name__ == "__main__":
