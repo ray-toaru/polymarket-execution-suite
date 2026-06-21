@@ -1,5 +1,32 @@
 # Validation Report — v0.28.0 production-live-candidate
 
+## 2026-06-21 local env/auth and package hygiene validation
+
+Current tracked component pins after the engine API auth environment split and
+release/package env-layer hygiene continuation:
+
+- Hermes adapter submodule commit:
+  `c3c644571ae28067ad7ed2c8ab4dd042a1d54923`.
+- Execution-engine submodule commit:
+  `faf52b298f1c42c9a5a9002e272621fba061b7dc`.
+- Integration root commit before this documentation sync:
+  `209047f410788fea3a4bc3da8a59f73c6a771c76`.
+
+Local validation passed before this documentation sync:
+
+- `python -m unittest tests.test_release_hygiene tests.test_package_release_index tests.test_check_release_artifact`;
+- `PYTHONPATH=polymarket-execution-engine/validation python -m unittest polymarket-execution-engine.validation.test_release_artifact_secret_scan`;
+- `python scripts/validate_contracts.py`;
+- `make check-package`;
+- `python -m unittest tests.test_offline_independent_review_manual tests.test_release_hygiene tests.test_package_release_index tests.test_check_release_artifact`;
+- `make check-local`.
+
+The first root `make check-local` attempt failed closed on stale current
+component pins in the documentation; it passed after this documentation sync.
+This validation is local only. No push, GitHub CI, tag, release, package
+refresh, production deployment, live submit/cancel enablement, or real-funds
+authorization is included.
+
 ## 2026-06-21 credentialed evidence refresh
 
 The current canonical evidence manifest now records pass evidence for

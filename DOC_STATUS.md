@@ -1,5 +1,23 @@
 # Documentation and evidence status — v0.28.0 production-live-candidate
 
+## 2026-06-21 local env/auth and package hygiene continuation
+
+Current local source includes the engine API auth env split and stricter
+release/package handling for local env-layer files. Current tracked component
+pins are:
+
+- Hermes adapter submodule:
+  `c3c644571ae28067ad7ed2c8ab4dd042a1d54923`;
+- execution-engine submodule:
+  `faf52b298f1c42c9a5a9002e272621fba061b7dc`;
+- integration root before this documentation sync:
+  `209047f410788fea3a4bc3da8a59f73c6a771c76`.
+
+This state is local and unpushed. It has targeted local validation but no
+GitHub CI, fresh package sidecars, or fresh independent package review. It
+remains `production_ready=false`, `live_trading_ready=false`, and
+`validated_release=false`.
+
 ## 2026-06-21 credentialed evidence refresh
 
 The current local evidence refresh records:

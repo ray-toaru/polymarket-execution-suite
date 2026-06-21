@@ -186,12 +186,21 @@ class PackageReleaseIndexTests(unittest.TestCase):
             Path(".env.local"),
             Path(".env.production"),
             Path(".env.shadow"),
+            Path("polymarket-execution-engine/.env.validation"),
+            Path("polymarket-execution-engine/.env.runtime"),
+            Path("polymarket-execution-engine/.env.runtime.secrets"),
             Path("config/runtime.local.json"),
             Path("secrets/token.txt"),
             Path("polymarket-execution-engine/config/controlled-canary.external-references.invalid-sensitive.fixture.json"),
         ]
         for path in forbidden:
             self.assertFalse(self.package_release.allowed(ROOT / path))
+
+        self.assertTrue(
+            self.package_release.allowed(
+                ROOT / "polymarket-execution-engine" / ".env.validation.example"
+            )
+        )
 
     def test_release_policy_rejects_tracked_files_outside_explicit_release_roots(self):
         self.assertFalse(self.package_release.allowed(ROOT / ".claude" / "notes.md"))
@@ -226,6 +235,9 @@ class PackageReleaseIndexTests(unittest.TestCase):
                 f"{expected_root}/.env.local",
                 f"{expected_root}/.env.production",
                 f"{expected_root}/.env.shadow",
+                f"{expected_root}/polymarket-execution-engine/.env.validation",
+                f"{expected_root}/polymarket-execution-engine/.env.runtime",
+                f"{expected_root}/polymarket-execution-engine/.env.runtime.secrets",
                 f"{expected_root}/config/runtime.local.json",
                 f"{expected_root}/secrets/token.txt",
                 f"{expected_root}/certs/client.p12",
@@ -234,6 +246,12 @@ class PackageReleaseIndexTests(unittest.TestCase):
             ]
             for name in names:
                 self.assertTrue(self.checker.forbidden(name, expected_root))
+            self.assertFalse(
+                self.checker.forbidden(
+                    f"{expected_root}/polymarket-execution-engine/.env.validation.example",
+                    expected_root,
+                )
+            )
 
     def test_artifact_checker_rejects_members_outside_explicit_release_allowlist(self):
         expected_root = "polymarket_execution_suite_v0_28_0"

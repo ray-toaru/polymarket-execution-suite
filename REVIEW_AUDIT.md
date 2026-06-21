@@ -1,5 +1,28 @@
 # Review audit — v0.28 production-live-candidate
 
+## 2026-06-21 local env/auth and package hygiene continuation
+
+Current local source has advanced after the engine API auth environment split
+and the release/package hygiene guard for local env-layer files. Current
+component pins are:
+
+- Hermes adapter submodule commit:
+  `c3c644571ae28067ad7ed2c8ab4dd042a1d54923`.
+- Execution-engine submodule commit:
+  `faf52b298f1c42c9a5a9002e272621fba061b7dc`.
+- Integration root commit before this documentation sync:
+  `209047f410788fea3a4bc3da8a59f73c6a771c76`.
+
+This local state is not pushed and has no GitHub CI result. Local validation
+has passed for targeted release hygiene/package negative tests, release
+artifact secret-scan tests, contract validation, package hygiene, and root
+`make check-local` after this documentation sync.
+
+The earlier external review and merge authorization remain scope-bound. They
+do not authorize live submit, live cancel, production deployment, or another
+canary attempt. Any rebuilt package, sidecar, provenance, reviewed-go package,
+or canary packet requires fresh review.
+
 ## 2026-06-18 local live-read event continuation
 
 Current local source has advanced after the Phase 5 live-read event

@@ -122,6 +122,18 @@ class CheckReleaseArtifactTests(unittest.TestCase):
             with zipfile.ZipFile(zip_path, "w") as zf:
                 zf.writestr("polymarket_execution_suite_v0_28_0/VERSION", "0.28.0\n")
                 zf.writestr("polymarket_execution_suite_v0_28_0/.env.local", "bad\n")
+                zf.writestr(
+                    "polymarket_execution_suite_v0_28_0/polymarket-execution-engine/.env.validation",
+                    "PMX_TEST_DATABASE_URL=postgres://example\n",
+                )
+                zf.writestr(
+                    "polymarket_execution_suite_v0_28_0/polymarket-execution-engine/.env.runtime.secrets",
+                    "POLY_API_SECRET=example\n",
+                )
+                zf.writestr(
+                    "polymarket_execution_suite_v0_28_0/polymarket-execution-engine/.env.validation.example",
+                    "PMX_TEST_DATABASE_URL=\n",
+                )
                 zf.writestr("polymarket_execution_suite_v0_28_0/V0_OLD.md", "old\n")
             with zipfile.ZipFile(zip_path) as zf:
                 failures = self.module.validate_archive_members(
@@ -131,6 +143,10 @@ class CheckReleaseArtifactTests(unittest.TestCase):
                 )
             self.assertTrue(any("forbidden archive members" in item for item in failures))
             self.assertTrue(any("stale root docs in archive" in item for item in failures))
+            joined = "\n".join(failures)
+            self.assertIn(".env.validation", joined)
+            self.assertIn(".env.runtime.secrets", joined)
+            self.assertNotIn(".env.validation.example", joined)
 
     def test_secret_content_scan_rejects_common_assignment_and_json_spellings(self):
         secret_key = "api_" + "secret"
