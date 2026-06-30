@@ -1,6 +1,8 @@
 import importlib.util
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -81,6 +83,66 @@ class DocsEvidenceStatusBindingTests(unittest.TestCase):
                 "postgres_validation"
             ],
         )
+
+    def test_rejects_current_source_wording_with_fixed_commit_pins(self):
+        guard = load_guard()
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            scripts = tmp / "scripts"
+            scripts.mkdir()
+            (scripts / "active_docs.py").write_text(
+                "ACTIVE_DOCS = ['DOC_STATUS.md']\n"
+            )
+            (tmp / "DOC_STATUS.md").write_text(
+                "Current source is aligned with a review:\n"
+                "- integration root: "
+                "081f8240610189455d08a981ef309de02bdc61e3\n"
+            )
+
+            import sys
+            sys.modules.pop("active_docs", None)
+            with mock.patch.object(guard, "INTEGRATION_MODE", True):
+                sys.path.insert(0, str(scripts))
+                try:
+                    failures = guard.active_source_pin_drift_failures(tmp)
+                finally:
+                    sys.path.remove(str(scripts))
+                    sys.modules.pop("active_docs", None)
+
+        self.assertEqual(
+            failures,
+            [
+                "DOC_STATUS.md:1 uses current-source wording with fixed commit pins; "
+                "use reviewed-packet or generated snapshot wording"
+            ],
+        )
+
+    def test_allows_reviewed_packet_source_binding_with_fixed_commit_pins(self):
+        guard = load_guard()
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            scripts = tmp / "scripts"
+            scripts.mkdir()
+            (scripts / "active_docs.py").write_text(
+                "ACTIVE_DOCS = ['DOC_STATUS.md']\n"
+            )
+            (tmp / "DOC_STATUS.md").write_text(
+                "Reviewed packet source binding:\n"
+                "- integration root: "
+                "081f8240610189455d08a981ef309de02bdc61e3\n"
+            )
+
+            import sys
+            sys.modules.pop("active_docs", None)
+            with mock.patch.object(guard, "INTEGRATION_MODE", True):
+                sys.path.insert(0, str(scripts))
+                try:
+                    failures = guard.active_source_pin_drift_failures(tmp)
+                finally:
+                    sys.path.remove(str(scripts))
+                    sys.modules.pop("active_docs", None)
+
+        self.assertEqual(failures, [])
 
 
 if __name__ == "__main__":

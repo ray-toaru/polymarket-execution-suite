@@ -13,20 +13,27 @@ real-funds canary fill. Historical v0.26 material remains `no_go` audit context
 only; any future v0.28 attempt needs current gates and a reviewed `go` release
 decision regenerated for the final artifact.
 
-Current source and evidence references:
+Reviewed packet source and evidence references:
 
 ```text
 source-refresh root commit: recorded in .zip.evidence.json sidecar
-hermes-polymarket-executor-adapter: 7477c028d5c4f0f2215e7ee6c3ee4ea750331553
-polymarket-execution-engine: be6298241d28eecc3eaf3be871c8f5776a8157d0
-latest pushed root CI baseline: 27474066294, success
-latest pushed adapter CI baseline: 27473948617, success
-latest pushed execution-engine CI baseline: 27473806418, success
+hermes-polymarket-executor-adapter: c3c644571ae28067ad7ed2c8ab4dd042a1d54923
+polymarket-execution-engine: 847389c1f72c4a7476135031770b73186324ab72
+latest reviewed root CI baseline: 27895560086, success
+latest reviewed adapter CI baseline: 27895590621, success
+latest reviewed execution-engine CI baseline: 27895560093, success
 artifact sha256: recorded in the detached .zip.sha256 and .zip.evidence.json sidecars
 evidence manifest sha256: recorded in the detached .zip.evidence.json sidecar
-credentialed SDK evidence: skipped in the current final manifest; must be
-refreshed before any go/live claim
+credentialed SDK evidence: present in the current manifest; still requires
+operator decision and reviewed-go binding before any go/live claim
 ```
+
+The 2026-06-21 Lei evidence-sufficiency review artifact permits the exact
+reviewed packet to enter the operator production/live decision gate. That review
+is not a go/live decision and does not authorize CI dispatch, credentialed
+smoke, sign-only dry-run, production deployment, live submit, live cancel, or
+real-funds action. This documentation sync is not part of that exact reviewed
+packet until a fresh package/review binds it.
 
 ## Decision
 

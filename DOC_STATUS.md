@@ -1,5 +1,30 @@
 # Documentation and evidence status — v0.28.0 production-live-candidate
 
+## 2026-06-30 operator production/live decision preparation
+
+The 2026-06-21 Lei evidence-sufficiency review artifact for entry into the
+operator production/live decision gate was bound to this reviewed packet source:
+
+- Hermes adapter submodule:
+  `c3c644571ae28067ad7ed2c8ab4dd042a1d54923`;
+- execution-engine submodule:
+  `847389c1f72c4a7476135031770b73186324ab72`;
+- integration root:
+  `081f8240610189455d08a981ef309de02bdc61e3`.
+
+The review artifact is
+`external_reviews/lei/phase-o-production-live-decision-review-20260621.approved.canonical.json`.
+It accepts evidence sufficiency only for entering an operator decision gate. It
+does not authorize CI dispatch, credentialed smoke, sign-only dry-run, push,
+tag, GitHub release, production deployment, live submit, live cancel,
+real-funds canary, or any real-funds action. This documentation sync is not
+part of that exact reviewed packet until a fresh package/review binds it.
+
+`docs/future/OPERATOR_PRODUCTION_LIVE_DECISION_PREP.md` is the current operator
+decision-prep index. It is not a reviewed-go release decision and does not move
+the project beyond `production_ready=false`, `live_trading_ready=false`, and
+`validated_release=false`.
+
 ## 2026-06-21 local debt closeout continuation
 
 Current local source includes non-authorizing release-orchestrator report
@@ -160,6 +185,7 @@ canonical trust-boundary, misuse, threat, and evidence-retention summary.
 - `RELEASE_DECISION.md`
 - `docs/future/CANARY_DECISION_PREP_AUDIT.md`
 - `docs/future/CANARY_GO_NO_GO_REVIEW.md`
+- `docs/future/OPERATOR_PRODUCTION_LIVE_DECISION_PREP.md`
 - `docs/future/CANARY_PRODUCTION_ROADMAP.md`
 - `VALIDATION_REPORT.md`
 - `REVIEW_AUDIT.md`

@@ -11,14 +11,14 @@ The current v0.28.0 phase is controlled canary source preparation only. The
 project is not production-ready, live-trading-ready, or approved for a
 real-funds canary fill.
 
-Current evidence baseline:
+Reviewed evidence baseline:
 
 ```text
-hermes-polymarket-executor-adapter: 7477c028d5c4f0f2215e7ee6c3ee4ea750331553
-polymarket-execution-engine: be6298241d28eecc3eaf3be871c8f5776a8157d0
-latest pushed root CI baseline: 27474066294, success
-latest pushed adapter CI baseline: 27473948617, success
-latest pushed execution-engine CI baseline: 27473806418, success
+hermes-polymarket-executor-adapter: c3c644571ae28067ad7ed2c8ab4dd042a1d54923
+polymarket-execution-engine: 847389c1f72c4a7476135031770b73186324ab72
+latest reviewed root CI baseline: 27895560086, success
+latest reviewed adapter CI baseline: 27895590621, success
+latest reviewed execution-engine CI baseline: 27895560093, success
 artifact sha256: recorded in the detached .zip.sha256 and .zip.evidence.json sidecars
 current evidence manifest sha256: recorded in the detached .zip.evidence.json sidecar
 artifact evidence sidecar sha256: external review material, not self-embedded
@@ -28,21 +28,19 @@ Historical v0.26 decision-prep source refreshes are audit context only. Their
 exact commits, CI runs, and credentialed evidence identifiers must not be used
 as current v0.28 promotion evidence.
 
-This refresh parameterizes review-package generation and the blocked rehearsal
-package so future no-go review material can be regenerated from explicit
-artifact/evidence hash overrides and current CI run IDs. The final zip hash is
-kept in external release sidecars rather than self-embedded in source files.
-It does not change the live-trading boundary.
+The 2026-06-21 Lei evidence-sufficiency review artifact accepts entry into an
+operator production/live decision gate for the exact reviewed packet. That
+acceptance does not change the live-trading boundary and does not itself
+authorize CI dispatch, credentialed smoke, sign-only dry-run, live submit, live
+cancel, production deployment, or real-funds action. This documentation sync is
+not part of that exact reviewed packet until a fresh package/review binds it.
 
-Current canonical evidence records `real_funds_canary_preflight_validation=pass`,
-`real_funds_canary_lifecycle_validation=pass`, and
-`real_funds_canary_review_package_validation=pass`. It records
-`credentialed_non_trading_validation=skipped`, `postgres_validation=skipped`,
-and `real_funds_canary_store_truth_cli_validation=skipped` for the final
-package-hash reviewed state because this local environment did not provide the
-required database URLs or credentialed opt-in variables. The release decision in
-the manifest still records `validated_release=false`,
-`production_ready=false`, and `live_trading_ready=false`.
+Current canonical evidence records `postgres_validation=pass`,
+`credentialed_non_trading_validation=pass`,
+`sdk_standard_sign_only_validation=pass`, `sdk_adapter_validation=pass`, and
+`real_funds_canary_store_truth_cli_validation=pass`. The release decision in the
+manifest still records `validated_release=false`, `production_ready=false`, and
+`live_trading_ready=false`.
 
 ## Decision package audit
 
@@ -81,9 +79,9 @@ current supplemental evidence:
 - package `artifact_sha256`: supplied from the external `.zip.sha256` sidecar
 - package `evidence_manifest_sha256`: historical value; not current final-state
   promotion evidence.
-- latest pushed root CI baseline after final package generation: `27474066294`
-- latest pushed adapter CI baseline after final package generation: `27473948617`
-- latest pushed execution-engine CI baseline after final package generation:
+- historical package root CI baseline after final package generation: `27474066294`
+- historical package adapter CI baseline after final package generation: `27473948617`
+- historical package execution-engine CI baseline after final package generation:
   `27473806418`
 - package `credentialed_sdk_run_id`: historical local-current-gates identifier;
   not current final-state promotion evidence.

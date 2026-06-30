@@ -1,5 +1,34 @@
 # Validation Report — v0.28.0 production-live-candidate
 
+## 2026-06-30 operator decision-prep validation status
+
+The 2026-06-21 Lei evidence-sufficiency review artifact was bound to this
+reviewed packet source:
+
+- Hermes adapter submodule commit:
+  `c3c644571ae28067ad7ed2c8ab4dd042a1d54923`.
+- Execution-engine submodule commit:
+  `847389c1f72c4a7476135031770b73186324ab72`.
+- Integration root commit:
+  `081f8240610189455d08a981ef309de02bdc61e3`.
+
+The review record
+`external_reviews/lei/phase-o-production-live-decision-review-20260621.approved.canonical.json`
+accepts evidence sufficiency only to enter an operator production/live
+decision gate. Its explicit non-authorizations keep CI dispatch, credentialed
+smoke, sign-only dry-run, push, tag, GitHub release, production deployment, live
+submit, live cancel, real-funds canary, and real-funds action unauthorized.
+This documentation sync is not part of that exact reviewed packet until a fresh
+package/review binds it.
+
+Operator production/live decision preparation is documented in
+`docs/future/OPERATOR_PRODUCTION_LIVE_DECISION_PREP.md`. No go/live decision has
+been generated in this documentation sync. The current posture remains
+`production_ready=false`, `live_trading_ready=false`, and
+`validated_release=false` until the operator decision inputs, current gates,
+dual-control review, and reviewed-go release decision are completed for the
+exact artifact under review.
+
 ## 2026-06-21 local debt closeout validation
 
 Current tracked component pins after release-orchestrator report schema

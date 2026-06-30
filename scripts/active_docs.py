@@ -21,5 +21,6 @@ ACTIVE_DOCS = [
     "NO_LOCAL_ACTIONS_REMAINING.md",
     "docs/future/CANARY_DECISION_PREP_AUDIT.md",
     "docs/future/CANARY_GO_NO_GO_REVIEW.md",
+    "docs/future/OPERATOR_PRODUCTION_LIVE_DECISION_PREP.md",
     "docs/future/CANARY_PRODUCTION_ROADMAP.md",
 ]
