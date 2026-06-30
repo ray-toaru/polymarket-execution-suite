@@ -91,6 +91,55 @@ class VerifyDualControlReviewSignatureTests(unittest.TestCase):
             "registry": registry,
         }
 
+    def exact_package_fixture(self, tmp: Path, *, reviewer_principal: str = "lei@example.invalid") -> dict[str, Path]:
+        review = {
+            "schema_version": 1,
+            "review_kind": "phase_r_exact_package_independent_review",
+            "decision": "approved_exact_artifact_only",
+            "reviewer": {
+                "name": "lei",
+                "role": "independent_reviewer",
+                "identity_ref": reviewer_principal,
+            },
+            "approval_scope": {
+                "exact_artifact_only": True,
+                "production_deployment_authorized": False,
+                "live_submit_authorized": False,
+                "live_cancel_authorized": False,
+                "real_funds_authorized": False,
+                "validated_release_claim_authorized": False,
+            },
+        }
+        approved = self.write_json(tmp, "exact-package-review.approved.json", review)
+        canonical = self.write_json(tmp, "exact-package-review.approved.canonical.json", review)
+        signature = tmp / "exact-package-review.signature"
+        signature.write_text("test-signature\n")
+        allowed_signers = tmp / "allowed_signers"
+        allowed_signers.write_text("lei@example.invalid ssh-ed25519 AAAA\n")
+        registry = self.write_json(
+            tmp,
+            "reviewer-registry.json",
+            {
+                "schema_version": 1,
+                "reviewers": [
+                    {
+                        "reviewer_identity_ref": "reviewer://lei",
+                        "status": "active",
+                        "allowed_signing_method": "ssh",
+                        "signing_key_fingerprint": "SHA256:test",
+                        "allowed_signers_file": "allowed_signers",
+                        "ssh_principal": "lei@example.invalid",
+                    }
+                ],
+            },
+        )
+        return {
+            "approved": approved,
+            "canonical": canonical,
+            "signature": signature,
+            "registry": registry,
+        }
+
     def test_verifies_gpg_signature_with_registered_fingerprint(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             paths = self.fixture(Path(tmp_name), method="gpg")
@@ -114,6 +163,41 @@ class VerifyDualControlReviewSignatureTests(unittest.TestCase):
             )
             self.assertEqual(result["status"], "pass")
             self.assertEqual(result["signature_method"], "gpg")
+
+    def test_verifies_exact_package_review_with_registered_ssh_principal(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            paths = self.exact_package_fixture(Path(tmp_name))
+
+            def fake_run(cmd, **kwargs):
+                self.assertIn("ssh-keygen", cmd)
+                self.assertEqual(kwargs["input"], paths["canonical"].read_text())
+                return subprocess.CompletedProcess(cmd, 0, stdout="Good signature\n", stderr="")
+
+            result = self.module.verify_review_signature(
+                approved_review_file=paths["approved"],
+                canonical_review_file=paths["canonical"],
+                signature_file=paths["signature"],
+                reviewer_registry_file=paths["registry"],
+                run_command=fake_run,
+            )
+            self.assertEqual(result["status"], "pass")
+            self.assertEqual(result["signature_method"], "ssh")
+            self.assertEqual(result["reviewer_identity_ref"], "reviewer://lei")
+            self.assertEqual(result["signed_reviewer_principal"], "lei@example.invalid")
+
+    def test_rejects_exact_package_review_with_unregistered_ssh_principal(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            paths = self.exact_package_fixture(
+                Path(tmp_name),
+                reviewer_principal="other@example.invalid",
+            )
+            with self.assertRaisesRegex(SystemExit, "matching reviewer"):
+                self.module.verify_review_signature(
+                    approved_review_file=paths["approved"],
+                    canonical_review_file=paths["canonical"],
+                    signature_file=paths["signature"],
+                    reviewer_registry_file=paths["registry"],
+                )
 
     def test_rejects_pending_reviewer(self):
         with tempfile.TemporaryDirectory() as tmp_name:
