@@ -14,6 +14,7 @@ Official SDK version: =0.6.0-canary.1
 
 - Official SDK dependencies stay isolated in adapter crates.
 - Core, policy, store, service, and public API crates must not depend directly on the official SDK.
+- The root Rust workspace must not include `adapters/pmx-official-sdk-adapter`, `adapters/pmx-official-sdk-spike`, or `polymarket_client_sdk_v2` in default workspace dependencies.
 - Patch/minor dependency changes require CI evidence before release promotion.
 - Major dependency changes require explicit review, rollback note, and validation evidence.
 - Trading-path dependency changes must not auto-promote to production.
@@ -23,6 +24,29 @@ Official SDK version: =0.6.0-canary.1
   resolved package versions.
 - Python compatibility CI covers 3.11 through 3.14. Rust CI and
   `rust-toolchain.toml` use the pinned 1.96 toolchain.
+
+## DDD and adapter dependency decision
+
+Current decision: do not convert the official SDK adapter into the default Rust
+workspace or a first-class execution dependency yet.
+
+The production execution path must depend on project-owned domain and gateway
+ports, not directly on `polymarket_client_sdk_v2`. The official SDK remains an
+infrastructure adapter behind feature/env gates so domain, policy, store,
+service, and public API crates stay deterministic, testable, and free of remote
+side effects by default.
+
+Reconsider this only after an exact artifact has reviewed evidence for all of
+the following:
+
+- `pmx-gateway` exposes the stable internal port needed by the execution path;
+- the official SDK adapter conforms to that port without leaking SDK types into
+  domain, policy, store, service, or API crates;
+- read-only, sign-only, data-readback, live-submit denied-path, reconciliation,
+  runtime-truth, custody, alerting, rollback, and PostgreSQL lifecycle gates pass
+  for the exact artifact;
+- an independent reviewed release decision explicitly authorizes the capability
+  and records whether it remains canary-only or becomes production/live.
 
 ## Submodule provenance
 

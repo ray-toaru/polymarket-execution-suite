@@ -2464,6 +2464,90 @@ tokio = { version = "1.52.3", features = ["macros"] }
                 module.validate_v08_dependency_and_sdk_policy()
         self.assertIn("workspace.package.version aligned with VERSION", str(ctx.exception))
 
+    def test_v08_rejects_sdk_adapter_in_root_workspace_members(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("polymarket-execution-engine/Cargo.toml"):
+                return """
+[workspace]
+members = [
+  "crates/pmx-core",
+  "adapters/pmx-official-sdk-adapter",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+license = "Apache-2.0"
+version = "0.28.0"
+rust-version = "1.96"
+
+[workspace.dependencies]
+serde = { version = "1.0.228", features = ["derive"] }
+tokio = { version = "1.52.3", features = ["macros"] }
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v08_dependency_and_sdk_policy()
+        self.assertIn("must not include isolated official SDK adapter member", str(ctx.exception))
+
+    def test_v08_rejects_official_sdk_in_root_workspace_dependencies(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("polymarket-execution-engine/Cargo.toml"):
+                return """
+[workspace]
+members = ["crates/pmx-core"]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+license = "Apache-2.0"
+version = "0.28.0"
+rust-version = "1.96"
+
+[workspace.dependencies]
+polymarket_client_sdk_v2 = "=0.6.0-canary.1"
+serde = { version = "1.0.228", features = ["derive"] }
+tokio = { version = "1.52.3", features = ["macros"] }
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v08_dependency_and_sdk_policy()
+        self.assertIn("workspace.dependencies must not include polymarket_client_sdk_v2", str(ctx.exception))
+
+    def test_v08_rejects_official_sdk_direct_dependency_in_protected_crates(self) -> None:
+        original_read_text = Path.read_text
+
+        def fake_read_text(path_self: Path, *args, **kwargs) -> str:
+            path = str(path_self)
+            if path.endswith("polymarket-execution-engine/crates/pmx-service/Cargo.toml"):
+                return """
+[package]
+name = "pmx-service"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+polymarket_client_sdk_v2 = "=0.6.0-canary.1"
+"""
+            return original_read_text(path_self, *args, **kwargs)
+
+        with mock.patch("pathlib.Path.read_text", autospec=True, side_effect=fake_read_text):
+            with self.assertRaises(ContractValidationError) as ctx:
+                module.validate_v08_dependency_and_sdk_policy()
+        self.assertIn("pmx-service must not depend directly on polymarket_client_sdk_v2", str(ctx.exception))
+
     def test_v08_requires_sdk_plan_tokens_under_expected_sections(self) -> None:
         original_read_text = Path.read_text
 

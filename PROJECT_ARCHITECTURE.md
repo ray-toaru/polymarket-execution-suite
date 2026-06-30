@@ -58,6 +58,30 @@ pmx-api        Axum API boundary
 pmx-release    release/version scaffold
 ```
 
+## DDD and ports/adapters boundary
+
+The Rust execution engine follows a conservative DDD/Clean Architecture shape:
+
+```text
+Domain model and policy:       pmx-core, pmx-policy, pmx-authz
+Application orchestration:     pmx-service, pmx-runtime
+Internal ports:                pmx-gateway
+Persistence/API infrastructure: pmx-store, pmx-api
+External SDK infrastructure:   adapters/pmx-official-sdk-adapter
+```
+
+Dependency direction is inward. Domain, policy, store, service, and public API
+crates must not import `polymarket_client_sdk_v2` or SDK adapter types. Future
+SDK-backed execution must enter through a project-owned gateway port, with the
+official SDK kept as an infrastructure implementation behind explicit
+compile-time and runtime gates.
+
+This means the official SDK adapter is intentionally not a standard/default
+workspace dependency today. Making it a first-class execution dependency would
+collapse the adapter boundary before the port contract, runtime truth,
+reconciliation, custody, rollback, alerting, and reviewed operator decision are
+artifact-bound.
+
 ## Conservative pre-live policy
 
 v0.28.0 is the production-live-candidate baseline. It is still non-live by

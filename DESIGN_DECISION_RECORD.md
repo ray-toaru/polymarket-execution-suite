@@ -81,3 +81,23 @@ fresh independent review for the exact artifact and configuration.
 This decision records a future implementation constraint only. It does not
 enable live submit, live cancel, production deployment, or another real-funds
 canary attempt in the current release state.
+
+## DDR-011: Official SDK adapter remains isolated from the default execution path
+
+Accepted. The official SDK adapter and SDK spike stay outside the default Rust
+workspace and are not root workspace dependencies. The first-class execution
+path must depend on project-owned domain types, application services, and
+`pmx-gateway` ports; it must not depend directly on
+`polymarket_client_sdk_v2`.
+
+This keeps Clean Architecture dependency direction intact: domain and
+application code define the rules, while SDK integration remains an
+infrastructure adapter. The current isolated adapter may compile, typecheck, and
+run guarded read-only or sign-only tests, but those capabilities do not become
+production/live execution just because the SDK crate is available.
+
+The decision can be revisited only after a reviewed release decision binds the
+exact artifact, evidence manifest, runtime truth, custody/rollback controls,
+PostgreSQL lifecycle evidence, and operator approval for the specific capability
+being promoted. Until then, live/sign-only/data-readback work remains guarded
+adapter capability, not an unrestricted first-class dependency path.
