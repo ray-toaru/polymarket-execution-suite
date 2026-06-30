@@ -101,18 +101,20 @@ tracker, not self-embedded in this source document.
 The manifest currently records:
 
 - `postgres_validation=pass`
-- `credentialed_non_trading_validation=pass`
+- `credentialed_non_trading_validation=skipped`
 - `sdk_standard_sign_only_validation=pass`
 - `real_funds_canary_store_truth_cli_validation=pass`
 - other local/static source-candidate gates: pass;
 - release decision: not validated, not production-ready, not live-ready.
 
 PostgreSQL-backed gates and store-truth CLI preflight were run locally on
-2026-06-20 against an isolated PostgreSQL 16 test cluster. Credentialed
-non-trading smoke and sign-only dry-run were run locally on 2026-06-21 with
-operator-provided execution-engine credentials, redacted logs, and live
-submit/cancel env gates unarmed. Historical 2026-05-23 credentialed
-non-trading evidence remains prior context only.
+2026-06-30 against an isolated PostgreSQL 16 test cluster. Credentialed
+non-trading smoke and sign-only dry-run were not refreshed in the current local
+run because `PMX_RUN_AUTHENTICATED_NON_TRADING_SMOKE` and
+`PMX_RUN_SIGN_ONLY_DRY_RUN` were not set to `1`; the manifest records this
+credentialed section as skipped. The earlier 2026-06-21 credentialed local run
+and historical 2026-05-23 credentialed non-trading evidence remain prior
+context only.
 
 Current detached artifact binding:
 
